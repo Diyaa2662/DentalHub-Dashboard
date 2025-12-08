@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ignore devextreme license key
+/src/devextreme-license.ts
