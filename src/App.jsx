@@ -1,5 +1,10 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./components/pages/Dashboard";
 import Products from "./components/pages/Products";
@@ -7,60 +12,86 @@ import Orders from "./components/pages/Orders";
 import Customers from "./components/pages/Customers";
 import Analytics from "./components/pages/Analytics";
 import Settings from "./components/pages/Settings";
+import Login from "./components/auth/Login";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import "./App.css";
 
 function App() {
   return (
     <Router>
       <Routes>
+        {/* مسار تسجيل الدخول */}
+        <Route path="/login" element={<Login />} />
+
+        {/* المسارات المحمية */}
         <Route
           path="/"
           element={
-            <MainLayout>
-              <Dashboard />
-            </MainLayout>
+            <ProtectedRoute>
+              <MainLayout>
+                <Dashboard />
+              </MainLayout>
+            </ProtectedRoute>
           }
         />
+
         <Route
           path="/products"
           element={
-            <MainLayout>
-              <Products />
-            </MainLayout>
+            <ProtectedRoute>
+              <MainLayout>
+                <Products />
+              </MainLayout>
+            </ProtectedRoute>
           }
         />
+
         <Route
           path="/orders"
           element={
-            <MainLayout>
-              <Orders />
-            </MainLayout>
+            <ProtectedRoute>
+              <MainLayout>
+                <Orders />
+              </MainLayout>
+            </ProtectedRoute>
           }
         />
+
         <Route
           path="/customers"
           element={
-            <MainLayout>
-              <Customers />
-            </MainLayout>
+            <ProtectedRoute>
+              <MainLayout>
+                <Customers />
+              </MainLayout>
+            </ProtectedRoute>
           }
         />
+
         <Route
           path="/analytics"
           element={
-            <MainLayout>
-              <Analytics />
-            </MainLayout>
+            <ProtectedRoute>
+              <MainLayout>
+                <Analytics />
+              </MainLayout>
+            </ProtectedRoute>
           }
         />
+
         <Route
           path="/settings"
           element={
-            <MainLayout>
-              <Settings />
-            </MainLayout>
+            <ProtectedRoute>
+              <MainLayout>
+                <Settings />
+              </MainLayout>
+            </ProtectedRoute>
           }
         />
+
+        {/* إعادة التوجيه إلى الداشبورد للمسارات غير المعروفة */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

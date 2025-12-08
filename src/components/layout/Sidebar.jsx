@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -7,27 +7,16 @@ import {
   Users,
   BarChart3,
   Settings,
-  Activity, // استخدام Activity بدلاً من Tooth
+  Activity,
   Menu,
   X,
-  Search,
-  Bell,
-  HelpCircle,
-  ChevronDown,
-  TrendingUp,
-  DollarSign,
-  Star,
-  Plus,
-  Filter,
-  Download,
-  Edit,
-  Trash2,
-  Eye,
+  LogOut,
 } from "lucide-react";
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [activeItem, setActiveItem] = useState("dashboard");
+  const navigate = useNavigate();
 
   const menuItems = [
     {
@@ -68,6 +57,12 @@ const Sidebar = () => {
     },
   ];
 
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("userEmail");
+    navigate("/login");
+  };
+
   return (
     <>
       <button
@@ -87,8 +82,7 @@ const Sidebar = () => {
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-dental-blue rounded-lg">
-              <Activity className="text-white" size={24} />{" "}
-              {/* استخدام Activity بدلاً من Tooth */}
+              <Activity className="text-white" size={24} />
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-800">
@@ -126,16 +120,26 @@ const Sidebar = () => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-gray-200 space-y-4">
+          {/* معلومات المستخدم */}
           <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-dental-blue to-dental-teal flex items-center justify-center">
               <span className="text-white font-bold">AD</span>
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-medium text-gray-800">Admin User</p>
               <p className="text-sm text-gray-500">admin@dentalpro.com</p>
             </div>
           </div>
+
+          {/* زر تسجيل الخروج */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 text-red-700 rounded-lg hover:from-red-100 hover:to-red-200 transition-colors"
+          >
+            <LogOut size={18} />
+            <span className="font-medium">Sign Out</span>
+          </button>
         </div>
       </aside>
     </>
