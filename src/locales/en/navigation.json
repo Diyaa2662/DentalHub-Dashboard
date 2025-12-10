@@ -1,0 +1,14 @@
+{
+  "dashboard": "Dashboard",
+  "products": "Products",
+  "orders": "Orders",
+  "customers": "Customers",
+  "invoices": "Invoices",
+  "analytics": "Analytics",
+  "settings": "Settings",
+  "logout": "Logout",
+  "login": "Login",
+  "register": "Register",
+  "profile": "Profile",
+  "admin": "Admin"
+}

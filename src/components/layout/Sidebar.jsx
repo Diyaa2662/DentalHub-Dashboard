@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { useLanguage } from "../../contexts/LanguageContext";
 import {
   LayoutDashboard,
   Package,
@@ -11,9 +12,11 @@ import {
   Menu,
   X,
   LogOut,
+  FileText, // إضافة أيقونة الفواتير
 } from "lucide-react";
 
 const Sidebar = () => {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(true);
   const [activeItem, setActiveItem] = useState("dashboard");
   const navigate = useNavigate();
@@ -21,37 +24,43 @@ const Sidebar = () => {
   const menuItems = [
     {
       id: "dashboard",
-      label: "Dashboard",
+      label: t("dashboard", "navigation"),
       icon: <LayoutDashboard size={20} />,
       path: "/",
     },
     {
       id: "products",
-      label: "Products",
+      label: t("products", "navigation"),
       icon: <Package size={20} />,
       path: "/products",
     },
     {
       id: "orders",
-      label: "Orders",
+      label: t("orders", "navigation"),
       icon: <ShoppingCart size={20} />,
       path: "/orders",
     },
     {
       id: "customers",
-      label: "Customers",
+      label: t("customers", "navigation"),
       icon: <Users size={20} />,
       path: "/customers",
     },
     {
+      id: "invoices",
+      label: t("invoices", "navigation"),
+      icon: <FileText size={20} />,
+      path: "/invoices",
+    },
+    {
       id: "analytics",
-      label: "Analytics",
+      label: t("analytics", "navigation"),
       icon: <BarChart3 size={20} />,
       path: "/analytics",
     },
     {
       id: "settings",
-      label: "Settings",
+      label: t("settings", "navigation"),
       icon: <Settings size={20} />,
       path: "/settings",
     },

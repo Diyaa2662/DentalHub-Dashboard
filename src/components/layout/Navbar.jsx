@@ -1,7 +1,10 @@
 import React from "react";
-import { Search, Bell, HelpCircle, ChevronDown } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { Search, Bell, HelpCircle, ChevronDown, Globe } from "lucide-react";
 
 const Navbar = () => {
+  const { language, switchLanguage, t } = useLanguage();
+
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -13,13 +16,31 @@ const Navbar = () => {
             />
             <input
               type="search"
-              placeholder="Search products, orders, customers..."
+              placeholder={
+                t("search", "common") + " products, orders, customers..."
+              }
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
         </div>
 
         <div className="flex items-center space-x-4">
+          {/* مبدل اللغة */}
+          <div className="relative">
+            <select
+              value={language}
+              onChange={(e) => switchLanguage(e.target.value)}
+              className="appearance-none bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="en">🇺🇸 English</option>
+              <option value="sv">🇸🇪 Svenska</option>
+            </select>
+            <Globe
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none"
+              size={16}
+            />
+          </div>
+
           <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg">
             <Bell size={20} />
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>

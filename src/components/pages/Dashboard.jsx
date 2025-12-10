@@ -1,4 +1,5 @@
 import React from "react";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { DataGrid, Column } from "devextreme-react/data-grid";
 import {
   Chart,
@@ -24,6 +25,8 @@ import {
 import StatCard from "../ui/StatCard";
 
 const Dashboard = () => {
+  const { t } = useLanguage();
+
   // Mock data for statistics
   const statsData = [
     {
@@ -119,17 +122,23 @@ const Dashboard = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
-        <p className="text-gray-600">
-          Welcome back! Here's what's happening with your dental equipment store
-          today.
-        </p>
+        <h1 className="text-2xl font-bold text-gray-800">
+          {t("overview", "dashboard")}
+        </h1>
+        <p className="text-gray-600">{t("welcomeBack", "dashboard")}</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsData.map((stat, index) => (
-          <StatCard key={index} {...stat} />
+          <StatCard
+            key={index}
+            {...stat}
+            title={t(
+              stat.translationKey || stat.title.toLowerCase().replace(" ", ""),
+              "dashboard"
+            )}
+          />
         ))}
       </div>
 

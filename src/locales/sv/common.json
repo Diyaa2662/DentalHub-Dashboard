@@ -1,0 +1,23 @@
+{
+  "welcome": "Välkommen",
+  "save": "Spara",
+  "cancel": "Avbryt",
+  "delete": "Radera",
+  "edit": "Redigera",
+  "add": "Lägg till",
+  "search": "Sök",
+  "loading": "Laddar...",
+  "error": "Fel",
+  "success": "Framgång",
+  "confirm": "Bekräfta",
+  "back": "Tillbaka",
+  "next": "Nästa",
+  "previous": "Föregående",
+  "submit": "Skicka",
+  "reset": "Återställ",
+  "close": "Stäng",
+  "open": "Öppna",
+  "yes": "Ja",
+  "no": "Nej",
+  "ok": "OK"
+}

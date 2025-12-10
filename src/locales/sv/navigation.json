@@ -1,0 +1,14 @@
+{
+  "dashboard": "Instrumentpanel",
+  "products": "Produkter",
+  "orders": "Beställningar",
+  "customers": "Kunder",
+  "invoices": "Fakturor",
+  "analytics": "Analys",
+  "settings": "Inställningar",
+  "logout": "Logga ut",
+  "login": "Logga in",
+  "register": "Registrera",
+  "profile": "Profil",
+  "admin": "Administratör"
+}
