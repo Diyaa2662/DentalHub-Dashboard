@@ -10,5 +10,9 @@
   "login": "Login",
   "register": "Register",
   "profile": "Profile",
-  "admin": "Admin"
+  "admin": "Admin",
+  "adminDashboard": "Admin Dashboard",
+  "adminUser": "Admin User",
+  "dentalAdmin": "Dental Admin",
+  "superAdmin": "Super Admin"
 }

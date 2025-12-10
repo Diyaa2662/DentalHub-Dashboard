@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useLanguage } from "../../contexts/LanguageContext";
 import {
   DataGrid,
   Column,
@@ -6,7 +7,6 @@ import {
   Paging,
   Pager,
 } from "devextreme-react/data-grid";
-import { Button } from "devextreme-react/button";
 import {
   FileText,
   Download,
@@ -19,11 +19,16 @@ import {
   DollarSign,
   Building,
   User,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Calendar,
 } from "lucide-react";
 
 const Invoices = () => {
-  const [activeTab, setActiveTab] = useState("all"); // all, income, outcome
+  const [activeTab, setActiveTab] = useState("all");
   const [selectedRows, setSelectedRows] = useState([]);
+  const { t } = useLanguage();
 
   // بيانات وهمية لفواتير الدخل (مشتريات من الموردين)
   const incomeInvoices = [
@@ -167,18 +172,32 @@ const Invoices = () => {
   };
 
   const handlePrintInvoice = (invoiceId) => {
-    alert(`Printing invoice: ${invoiceId}`);
-    // هنا يمكنك إضافة منطق الطباعة الفعلي
+    alert(`${t("printingInvoice", "invoices")} ${invoiceId}`);
   };
 
   const handleDownloadInvoice = (invoiceId) => {
-    alert(`Downloading invoice: ${invoiceId}`);
-    // هنا يمكنك إضافة منطق التحميل الفعلي
+    alert(`${t("downloadingInvoice", "invoices")} ${invoiceId}`);
   };
 
   const handleViewInvoice = (invoiceId) => {
-    alert(`Viewing invoice: ${invoiceId}`);
-    // هنا يمكنك إضافة منطق عرض الفاتورة
+    alert(`${t("viewingInvoice", "invoices")} ${invoiceId}`);
+  };
+
+  const handleCreateInvoice = () => {
+    alert(t("createInvoiceMessage", "invoices"));
+  };
+
+  const handlePrintSelected = () => {
+    if (selectedRows.length === 0) {
+      alert(t("noInvoicesSelected", "invoices"));
+      return;
+    }
+    alert(
+      `${t("printingSelected", "invoices")} ${selectedRows.length} ${t(
+        "invoices",
+        "navigation"
+      ).toLowerCase()}`
+    );
   };
 
   return (
@@ -187,26 +206,32 @@ const Invoices = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
-            Invoices Management
+            {t("invoicesManagement", "invoices")}
           </h1>
-          <p className="text-gray-600">Manage income and outcome invoices</p>
+          <p className="text-gray-600">
+            {t("manageIncomeOutcome", "invoices")}
+          </p>
         </div>
         <div className="flex space-x-3 mt-4 md:mt-0">
-          <Button
-            text="Print Selected"
-            icon="print"
-            type="default"
-            stylingMode="contained"
-            className="!bg-gray-100 !text-gray-700 hover:!bg-gray-200"
+          <button
+            onClick={handlePrintSelected}
             disabled={selectedRows.length === 0}
-          />
-          <Button
-            text="Create Invoice"
-            icon="plus"
-            type="default"
-            stylingMode="contained"
-            className="!bg-dental-blue !text-white hover:!bg-blue-600"
-          />
+            className={`px-4 py-2 rounded-lg font-medium transition flex items-center space-x-2 ${
+              selectedRows.length === 0
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            <Printer size={20} />
+            <span>{t("printSelected", "invoices")}</span>
+          </button>
+          <button
+            onClick={handleCreateInvoice}
+            className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center space-x-2"
+          >
+            <Plus size={20} />
+            <span>{t("createInvoice", "invoices")}</span>
+          </button>
         </div>
       </div>
 
@@ -215,7 +240,9 @@ const Invoices = () => {
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Invoices</p>
+              <p className="text-sm text-gray-600">
+                {t("totalInvoices", "invoices")}
+              </p>
               <p className="text-2xl font-bold text-gray-800">
                 {invoiceStats.total}
               </p>
@@ -224,13 +251,17 @@ const Invoices = () => {
               <FileText className="text-dental-blue" size={24} />
             </div>
           </div>
-          <p className="text-sm text-green-600 mt-2">+12% from last month</p>
+          <p className="text-sm text-green-600 mt-2">
+            +12% {t("fromLastMonth", "orders")}
+          </p>
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Amount</p>
+              <p className="text-sm text-gray-600">
+                {t("totalAmount", "invoices")}
+              </p>
               <p className="text-2xl font-bold text-gray-800">
                 $
                 {invoiceStats.totalAmount.toLocaleString("en-US", {
@@ -243,37 +274,47 @@ const Invoices = () => {
               <DollarSign className="text-green-500" size={24} />
             </div>
           </div>
-          <p className="text-sm text-green-600 mt-2">+18% from last month</p>
+          <p className="text-sm text-green-600 mt-2">
+            +18% {t("fromLastMonth", "orders")}
+          </p>
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Pending Invoices</p>
+              <p className="text-sm text-gray-600">
+                {t("pendingInvoices", "invoices")}
+              </p>
               <p className="text-2xl font-bold text-yellow-600">
                 {invoiceStats.pending}
               </p>
             </div>
             <div className="p-3 bg-yellow-50 rounded-lg">
-              <Filter className="text-yellow-500" size={24} />
+              <Clock className="text-yellow-500" size={24} />
             </div>
           </div>
-          <p className="text-sm text-red-600 mt-2">Requires attention</p>
+          <p className="text-sm text-red-600 mt-2">
+            {t("requiresAttention", "orders")}
+          </p>
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Overdue Invoices</p>
+              <p className="text-sm text-gray-600">
+                {t("overdueInvoices", "invoices")}
+              </p>
               <p className="text-2xl font-bold text-red-600">
                 {invoiceStats.overdue}
               </p>
             </div>
             <div className="p-3 bg-red-50 rounded-lg">
-              <FileText className="text-red-500" size={24} />
+              <AlertCircle className="text-red-500" size={24} />
             </div>
           </div>
-          <p className="text-sm text-red-600 mt-2">Immediate action needed</p>
+          <p className="text-sm text-red-600 mt-2">
+            {t("immediateAction", "invoices")}
+          </p>
         </div>
       </div>
 
@@ -288,7 +329,7 @@ const Invoices = () => {
                 : "text-gray-600 hover:bg-gray-100"
             }`}
           >
-            All Invoices ({allInvoices.length})
+            {t("allInvoices", "invoices")} ({allInvoices.length})
           </button>
           <button
             onClick={() => setActiveTab("income")}
@@ -299,7 +340,9 @@ const Invoices = () => {
             }`}
           >
             <ArrowDownCircle size={18} />
-            <span>Income ({incomeInvoices.length})</span>
+            <span>
+              {t("income", "invoices")} ({incomeInvoices.length})
+            </span>
           </button>
           <button
             onClick={() => setActiveTab("outcome")}
@@ -310,7 +353,9 @@ const Invoices = () => {
             }`}
           >
             <ArrowUpCircle size={18} />
-            <span>Outcome ({outcomeInvoices.length})</span>
+            <span>
+              {t("outcome", "invoices")} ({outcomeInvoices.length})
+            </span>
           </button>
         </div>
 
@@ -325,10 +370,10 @@ const Invoices = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800">
-                    Income Invoices
+                    {t("incomeInvoices", "invoices")}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Purchases from suppliers
+                    {t("purchasesFromSuppliers", "invoices")}
                   </p>
                 </div>
               </div>
@@ -336,7 +381,9 @@ const Invoices = () => {
             </div>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Total Amount</span>
+                <span className="text-gray-600">
+                  {t("totalAmount", "invoices")}
+                </span>
                 <span className="font-bold text-green-700">
                   $
                   {incomeInvoices
@@ -352,23 +399,25 @@ const Invoices = () => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Pending</span>
+                <span className="text-gray-600">{t("pending", "common")}</span>
                 <span className="font-medium text-yellow-600">
                   {
                     incomeInvoices.filter((inv) => inv.status === "Pending")
                       .length
                   }{" "}
-                  invoices
+                  {t("invoices", "navigation").toLowerCase()}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Overdue</span>
+                <span className="text-gray-600">
+                  {t("overdue", "invoices")}
+                </span>
                 <span className="font-medium text-red-600">
                   {
                     incomeInvoices.filter((inv) => inv.status === "Overdue")
                       .length
                   }{" "}
-                  invoices
+                  {t("invoices", "navigation").toLowerCase()}
                 </span>
               </div>
             </div>
@@ -383,16 +432,20 @@ const Invoices = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800">
-                    Outcome Invoices
+                    {t("outcomeInvoices", "invoices")}
                   </h3>
-                  <p className="text-sm text-gray-600">Sales to customers</p>
+                  <p className="text-sm text-gray-600">
+                    {t("salesToCustomers", "invoices")}
+                  </p>
                 </div>
               </div>
               <User className="text-blue-600" size={20} />
             </div>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Total Amount</span>
+                <span className="text-gray-600">
+                  {t("totalAmount", "invoices")}
+                </span>
                 <span className="font-bold text-blue-700">
                   $
                   {outcomeInvoices
@@ -408,23 +461,23 @@ const Invoices = () => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Pending</span>
+                <span className="text-gray-600">{t("pending", "common")}</span>
                 <span className="font-medium text-yellow-600">
                   {
                     outcomeInvoices.filter((inv) => inv.status === "Pending")
                       .length
                   }{" "}
-                  invoices
+                  {t("invoices", "navigation").toLowerCase()}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Shipped</span>
+                <span className="text-gray-600">{t("shipped", "orders")}</span>
                 <span className="font-medium text-purple-600">
                   {
                     outcomeInvoices.filter((inv) => inv.status === "Shipped")
                       .length
                   }{" "}
-                  invoices
+                  {t("invoices", "navigation").toLowerCase()}
                 </span>
               </div>
             </div>
@@ -441,7 +494,10 @@ const Invoices = () => {
             selection={{ mode: "multiple" }}
             onSelectionChanged={(e) => setSelectedRows(e.selectedRowsData)}
           >
-            <SearchPanel visible={true} placeholder="Search invoices..." />
+            <SearchPanel
+              visible={true}
+              placeholder={t("searchInvoices", "invoices")}
+            />
             <Paging defaultPageSize={10} />
             <Pager
               showPageSizeSelector={true}
@@ -449,10 +505,14 @@ const Invoices = () => {
               showInfo={true}
             />
 
-            <Column dataField="id" caption="Invoice ID" width={120} />
+            <Column
+              dataField="id"
+              caption={t("invoiceId", "invoices")}
+              width={120}
+            />
             <Column
               dataField="type"
-              caption="Type"
+              caption={t("type", "products")}
               cellRender={({ data }) => (
                 <span
                   className={`
@@ -469,64 +529,101 @@ const Invoices = () => {
                   ) : (
                     <ArrowUpCircle size={12} className="mr-1" />
                   )}
-                  {data.type}
+                  {data.type === "Income"
+                    ? t("income", "invoices")
+                    : t("outcome", "invoices")}
                 </span>
               )}
             />
             <Column
               dataField={activeTab === "income" ? "supplier" : "customer"}
-              caption={activeTab === "income" ? "Supplier" : "Customer"}
+              caption={
+                activeTab === "income"
+                  ? t("supplier", "products")
+                  : t("customer", "navigation")
+              }
             />
-            <Column dataField="amount" caption="Amount" />
-            <Column dataField="tax" caption="Tax" />
-            <Column dataField="total" caption="Total" />
-            <Column dataField="date" caption="Date" width={100} />
-            <Column dataField="dueDate" caption="Due Date" width={100} />
+            <Column dataField="amount" caption={t("amount", "common")} />
+            <Column dataField="tax" caption={t("tax", "products")} />
+            <Column dataField="total" caption={t("total", "customers")} />
+            <Column
+              dataField="date"
+              caption={t("date", "orders")}
+              width={100}
+            />
+            <Column
+              dataField="dueDate"
+              caption={t("dueDate", "invoices")}
+              width={100}
+            />
             <Column
               dataField="status"
-              caption="Status"
-              cellRender={({ data }) => (
-                <span
-                  className={`
-                  px-3 py-1 rounded-full text-xs font-medium
-                  ${
-                    data.status === "Paid"
-                      ? "bg-green-100 text-green-800"
-                      : data.status === "Pending"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : data.status === "Shipped"
-                      ? "bg-purple-100 text-purple-800"
-                      : "bg-red-100 text-red-800"
-                  }
-                `}
-                >
-                  {data.status}
-                </span>
-              )}
+              caption={t("status", "common")}
+              cellRender={({ data }) => {
+                const statusConfig = {
+                  Paid: {
+                    color: "bg-green-100 text-green-800",
+                    icon: <CheckCircle size={12} />,
+                  },
+                  Pending: {
+                    color: "bg-yellow-100 text-yellow-800",
+                    icon: <Clock size={12} />,
+                  },
+                  Shipped: {
+                    color: "bg-purple-100 text-purple-800",
+                    icon: <ArrowUpCircle size={12} />,
+                  },
+                  Overdue: {
+                    color: "bg-red-100 text-red-800",
+                    icon: <AlertCircle size={12} />,
+                  },
+                };
+
+                const config = statusConfig[data.status] || {
+                  color: "bg-gray-100 text-gray-800",
+                };
+
+                return (
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center ${config.color}`}
+                  >
+                    {config.icon && <>{config.icon}</>}
+                    <span className="ml-1">
+                      {data.status === "Paid"
+                        ? t("paid", "invoices")
+                        : data.status === "Pending"
+                        ? t("pending", "common")
+                        : data.status === "Shipped"
+                        ? t("shipped", "orders")
+                        : t("overdue", "invoices")}
+                    </span>
+                  </span>
+                );
+              }}
             />
             <Column
-              caption="Actions"
+              caption={t("actions", "products")}
               width={140}
               cellRender={({ data }) => (
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleViewInvoice(data.id)}
-                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                    title="View Invoice"
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                    title={t("view", "common")}
                   >
                     <Eye size={16} />
                   </button>
                   <button
                     onClick={() => handlePrintInvoice(data.id)}
-                    className="p-1.5 text-gray-600 hover:bg-gray-50 rounded"
-                    title="Print Invoice"
+                    className="p-1.5 text-gray-600 hover:bg-gray-50 rounded transition"
+                    title={t("print", "common")}
                   >
                     <Printer size={16} />
                   </button>
                   <button
                     onClick={() => handleDownloadInvoice(data.id)}
-                    className="p-1.5 text-green-600 hover:bg-green-50 rounded"
-                    title="Download Invoice"
+                    className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
+                    title={t("download", "common")}
                   >
                     <Download size={16} />
                   </button>
@@ -540,34 +637,171 @@ const Invoices = () => {
       {/* Quick Actions */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          Quick Actions
+          {t("quickActions", "invoices")}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="p-4 border border-green-200 rounded-lg hover:bg-green-50 transition flex items-center justify-center space-x-3">
+          <button
+            onClick={() => {
+              setActiveTab("income");
+              handleCreateInvoice();
+            }}
+            className="p-4 border border-green-200 rounded-lg hover:bg-green-50 transition flex items-center justify-center space-x-3"
+          >
             <ArrowDownCircle className="text-green-600" size={24} />
             <div className="text-left">
-              <p className="font-medium text-gray-800">Create Income Invoice</p>
-              <p className="text-sm text-gray-600">Record supplier purchase</p>
+              <p className="font-medium text-gray-800">
+                {t("createIncomeInvoice", "invoices")}
+              </p>
+              <p className="text-sm text-gray-600">
+                {t("recordSupplierPurchase", "invoices")}
+              </p>
             </div>
           </button>
 
-          <button className="p-4 border border-blue-200 rounded-lg hover:bg-blue-50 transition flex items-center justify-center space-x-3">
+          <button
+            onClick={() => {
+              setActiveTab("outcome");
+              handleCreateInvoice();
+            }}
+            className="p-4 border border-blue-200 rounded-lg hover:bg-blue-50 transition flex items-center justify-center space-x-3"
+          >
             <ArrowUpCircle className="text-blue-600" size={24} />
             <div className="text-left">
               <p className="font-medium text-gray-800">
-                Create Outcome Invoice
+                {t("createOutcomeInvoice", "invoices")}
               </p>
-              <p className="text-sm text-gray-600">Record customer sale</p>
+              <p className="text-sm text-gray-600">
+                {t("recordCustomerSale", "invoices")}
+              </p>
             </div>
           </button>
 
-          <button className="p-4 border border-purple-200 rounded-lg hover:bg-purple-50 transition flex items-center justify-center space-x-3">
+          <button
+            onClick={handlePrintSelected}
+            className="p-4 border border-purple-200 rounded-lg hover:bg-purple-50 transition flex items-center justify-center space-x-3"
+          >
             <FileText className="text-purple-600" size={24} />
             <div className="text-left">
-              <p className="font-medium text-gray-800">Generate Reports</p>
-              <p className="text-sm text-gray-600">Monthly invoice reports</p>
+              <p className="font-medium text-gray-800">
+                {t("generateReports", "invoices")}
+              </p>
+              <p className="text-sm text-gray-600">
+                {t("monthlyInvoiceReports", "invoices")}
+              </p>
             </div>
           </button>
+        </div>
+      </div>
+
+      {/* Upcoming Due Dates */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800">
+              {t("upcomingDueDates", "invoices")}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {t("invoicesDueSoon", "invoices")}
+            </p>
+          </div>
+          <Calendar className="text-dental-teal" size={24} />
+        </div>
+
+        <div className="space-y-3">
+          {[
+            {
+              id: "INV-IN-003",
+              type: "Income",
+              to: "Surgical Tools Ltd.",
+              amount: "$2,530",
+              dueDate: "2024-02-05",
+              status: "pending",
+            },
+            {
+              id: "INV-OUT-002",
+              type: "Outcome",
+              to: "Dr. Michael Chen",
+              amount: "$3,080",
+              dueDate: "2024-02-14",
+              status: "pending",
+            },
+            {
+              id: "INV-IN-004",
+              type: "Income",
+              to: "Dental Materials Corp.",
+              amount: "$1,980",
+              dueDate: "2024-02-03",
+              status: "overdue",
+            },
+            {
+              id: "INV-OUT-001",
+              type: "Outcome",
+              to: "Dr. Sarah Johnson",
+              amount: "$935",
+              dueDate: "2024-02-16",
+              status: "pending",
+            },
+          ].map((invoice) => (
+            <div
+              key={invoice.id}
+              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+            >
+              <div className="flex items-center space-x-4">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    invoice.status === "overdue"
+                      ? "bg-red-100"
+                      : "bg-yellow-100"
+                  }`}
+                >
+                  {invoice.type === "Income" ? (
+                    <ArrowDownCircle
+                      className={
+                        invoice.status === "overdue"
+                          ? "text-red-600"
+                          : "text-yellow-600"
+                      }
+                      size={20}
+                    />
+                  ) : (
+                    <ArrowUpCircle
+                      className={
+                        invoice.status === "overdue"
+                          ? "text-red-600"
+                          : "text-yellow-600"
+                      }
+                      size={20}
+                    />
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-gray-800">
+                    {invoice.id} - {invoice.to}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {invoice.type === "Income"
+                      ? t("income", "invoices")
+                      : t("outcome", "invoices")}{" "}
+                    • {t("due", "invoices")}: {invoice.dueDate}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-gray-800">{invoice.amount}</p>
+                <p
+                  className={`text-sm font-medium ${
+                    invoice.status === "overdue"
+                      ? "text-red-600"
+                      : "text-yellow-600"
+                  }`}
+                >
+                  {invoice.status === "overdue"
+                    ? t("overdue", "invoices")
+                    : t("dueSoon", "invoices")}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -233,5 +233,22 @@
   "feedback": "Feedback",
   "whatsNew": "What's New",
   "itemsSelected": "items selected",
-  "noProductsFound": "No products found"
+  "noProductsFound": "No products found",
+  "confirmBulkDelete": "Are you sure you want to delete",
+  "bulkDeleteSuccess": "Successfully deleted",
+  "exportSelected": "Exporting",
+  "exportSuccess": "Export functionality would be implemented here",
+  "equipment": "Equipment",
+  "imaging": "Imaging",
+  "surgical": "Surgical",
+  "restorative": "Restorative",
+  "hygiene": "Hygiene",
+  "inventoryValue": "Inventory Value",
+  "totalInventoryValue": "Total inventory value",
+  "avgPrice": "Average Price",
+  "averageProductPrice": "Average product price",
+  "stockTurnover": "Stock Turnover",
+  "annualStockTurnover": "Annual stock turnover rate",
+  "units": "units",
+  "products": "products"
 }

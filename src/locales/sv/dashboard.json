@@ -8,5 +8,8 @@
   "salesOverview": "Försäljningsöversikt",
   "monthlyPerformance": "Månatlig prestation",
   "recentOrders": "Senaste beställningar",
-  "topProducts": "Toppprodukter"
+  "topProducts": "Toppprodukter",
+  "monthlyRevenueOrders": "Månatliga intäkter och beställningar",
+  "latestCustomerPurchases": "Senaste kundköp",
+  "bestSellingEquipment": "Bästsäljande tandläkarutrustning"
 }

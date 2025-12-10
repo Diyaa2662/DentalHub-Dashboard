@@ -1,0 +1,18 @@
+{
+  "customersManagement": "Kundhantering",
+  "manageDentalProfessionals": "Hantera dina tandläkarprofessionella kunder",
+  "addCustomer": "Lägg till kund",
+  "addCustomerMessage": "Lägg till kundfunktionalitet",
+  "sendingEmailTo": "Skickar e-post till",
+  "totalCustomers": "Totalt antal kunder",
+  "activeCustomers": "Aktiva kunder",
+  "searchCustomers": "Sök kunder...",
+  "name": "Namn",
+  "phone": "Telefon",
+  "location": "Plats",
+  "totalSpent": "Totalt spenderat",
+  "topCustomers": "Toppkunder",
+  "highestSpendingCustomers": "Kunder som spenderat mest",
+  "total": "Totalt",
+  "growth": "Tillväxt"
+}

@@ -10,5 +10,9 @@
   "login": "Logga in",
   "register": "Registrera",
   "profile": "Profil",
-  "admin": "Administratör"
+  "admin": "Administratör",
+  "adminDashboard": "Administratörspanel",
+  "adminUser": "Administratörsanvändare",
+  "dentalAdmin": "Tandläkaradministratör",
+  "superAdmin": "Superadministratör"
 }

@@ -8,7 +8,7 @@ import {
 import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./components/pages/Dashboard";
 import Products from "./components/pages/Products";
-import AddProduct from "./components/pages/AddProduct"; // إضافة هذا السطر
+import AddProduct from "./components/pages/AddProduct";
 import Orders from "./components/pages/Orders";
 import Customers from "./components/pages/Customers";
 import Analytics from "./components/pages/Analytics";

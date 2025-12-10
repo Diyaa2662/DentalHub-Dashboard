@@ -8,10 +8,8 @@ import {
   CommonSeriesSettings,
   Export,
   Legend,
-  Point,
-  Border,
-  Title,
   Tooltip,
+  Title,
   Grid,
 } from "devextreme-react/chart";
 import {
@@ -30,7 +28,7 @@ const Dashboard = () => {
   // Mock data for statistics
   const statsData = [
     {
-      title: "Total Revenue",
+      title: "totalRevenue",
       value: "$45,231.89",
       change: "+20.1%",
       icon: <DollarSign className="text-green-500" size={24} />,
@@ -38,7 +36,7 @@ const Dashboard = () => {
       trend: "up",
     },
     {
-      title: "Total Products",
+      title: "totalProducts",
       value: "2,345",
       change: "+5.2%",
       icon: <Package className="text-blue-500" size={24} />,
@@ -46,7 +44,7 @@ const Dashboard = () => {
       trend: "up",
     },
     {
-      title: "Active Customers",
+      title: "activeCustomers",
       value: "1,234",
       change: "+12.5%",
       icon: <Users className="text-purple-500" size={24} />,
@@ -54,7 +52,7 @@ const Dashboard = () => {
       trend: "up",
     },
     {
-      title: "Orders Today",
+      title: "ordersToday",
       value: "45",
       change: "-2.3%",
       icon: <ShoppingCart className="text-orange-500" size={24} />,
@@ -133,11 +131,12 @@ const Dashboard = () => {
         {statsData.map((stat, index) => (
           <StatCard
             key={index}
-            {...stat}
-            title={t(
-              stat.translationKey || stat.title.toLowerCase().replace(" ", ""),
-              "dashboard"
-            )}
+            title={t(stat.title, "dashboard")}
+            value={stat.value}
+            change={stat.change}
+            icon={stat.icon}
+            color={stat.color}
+            trend={stat.trend}
           />
         ))}
       </div>
@@ -149,26 +148,26 @@ const Dashboard = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-800">
-                Sales Overview
+                {t("salesOverview", "dashboard")}
               </h3>
               <p className="text-sm text-gray-600">
-                Monthly revenue and orders
+                {t("monthlyRevenueOrders", "dashboard") ||
+                  "Monthly revenue and orders"}
               </p>
             </div>
             <TrendingUp className="text-dental-blue" size={24} />
           </div>
           <Chart id="chart" dataSource={salesData} palette="Soft">
             <CommonSeriesSettings argumentField="month" />
-            <Series valueField="sales" name="Sales ($)" />
-            <Series valueField="orders" name="Orders" />
+            <Series valueField="sales" name={t("sales", "products") + " ($)"} />
+            <Series valueField="orders" name={t("orders", "navigation")} />
             <ArgumentAxis>
               <Grid visible={true} />
             </ArgumentAxis>
             <Legend verticalAlignment="bottom" horizontalAlignment="center" />
             <Export enabled={true} />
             <Tooltip enabled={true} />
-            <Title text="Monthly Performance" />
-            {/* إزالة Subtitle */}
+            <Title text={t("monthlyPerformance", "dashboard")} />
           </Chart>
         </div>
 
@@ -177,9 +176,12 @@ const Dashboard = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-800">
-                Recent Orders
+                {t("recentOrders", "dashboard")}
               </h3>
-              <p className="text-sm text-gray-600">Latest customer purchases</p>
+              <p className="text-sm text-gray-600">
+                {t("latestCustomerPurchases", "dashboard") ||
+                  "Latest customer purchases"}
+              </p>
             </div>
             <ShoppingCart className="text-dental-purple" size={24} />
           </div>
@@ -189,13 +191,22 @@ const Dashboard = () => {
             columnAutoWidth={true}
             height={350}
           >
-            <Column dataField="id" caption="ID" width={60} />
-            <Column dataField="customer" caption="Customer" />
-            <Column dataField="product" caption="Product" />
-            <Column dataField="amount" caption="Amount" />
+            <Column dataField="id" caption={t("id", "products")} width={60} />
+            <Column
+              dataField="customer"
+              caption={t("customer", "navigation")}
+            />
+            <Column
+              dataField="product"
+              caption={t("product", "products") || "Product"}
+            />
+            <Column
+              dataField="amount"
+              caption={t("amount", "common") || "Amount"}
+            />
             <Column
               dataField="status"
-              caption="Status"
+              caption={t("status", "common")}
               cellRender={({ data }) => (
                 <span
                   className={`
@@ -211,7 +222,13 @@ const Dashboard = () => {
                   }
                 `}
                 >
-                  {data.status}
+                  {data.status === "Completed"
+                    ? t("completed", "common")
+                    : data.status === "Processing"
+                    ? t("processing", "common") || "Processing"
+                    : data.status === "Pending"
+                    ? t("pending", "common")
+                    : data.status}
                 </span>
               )}
             />
@@ -224,10 +241,11 @@ const Dashboard = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-800">
-              Top Products
+              {t("topProducts", "dashboard")}
             </h3>
             <p className="text-sm text-gray-600">
-              Best selling dental equipment
+              {t("bestSellingEquipment", "dashboard") ||
+                "Best selling dental equipment"}
             </p>
           </div>
           <Star className="text-dental-teal" size={24} />
@@ -237,22 +255,22 @@ const Dashboard = () => {
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  Product
+                  {t("product", "products") || "Product"}
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  Category
+                  {t("category", "products")}
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  Price
+                  {t("price", "products")}
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  Stock
+                  {t("stock", "products")}
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  Sales
+                  {t("sales", "products")}
                 </th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  Rating
+                  {t("rating", "products")}
                 </th>
               </tr>
             </thead>
@@ -323,7 +341,7 @@ const Dashboard = () => {
                       }
                     `}
                     >
-                      {item.stock} units
+                      {item.stock} {t("units", "products") || "units"}
                     </span>
                   </td>
                   <td className="py-3 px-4">{item.sales}</td>

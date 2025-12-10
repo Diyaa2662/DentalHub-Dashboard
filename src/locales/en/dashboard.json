@@ -8,5 +8,8 @@
   "salesOverview": "Sales Overview",
   "monthlyPerformance": "Monthly Performance",
   "recentOrders": "Recent Orders",
-  "topProducts": "Top Products"
+  "topProducts": "Top Products",
+  "monthlyRevenueOrders": "Monthly revenue and orders",
+  "latestCustomerPurchases": "Latest customer purchases",
+  "bestSellingEquipment": "Best selling dental equipment"
 }

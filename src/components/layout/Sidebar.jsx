@@ -12,7 +12,7 @@ import {
   Menu,
   X,
   LogOut,
-  FileText, // إضافة أيقونة الفواتير
+  FileText,
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -24,13 +24,13 @@ const Sidebar = () => {
   const menuItems = [
     {
       id: "dashboard",
-      label: t("dashboard", "navigation"),
+      label: t("dashboard", "navigation") || t("dashboard", "common"),
       icon: <LayoutDashboard size={20} />,
       path: "/",
     },
     {
       id: "products",
-      label: t("products", "navigation"),
+      label: t("products", "navigation") || t("products", "products"),
       icon: <Package size={20} />,
       path: "/products",
     },
@@ -54,13 +54,13 @@ const Sidebar = () => {
     },
     {
       id: "analytics",
-      label: t("analytics", "navigation"),
+      label: t("analytics", "navigation") || t("analytics", "common"),
       icon: <BarChart3 size={20} />,
       path: "/analytics",
     },
     {
       id: "settings",
-      label: t("settings", "navigation"),
+      label: t("settings", "navigation") || t("settings", "common"),
       icon: <Settings size={20} />,
       path: "/settings",
     },
@@ -97,7 +97,9 @@ const Sidebar = () => {
               <h1 className="text-xl font-bold text-gray-800">
                 DentalPro Shop
               </h1>
-              <p className="text-sm text-gray-500">Admin Dashboard</p>
+              <p className="text-sm text-gray-500">
+                {t("adminDashboard", "navigation") || "Admin Dashboard"}
+              </p>
             </div>
           </div>
         </div>
@@ -136,7 +138,9 @@ const Sidebar = () => {
               <span className="text-white font-bold">AD</span>
             </div>
             <div className="flex-1">
-              <p className="font-medium text-gray-800">Admin User</p>
+              <p className="font-medium text-gray-800">
+                {t("adminUser", "navigation") || "Admin User"}
+              </p>
               <p className="text-sm text-gray-500">admin@dentalpro.com</p>
             </div>
           </div>
@@ -147,7 +151,9 @@ const Sidebar = () => {
             className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 text-red-700 rounded-lg hover:from-red-100 hover:to-red-200 transition-colors"
           >
             <LogOut size={18} />
-            <span className="font-medium">Sign Out</span>
+            <span className="font-medium">
+              {t("logout", "navigation") || t("signOut", "common")}
+            </span>
           </button>
         </div>
       </aside>

@@ -1,0 +1,13 @@
+{
+  "signInToDashboard": "Logga in på din administratörspanel",
+  "welcomeBack": "Välkommen tillbaka",
+  "enterCredentials": "Ange dina inloggningsuppgifter för att fortsätta",
+  "emailAddress": "E-postadress",
+  "enterYourEmail": "Ange din e-post",
+  "enterYourPassword": "Ange ditt lösenord",
+  "demoCredentials": "Demo-inloggningsuppgifter",
+  "signingIn": "Loggar in...",
+  "demoAdminPanel": "Detta är en demo-administratörspanel. För säkerhets skull, använd inte riktiga inloggningsuppgifter.",
+  "invalidCredentials": "Ogiltig e-post eller lösenord. Försök igen.",
+  "currentLanguage": "Aktuellt språk"
+}

@@ -233,5 +233,22 @@
   "feedback": "Feedback",
   "whatsNew": "Vad är nytt",
   "itemsSelected": "objekt valda",
-  "noProductsFound": "Inga produkter hittades"
+  "noProductsFound": "Inga produkter hittades",
+  "confirmBulkDelete": "Är du säker på att du vill radera",
+  "bulkDeleteSuccess": "Framgångsrikt raderat",
+  "exportSelected": "Exporterar",
+  "exportSuccess": "Exporteringsfunktionalitet skulle implementeras här",
+  "equipment": "Utrustning",
+  "imaging": "Bildtagning",
+  "surgical": "Kirurgisk",
+  "restorative": "Restaurativ",
+  "hygiene": "Hygien",
+  "inventoryValue": "Lagervärde",
+  "totalInventoryValue": "Totalt lagervärde",
+  "avgPrice": "Genomsnittspris",
+  "averageProductPrice": "Genomsnittligt produktpris",
+  "stockTurnover": "Lageromsättning",
+  "annualStockTurnover": "Årlig lageromsättningsgrad",
+  "units": "enheter",
+  "products": "produkter"
 }

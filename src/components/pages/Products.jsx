@@ -16,6 +16,11 @@ import {
   Trash2,
   Eye,
   Package,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  TrendingUp,
+  DollarSign,
 } from "lucide-react";
 
 const Products = () => {
@@ -99,6 +104,49 @@ const Products = () => {
     },
   ];
 
+  const handleExport = () => {
+    alert(
+      t("exportSuccess", "products") ||
+        "Export functionality would be implemented here"
+    );
+  };
+
+  const handleDelete = (id, name) => {
+    if (window.confirm(`${t("confirmDelete", "products")} "${name}"?`)) {
+      alert(`${t("deleteSuccess", "products")}: ${name}`);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedRows.length === 0) return;
+    if (
+      window.confirm(
+        `${t("confirmBulkDelete", "products")} ${selectedRows.length} ${t(
+          "products",
+          "products"
+        )}?`
+      )
+    ) {
+      alert(
+        `${t("bulkDeleteSuccess", "products")} ${selectedRows.length} ${t(
+          "products",
+          "products"
+        )}`
+      );
+      setSelectedRows([]);
+    }
+  };
+
+  const handleBulkExport = () => {
+    if (selectedRows.length === 0) return;
+    alert(
+      `${t("exportSelected", "products")} ${selectedRows.length} ${t(
+        "products",
+        "products"
+      )}`
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -111,13 +159,11 @@ const Products = () => {
         </div>
         <div className="flex space-x-3 mt-4 md:mt-0">
           <button
-            onClick={() => {
-              /* Export logic */
-            }}
+            onClick={handleExport}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center space-x-2"
           >
             <Download size={20} />
-            <span>{t("export", "products")}</span>
+            <span>{t("export", "common")}</span>
           </button>
           <button
             onClick={() => navigate("/products/add")}
@@ -138,16 +184,37 @@ const Products = () => {
           <p className="text-2xl font-bold text-gray-800">145</p>
         </div>
         <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <p className="text-sm text-gray-600">{t("inStock", "products")}</p>
-          <p className="text-2xl font-bold text-green-600">112</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">
+                {t("inStock", "products")}
+              </p>
+              <p className="text-2xl font-bold text-green-600">112</p>
+            </div>
+            <CheckCircle className="text-green-500" size={20} />
+          </div>
         </div>
         <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <p className="text-sm text-gray-600">{t("lowStock", "products")}</p>
-          <p className="text-2xl font-bold text-yellow-600">18</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">
+                {t("lowStock", "products")}
+              </p>
+              <p className="text-2xl font-bold text-yellow-600">18</p>
+            </div>
+            <AlertCircle className="text-yellow-500" size={20} />
+          </div>
         </div>
         <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <p className="text-sm text-gray-600">{t("outOfStock", "products")}</p>
-          <p className="text-2xl font-bold text-red-600">15</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">
+                {t("outOfStock", "products")}
+              </p>
+              <p className="text-2xl font-bold text-red-600">15</p>
+            </div>
+            <XCircle className="text-red-500" size={20} />
+          </div>
         </div>
       </div>
 
@@ -179,56 +246,65 @@ const Products = () => {
           <Column dataField="stock" caption={t("stock", "products")} />
           <Column
             dataField="status"
-            caption={t("status", "products")}
-            cellRender={({ data }) => (
-              <span
-                className={`
-                px-3 py-1 rounded-full text-xs font-medium
-                ${
-                  data.status === "In Stock"
-                    ? "bg-green-100 text-green-800"
+            caption={t("status", "common")}
+            cellRender={({ data }) => {
+              let statusConfig = {
+                "In Stock": {
+                  color: "bg-green-100 text-green-800",
+                  icon: <CheckCircle size={12} className="mr-1" />,
+                },
+                "Low Stock": {
+                  color: "bg-yellow-100 text-yellow-800",
+                  icon: <AlertCircle size={12} className="mr-1" />,
+                },
+                "Out of Stock": {
+                  color: "bg-red-100 text-red-800",
+                  icon: <XCircle size={12} className="mr-1" />,
+                },
+              };
+
+              const config = statusConfig[data.status] || {
+                color: "bg-gray-100 text-gray-800",
+              };
+
+              return (
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center ${config.color}`}
+                >
+                  {config.icon}
+                  {data.status === "In Stock"
+                    ? t("inStock", "products")
                     : data.status === "Low Stock"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-red-100 text-red-800"
-                }
-              `}
-              >
-                {data.status === "In Stock"
-                  ? t("inStock", "products")
-                  : data.status === "Low Stock"
-                  ? t("lowStock", "products")
-                  : t("outOfStock", "products")}
-              </span>
-            )}
+                    ? t("lowStock", "products")
+                    : t("outOfStock", "products")}
+                </span>
+              );
+            }}
           />
           <Column dataField="sales" caption={t("sales", "products")} />
           <Column
             caption={t("actions", "products")}
-            width={120}
+            width={140}
             cellRender={({ data }) => (
               <div className="flex space-x-2">
                 <button
                   onClick={() => navigate(`/products/view/${data.id}`)}
-                  className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                  title={t("view", "products")}
+                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                  title={t("view", "common")}
                 >
                   <Eye size={16} />
                 </button>
                 <button
                   onClick={() => navigate(`/products/edit/${data.id}`)}
-                  className="p-1 text-green-600 hover:bg-green-50 rounded"
-                  title={t("edit", "products")}
+                  className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
+                  title={t("edit", "common")}
                 >
                   <Edit size={16} />
                 </button>
                 <button
-                  onClick={() => {
-                    if (window.confirm(t("confirmDelete", "products"))) {
-                      // Delete logic here
-                    }
-                  }}
-                  className="p-1 text-red-600 hover:bg-red-50 rounded"
-                  title={t("delete", "products")}
+                  onClick={() => handleDelete(data.id, data.name)}
+                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                  title={t("delete", "common")}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -245,28 +321,23 @@ const Products = () => {
             <div className="flex items-center space-x-3">
               <Package className="text-gray-500" size={20} />
               <span className="font-medium text-gray-700">
-                {selectedRows.length}{" "}
-                {t("itemsSelected", "products") || "items selected"}
+                {selectedRows.length} {t("itemsSelected", "products")}
               </span>
             </div>
             <div className="flex space-x-2">
               <button
-                onClick={() => {
-                  if (window.confirm(t("confirmDelete", "products"))) {
-                    // Bulk delete logic
-                  }
-                }}
-                className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition"
+                onClick={handleBulkDelete}
+                className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition flex items-center space-x-2"
               >
-                {t("bulkDelete", "products")}
+                <Trash2 size={16} />
+                <span>{t("bulkDelete", "products")}</span>
               </button>
               <button
-                onClick={() => {
-                  /* Bulk export logic */
-                }}
-                className="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition"
+                onClick={handleBulkExport}
+                className="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center space-x-2"
               >
-                {t("bulkExport", "products")}
+                <Download size={16} />
+                <span>{t("bulkExport", "products")}</span>
               </button>
             </div>
           </div>
@@ -280,21 +351,62 @@ const Products = () => {
         </h3>
         <div className="flex flex-wrap gap-2">
           {[
-            "Equipment",
-            "Imaging",
-            "Surgical",
-            "Restorative",
-            "Hygiene",
-            "Digital",
-            "All",
+            { value: "all", label: t("allCategories", "products") },
+            { value: "equipment", label: t("equipment", "products") },
+            { value: "imaging", label: t("imaging", "products") },
+            { value: "surgical", label: t("surgical", "products") },
+            { value: "restorative", label: t("restorative", "products") },
+            { value: "hygiene", label: t("hygiene", "products") },
           ].map((category) => (
             <button
-              key={category}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+              key={category.value}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
             >
-              {category === "All" ? t("allCategories", "products") : category}
+              {category.label}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-800">
+              {t("inventoryValue", "products")}
+            </h3>
+            <DollarSign className="text-green-500" size={20} />
+          </div>
+          <p className="text-2xl font-bold text-gray-800">$245,800</p>
+          <p className="text-sm text-gray-600 mt-2">
+            {t("totalInventoryValue", "products")}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-800">
+              {t("avgPrice", "products")}
+            </h3>
+            <Package className="text-blue-500" size={20} />
+          </div>
+          <p className="text-2xl font-bold text-gray-800">$890</p>
+          <p className="text-sm text-gray-600 mt-2">
+            {t("averageProductPrice", "products")}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-800">
+              {t("stockTurnover", "products")}
+            </h3>
+            <TrendingUp className="text-purple-500" size={20} />
+          </div>
+          <p className="text-2xl font-bold text-gray-800">4.2x</p>
+          <p className="text-sm text-gray-600 mt-2">
+            {t("annualStockTurnover", "products")}
+          </p>
         </div>
       </div>
     </div>

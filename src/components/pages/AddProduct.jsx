@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// إزالة استيراد Button من devextreme واستخدام button عادي
+import { useLanguage } from "../../contexts/LanguageContext";
 import { TextBox, TextArea } from "devextreme-react";
 import { SelectBox } from "devextreme-react/select-box";
 import { NumberBox } from "devextreme-react/number-box";
@@ -15,10 +15,13 @@ import {
   AlertCircle,
   CheckCircle,
   Image as ImageIcon,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 const AddProduct = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
@@ -28,26 +31,39 @@ const AddProduct = () => {
     stock: "",
     description: "",
     image: null,
+    status: "active",
+    featured: false,
+    trackInventory: true,
+    lowStockAlert: 10,
+    unit: "Piece",
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  // eslint-disable-next-line no-unused-vars
+  const [showPassword, setShowPassword] = useState(false);
 
   // قائمة الفئات
   const categories = [
-    "Equipment",
-    "Imaging",
-    "Surgical",
-    "Restorative",
-    "Hygiene",
-    "Digital",
-    "Sterilization",
-    "Magnification",
-    "Orthodontic",
+    t("equipment", "products"),
+    t("imaging", "products"),
+    t("surgical", "products"),
+    t("restorative", "products"),
+    t("hygiene", "products"),
+    t("digital", "products"),
+    t("sterilization", "products"),
+    t("magnification", "products"),
+    t("orthodontic", "products"),
   ];
 
   // قائمة الوحدات
-  const units = ["Piece", "Set", "Box", "Kit", "Pack"];
+  const units = [
+    t("piece", "addProduct") || "Piece",
+    t("set", "addProduct") || "Set",
+    t("box", "addProduct") || "Box",
+    t("kit", "addProduct") || "Kit",
+    t("pack", "addProduct") || "Pack",
+  ];
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({
@@ -94,6 +110,14 @@ const AddProduct = () => {
     }, 1500);
   };
 
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -108,10 +132,10 @@ const AddProduct = () => {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              Add New Product
+              {t("addNewProduct", "addProduct")}
             </h1>
             <p className="text-gray-600">
-              Add new dental equipment to your inventory
+              {t("addDentalEquipment", "addProduct")}
             </p>
           </div>
         </div>
@@ -121,7 +145,7 @@ const AddProduct = () => {
           onClick={() => navigate("/products")}
           className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
         >
-          Cancel
+          {t("cancel", "common")}
         </button>
       </div>
 
@@ -133,17 +157,17 @@ const AddProduct = () => {
               <CheckCircle className="text-green-600" size={32} />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">
-              Product Added Successfully!
+              {t("productAddedSuccess", "addProduct")}
             </h3>
             <p className="text-gray-600 mb-6">
-              The new product has been added to your inventory.
+              {t("productAddedInventory", "addProduct")}
             </p>
             <button
               type="button"
               onClick={() => navigate("/products")}
               className="px-6 py-3 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition"
             >
-              Go Back to Products
+              {t("goBackProducts", "addProduct")}
             </button>
           </div>
         </div>
@@ -161,10 +185,10 @@ const AddProduct = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
-                      Basic Information
+                      {t("basicInformation", "addProduct")}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      Enter product details
+                      {t("enterProductDetails", "addProduct")}
                     </p>
                   </div>
                 </div>
@@ -173,7 +197,7 @@ const AddProduct = () => {
                   {/* Product Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Product Name *
+                      {t("productName", "addProduct")} *
                     </label>
                     <TextBox
                       placeholder="e.g., Advanced Dental Chair"
@@ -187,14 +211,14 @@ const AddProduct = () => {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-medium text-gray-700">
-                        SKU (Stock Keeping Unit)
+                        {t("skuStockKeeping", "addProduct")}
                       </label>
                       <button
                         type="button"
                         onClick={generateSKU}
                         className="text-sm text-dental-blue hover:text-blue-600"
                       >
-                        Generate SKU
+                        {t("generateSku", "addProduct")}
                       </button>
                     </div>
                     <div className="relative">
@@ -214,13 +238,15 @@ const AddProduct = () => {
                   {/* Category */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Category *
+                      {t("category", "products")} *
                     </label>
                     <SelectBox
                       items={categories}
                       value={formData.category}
                       onValueChange={(value) => handleChange("category", value)}
-                      placeholder="Select category"
+                      placeholder={
+                        t("selectCategory", "common") || "Select category"
+                      }
                       width="100%"
                     />
                   </div>
@@ -228,13 +254,13 @@ const AddProduct = () => {
                   {/* Unit */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Unit
+                      {t("unit", "addProduct")}
                     </label>
                     <SelectBox
                       items={units}
                       value={formData.unit}
                       onValueChange={(value) => handleChange("unit", value)}
-                      placeholder="Select unit"
+                      placeholder={t("selectUnit", "common") || "Select unit"}
                       width="100%"
                     />
                   </div>
@@ -249,10 +275,10 @@ const AddProduct = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
-                      Pricing & Stock
+                      {t("pricingStock", "addProduct")}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      Set pricing and inventory details
+                      {t("setPricingInventory", "addProduct")}
                     </p>
                   </div>
                 </div>
@@ -261,7 +287,7 @@ const AddProduct = () => {
                   {/* Selling Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Selling Price *
+                      {t("sellingPrice", "addProduct")} *
                     </label>
                     <div className="relative">
                       <NumberBox
@@ -281,7 +307,7 @@ const AddProduct = () => {
                   {/* Cost Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cost Price
+                      {t("costPrice", "addProduct")}
                     </label>
                     <div className="relative">
                       <NumberBox
@@ -301,7 +327,7 @@ const AddProduct = () => {
                   {/* Stock Quantity */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Stock Quantity *
+                      {t("stockQuantity", "addProduct")} *
                     </label>
                     <NumberBox
                       placeholder="0"
@@ -317,7 +343,7 @@ const AddProduct = () => {
                 {/* Low Stock Alert */}
                 <div className="mt-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Low Stock Alert Threshold
+                    {t("lowStockAlert", "addProduct")}
                   </label>
                   <NumberBox
                     placeholder="10"
@@ -330,7 +356,7 @@ const AddProduct = () => {
                     width="100%"
                   />
                   <p className="text-sm text-gray-500 mt-2">
-                    Get notified when stock falls below this number
+                    {t("getNotifiedWhenStock", "addProduct")}
                   </p>
                 </div>
               </div>
@@ -343,20 +369,23 @@ const AddProduct = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
-                      Description & Details
+                      {t("descriptionDetails", "addProduct")}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      Add product description and specifications
+                      {t("addProductDescription", "addProduct")}
                     </p>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Product Description
+                    {t("productDescription", "addProduct")}
                   </label>
                   <TextArea
-                    placeholder="Describe the product features, specifications, and benefits..."
+                    placeholder={
+                      t("describeProductFeatures", "addProduct") ||
+                      "Describe the product features, specifications, and benefits..."
+                    }
                     value={formData.description}
                     onValueChange={(value) =>
                       handleChange("description", value)
@@ -374,7 +403,7 @@ const AddProduct = () => {
                   onClick={() => navigate("/products")}
                   className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
                 >
-                  Cancel
+                  {t("cancel", "common")}
                 </button>
                 <button
                   type="submit"
@@ -391,12 +420,12 @@ const AddProduct = () => {
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Saving...
+                      {t("saving", "addProduct")}
                     </>
                   ) : (
                     <>
                       <Save size={20} className="mr-2" />
-                      Save Product
+                      {t("saveProduct", "addProduct")}
                     </>
                   )}
                 </button>
@@ -414,9 +443,11 @@ const AddProduct = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">
-                    Product Image
+                    {t("productImage", "addProduct")}
                   </h3>
-                  <p className="text-sm text-gray-600">Upload product photos</p>
+                  <p className="text-sm text-gray-600">
+                    {t("uploadProductPhotos", "addProduct")}
+                  </p>
                 </div>
               </div>
 
@@ -442,7 +473,9 @@ const AddProduct = () => {
                           ✕
                         </button>
                       </div>
-                      <p className="text-sm text-gray-600">Image preview</p>
+                      <p className="text-sm text-gray-600">
+                        {t("imagePreview", "common") || "Image preview"}
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -451,10 +484,10 @@ const AddProduct = () => {
                       </div>
                       <div>
                         <p className="text-gray-600 mb-2">
-                          Drag & drop or click to upload
+                          {t("dragDropClick", "addProduct")}
                         </p>
                         <p className="text-sm text-gray-500">
-                          Supports JPG, PNG up to 5MB
+                          {t("supportsJpgPng", "addProduct")}
                         </p>
                       </div>
                     </div>
@@ -477,7 +510,9 @@ const AddProduct = () => {
                 >
                   <div className="flex items-center justify-center space-x-2">
                     <Upload size={18} />
-                    <span className="font-medium">Choose Image</span>
+                    <span className="font-medium">
+                      {t("chooseImage", "addProduct")}
+                    </span>
                   </div>
                 </label>
               </div>
@@ -486,48 +521,51 @@ const AddProduct = () => {
             {/* Product Status Card */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                Product Status
+                {t("productStatus", "addProduct")}
               </h3>
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-700">Status</span>
+                  <span className="text-gray-700">{t("status", "common")}</span>
                   <select
                     className="bg-white border border-gray-300 rounded-lg px-3 py-1"
-                    value={formData.status || "active"}
-                    onChange={(e) => handleChange("status", e.target.value)}
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
                   >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="draft">Draft</option>
+                    <option value="active">{t("active", "common")}</option>
+                    <option value="inactive">{t("inactive", "common")}</option>
+                    <option value="draft">{t("draft", "common")}</option>
                   </select>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-700">Featured Product</span>
+                  <span className="text-gray-700">
+                    {t("featuredProduct", "addProduct")}
+                  </span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       className="sr-only peer"
-                      checked={formData.featured || false}
-                      onChange={(e) =>
-                        handleChange("featured", e.target.checked)
-                      }
+                      name="featured"
+                      checked={formData.featured}
+                      onChange={handleInputChange}
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
                   </label>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-700">Track Inventory</span>
+                  <span className="text-gray-700">
+                    {t("trackInventory", "addProduct")}
+                  </span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       className="sr-only peer"
-                      checked={formData.trackInventory !== false}
-                      onChange={(e) =>
-                        handleChange("trackInventory", e.target.checked)
-                      }
+                      name="trackInventory"
+                      checked={formData.trackInventory}
+                      onChange={handleInputChange}
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
                   </label>
@@ -538,32 +576,32 @@ const AddProduct = () => {
             {/* Quick Tips */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-blue-800 mb-4">
-                📝 Quick Tips
+                📝 {t("quickTips", "addProduct")}
               </h3>
               <ul className="space-y-3 text-sm text-blue-700">
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">1</span>
                   </div>
-                  <span>Use clear, descriptive product names</span>
+                  <span>{t("useClearDescriptive", "addProduct")}</span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">2</span>
                   </div>
-                  <span>Set realistic stock levels and alerts</span>
+                  <span>{t("setRealisticStock", "addProduct")}</span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">3</span>
                   </div>
-                  <span>High-quality images increase sales</span>
+                  <span>{t("highQualityImages", "addProduct")}</span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">4</span>
                   </div>
-                  <span>Accurate pricing ensures profitability</span>
+                  <span>{t("accuratePricing", "addProduct")}</span>
                 </li>
               </ul>
             </div>

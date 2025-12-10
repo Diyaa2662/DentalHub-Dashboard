@@ -1,0 +1,18 @@
+{
+  "customersManagement": "Customers Management",
+  "manageDentalProfessionals": "Manage your dental professional customers",
+  "addCustomer": "Add Customer",
+  "addCustomerMessage": "Add customer functionality",
+  "sendingEmailTo": "Sending email to",
+  "totalCustomers": "Total Customers",
+  "activeCustomers": "Active Customers",
+  "searchCustomers": "Search customers...",
+  "name": "Name",
+  "phone": "Phone",
+  "location": "Location",
+  "totalSpent": "Total Spent",
+  "topCustomers": "Top Customers",
+  "highestSpendingCustomers": "Highest spending customers",
+  "total": "Total",
+  "growth": "Growth"
+}

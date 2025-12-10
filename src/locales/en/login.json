@@ -1,0 +1,13 @@
+{
+  "signInToDashboard": "Sign in to your admin dashboard",
+  "welcomeBack": "Welcome Back",
+  "enterCredentials": "Please enter your credentials to continue",
+  "emailAddress": "Email Address",
+  "enterYourEmail": "Enter your email",
+  "enterYourPassword": "Enter your password",
+  "demoCredentials": "Demo Credentials",
+  "signingIn": "Signing in...",
+  "demoAdminPanel": "This is a demo admin panel. For security, please don't use real credentials.",
+  "invalidCredentials": "Invalid email or password. Please try again.",
+  "currentLanguage": "Current language"
+}
