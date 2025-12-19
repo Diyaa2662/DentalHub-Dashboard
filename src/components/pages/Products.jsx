@@ -21,12 +21,21 @@ import {
   AlertCircle,
   TrendingUp,
   DollarSign,
+  Tag,
 } from "lucide-react";
 
 const Products = () => {
   const [selectedRows, setSelectedRows] = useState([]);
   const navigate = useNavigate();
   const { t } = useLanguage();
+
+  // دالة لحساب المبلغ الذي تم توفيره
+  const calculateSavings = (originalPrice, discountedPrice) => {
+    const original = parseFloat(originalPrice.replace(/[^0-9.-]+/g, ""));
+    const discounted = parseFloat(discountedPrice.replace(/[^0-9.-]+/g, ""));
+    const savings = original - discounted;
+    return `$${savings.toLocaleString()}`;
+  };
 
   // Mock data for products
   const productsData = [
@@ -35,6 +44,8 @@ const Products = () => {
       name: "Advanced Dental Chair",
       category: "Equipment",
       price: "$4,500",
+      discount: "10%",
+      priceAfterDiscount: "$4,050",
       stock: 12,
       status: "In Stock",
       sales: 45,
@@ -44,6 +55,8 @@ const Products = () => {
       name: "Portable X-Ray Unit",
       category: "Imaging",
       price: "$2,800",
+      discount: "0%",
+      priceAfterDiscount: "$2,800",
       stock: 8,
       status: "Low Stock",
       sales: 32,
@@ -53,6 +66,8 @@ const Products = () => {
       name: "Surgical Instrument Set",
       category: "Surgical",
       price: "$1,200",
+      discount: "15%",
+      priceAfterDiscount: "$1,020",
       stock: 25,
       status: "In Stock",
       sales: 78,
@@ -62,6 +77,8 @@ const Products = () => {
       name: "Digital Impressions Scanner",
       category: "Digital",
       price: "$3,500",
+      discount: "5%",
+      priceAfterDiscount: "$3,325",
       stock: 5,
       status: "Low Stock",
       sales: 18,
@@ -71,6 +88,8 @@ const Products = () => {
       name: "Autoclave Sterilizer",
       category: "Sterilization",
       price: "$950",
+      discount: "0%",
+      priceAfterDiscount: "$950",
       stock: 15,
       status: "In Stock",
       sales: 56,
@@ -80,6 +99,8 @@ const Products = () => {
       name: "Composite Resin Kit",
       category: "Restorative",
       price: "$280",
+      discount: "20%",
+      priceAfterDiscount: "$224",
       stock: 42,
       status: "In Stock",
       sales: 120,
@@ -89,6 +110,8 @@ const Products = () => {
       name: "Dental Loupes 3.5x",
       category: "Magnification",
       price: "$650",
+      discount: "12%",
+      priceAfterDiscount: "$572",
       stock: 0,
       status: "Out of Stock",
       sales: 23,
@@ -98,6 +121,8 @@ const Products = () => {
       name: "Ultrasonic Scaler",
       category: "Hygiene",
       price: "$1,800",
+      discount: "0%",
+      priceAfterDiscount: "$1,800",
       stock: 7,
       status: "Low Stock",
       sales: 34,
@@ -243,6 +268,48 @@ const Products = () => {
           <Column dataField="name" caption={t("productName", "products")} />
           <Column dataField="category" caption={t("category", "products")} />
           <Column dataField="price" caption={t("price", "products")} />
+
+          {/* عمود الخصم الجديد */}
+          <Column
+            dataField="discount"
+            caption={t("discount", "products")}
+            width={100}
+            cellRender={({ data }) => (
+              <div className="flex items-center">
+                {data.discount !== "0%" && (
+                  <Tag className="text-red-500 mr-1" size={14} />
+                )}
+                <span
+                  className={`
+                  font-medium
+                  ${data.discount !== "0%" ? "text-red-600" : "text-gray-500"}
+                `}
+                >
+                  {data.discount}
+                </span>
+              </div>
+            )}
+          />
+
+          {/* عمود السعر بعد الخصم الجديد */}
+          <Column
+            dataField="priceAfterDiscount"
+            caption={t("priceAfterDiscount", "products")}
+            width={140}
+            cellRender={({ data }) => (
+              <div className="flex flex-col">
+                <span className="font-bold text-gray-800">
+                  {data.priceAfterDiscount}
+                </span>
+                {data.discount !== "0%" && (
+                  <span className="text-xs text-green-600">
+                    Save {calculateSavings(data.price, data.priceAfterDiscount)}
+                  </span>
+                )}
+              </div>
+            )}
+          />
+
           <Column dataField="stock" caption={t("stock", "products")} />
           <Column
             dataField="status"

@@ -26,5 +26,11 @@
   "paymentReceived": "Betalning mottagen",
   "orderProcessed": "Beställning behandlad",
   "orderCancelled": "Beställning avbruten",
-  "orderDelivered": "Beställning levererad"
+  "orderDelivered": "Beställning levererad",
+  "paymentMethod": "Betalningsmetod",
+  "creditCard": "Kreditkort",
+  "bankTransfer": "Banköverföring",
+  "cash": "Kontant",
+  "mobilePayment": "Mobilbetalning",
+  "onlineBanking": "Internetbank"
 }

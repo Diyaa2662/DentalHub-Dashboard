@@ -26,5 +26,11 @@
   "paymentReceived": "Payment received",
   "orderProcessed": "Order processed",
   "orderCancelled": "Order cancelled",
-  "orderDelivered": "Order delivered"
+  "orderDelivered": "Order delivered",
+  "paymentMethod": "Payment Method",
+  "creditCard": "Credit Card",
+  "bankTransfer": "Bank Transfer",
+  "cash": "Cash",
+  "mobilePayment": "Mobile Payment",
+  "onlineBanking": "Online Banking"
 }

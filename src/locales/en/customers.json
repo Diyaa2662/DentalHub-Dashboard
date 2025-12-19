@@ -5,7 +5,6 @@
   "addCustomerMessage": "Add customer functionality",
   "sendingEmailTo": "Sending email to",
   "totalCustomers": "Total Customers",
-  "activeCustomers": "Active Customers",
   "searchCustomers": "Search customers...",
   "name": "Name",
   "phone": "Phone",
@@ -14,5 +13,6 @@
   "topCustomers": "Top Customers",
   "highestSpendingCustomers": "Highest spending customers",
   "total": "Total",
-  "growth": "Growth"
+  "growth": "Growth",
+  "joinDate": "Join Date"
 }

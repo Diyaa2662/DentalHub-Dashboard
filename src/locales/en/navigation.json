@@ -14,5 +14,14 @@
   "adminDashboard": "Admin Dashboard",
   "adminUser": "Admin User",
   "dentalAdmin": "Dental Admin",
-  "superAdmin": "Super Admin"
+  "superAdmin": "Super Admin",
+  "inventoryManagement": "Inventory Management",
+  "procurement": "Procurement",
+  "suppliers": "Suppliers",
+  "purchaseOrders": "Purchase Orders",
+  "supplierManagement": "Supplier Management",
+  "purchaseOrderManagement": "Purchase Order Management",
+  "employees": "Employees",
+  "staff": "Staff",
+  "teamManagement": "Team Management"
 }

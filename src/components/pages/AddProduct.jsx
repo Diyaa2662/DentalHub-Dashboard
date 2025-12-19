@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { TextBox, TextArea } from "devextreme-react";
@@ -17,6 +17,9 @@ import {
   Image as ImageIcon,
   Eye,
   EyeOff,
+  Plus,
+  Check,
+  X,
 } from "lucide-react";
 
 const AddProduct = () => {
@@ -36,6 +39,7 @@ const AddProduct = () => {
     trackInventory: true,
     lowStockAlert: 10,
     unit: "Piece",
+    discount: 0, // حقل الخصم الجديد
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -43,27 +47,72 @@ const AddProduct = () => {
   // eslint-disable-next-line no-unused-vars
   const [showPassword, setShowPassword] = useState(false);
 
-  // قائمة الفئات
-  const categories = [
-    t("equipment", "products"),
-    t("imaging", "products"),
-    t("surgical", "products"),
-    t("restorative", "products"),
-    t("hygiene", "products"),
-    t("digital", "products"),
-    t("sterilization", "products"),
-    t("magnification", "products"),
-    t("orthodontic", "products"),
+  // قائمة الفئات الافتراضية (يتم تحميلها أول مرة فقط)
+  const defaultCategories = [
+    { id: 1, name: t("equipment", "products"), enabled: true },
+    { id: 2, name: t("imaging", "products"), enabled: true },
+    { id: 3, name: t("surgical", "products"), enabled: true },
+    { id: 4, name: t("restorative", "products"), enabled: true },
+    { id: 5, name: t("hygiene", "products"), enabled: true },
+    { id: 6, name: t("digital", "products"), enabled: true },
+    { id: 7, name: t("sterilization", "products"), enabled: true },
+    { id: 8, name: t("magnification", "products"), enabled: true },
+    { id: 9, name: t("orthodontic", "products"), enabled: true },
   ];
 
   // قائمة الوحدات
   const units = [
-    t("piece", "addProduct") || "Piece",
-    t("set", "addProduct") || "Set",
-    t("box", "addProduct") || "Box",
-    t("kit", "addProduct") || "Kit",
-    t("pack", "addProduct") || "Pack",
+    t("piece", "common"),
+    t("set", "common"),
+    t("box", "common"),
+    t("kit", "common"),
+    t("pack", "common"),
   ];
+
+  // حالة خاصة باختيار الفئة - استخدام lazy initializer
+  const [categories, setCategories] = useState(() => {
+    const savedCategories = localStorage.getItem("productCategories");
+    if (savedCategories) {
+      return JSON.parse(savedCategories);
+    } else {
+      localStorage.setItem(
+        "productCategories",
+        JSON.stringify(defaultCategories)
+      );
+      return defaultCategories;
+    }
+  });
+  const [newCategory, setNewCategory] = useState("");
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+
+  // حفظ الفئات عند التغيير
+  useEffect(() => {
+    if (categories.length > 0) {
+      localStorage.setItem("productCategories", JSON.stringify(categories));
+    }
+  }, [categories]);
+
+  // دالة لحساب السعر بعد الخصم
+  const calculateDiscountedPrice = (price, discount) => {
+    if (!price || discount === 0) return "";
+    const original = parseFloat(price.replace(/[^0-9.-]+/g, ""));
+    const discounted = original * (1 - discount / 100);
+    return `$${discounted.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  // دالة لحساب مبلغ التوفير
+  const calculateSavingsAmount = (price, discount) => {
+    if (!price || discount === 0) return "";
+    const original = parseFloat(price.replace(/[^0-9.-]+/g, ""));
+    const savings = original * (discount / 100);
+    return `$${savings.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({
@@ -117,6 +166,53 @@ const AddProduct = () => {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
+
+  // إضافة فئة جديدة
+  const handleAddCategory = () => {
+    if (newCategory.trim() === "") return;
+
+    const newCat = {
+      id: Date.now(), // استخدام timestamp كمعرف فريد
+      name: newCategory.trim(),
+      enabled: true,
+    };
+
+    setCategories((prev) => [...prev, newCat]);
+    setFormData((prev) => ({ ...prev, category: newCat.name }));
+    setNewCategory("");
+    setIsAddingCategory(false);
+  };
+
+  // تفعيل/تعطيل فئة
+  const toggleCategoryStatus = (id) => {
+    setCategories((prev) =>
+      prev.map((cat) =>
+        cat.id === id ? { ...cat, enabled: !cat.enabled } : cat
+      )
+    );
+  };
+
+  // حذف فئة
+  const handleDeleteCategory = (id) => {
+    if (
+      window.confirm(
+        t("deleteCategoryConfirm", "addProduct") ||
+          "Are you sure you want to delete this category?"
+      )
+    ) {
+      setCategories((prev) => prev.filter((cat) => cat.id !== id));
+
+      // إذا كان المنتج يستخدم هذه الفئة، امسحها
+      if (formData.category === categories.find((c) => c.id === id)?.name) {
+        setFormData((prev) => ({ ...prev, category: "" }));
+      }
+    }
+  };
+
+  // الفعالة فقط لعرضها في القائمة المنسدلة
+  const enabledCategories = categories
+    .filter((cat) => cat.enabled)
+    .map((cat) => cat.name);
 
   return (
     <div className="space-y-6">
@@ -235,20 +331,72 @@ const AddProduct = () => {
                     </div>
                   </div>
 
-                  {/* Category */}
+                  {/* Category - الجزء المعدل */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("category", "products")} *
-                    </label>
-                    <SelectBox
-                      items={categories}
-                      value={formData.category}
-                      onValueChange={(value) => handleChange("category", value)}
-                      placeholder={
-                        t("selectCategory", "common") || "Select category"
-                      }
-                      width="100%"
-                    />
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        {t("category", "products")} *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingCategory(true)}
+                        className="text-sm text-dental-blue hover:text-blue-600 flex items-center"
+                      >
+                        <Plus size={14} className="mr-1" />
+                        {t("addNewCategory", "addProduct") || "Add New"}
+                      </button>
+                    </div>
+
+                    {isAddingCategory ? (
+                      <div className="space-y-2">
+                        <div className="flex space-x-2">
+                          <TextBox
+                            placeholder={
+                              t("enterNewCategory", "addProduct") ||
+                              "Enter new category"
+                            }
+                            value={newCategory}
+                            onValueChange={setNewCategory}
+                            width="100%"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddCategory}
+                            className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                            disabled={!newCategory.trim()}
+                          >
+                            <Check size={18} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddingCategory(false);
+                              setNewCategory("");
+                            }}
+                            className="px-3 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                          >
+                            <X size={18} />
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {t("categoryWillBeSaved", "addProduct") ||
+                            "Category will be saved for future use"}
+                        </p>
+                      </div>
+                    ) : (
+                      <SelectBox
+                        items={enabledCategories}
+                        value={formData.category}
+                        onValueChange={(value) =>
+                          handleChange("category", value)
+                        }
+                        placeholder={
+                          t("selectCategory", "addProduct") || "Select category"
+                        }
+                        searchEnabled={true}
+                        width="100%"
+                      />
+                    )}
                   </div>
 
                   {/* Unit */}
@@ -260,9 +408,67 @@ const AddProduct = () => {
                       items={units}
                       value={formData.unit}
                       onValueChange={(value) => handleChange("unit", value)}
-                      placeholder={t("selectUnit", "common") || "Select unit"}
+                      placeholder={
+                        t("selectUnit", "addProduct") || "Select unit"
+                      }
                       width="100%"
                     />
+                  </div>
+                </div>
+
+                {/* Category Management - عرض وإدارة الفئات */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">
+                    {t("manageCategories", "addProduct") || "Manage Categories"}
+                  </h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                    {categories.map((category) => (
+                      <div
+                        key={category.id}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded-lg hover:bg-gray-100"
+                      >
+                        <div className="flex items-center">
+                          <span
+                            className={`text-sm ${
+                              category.enabled
+                                ? "text-gray-800"
+                                : "text-gray-400 line-through"
+                            }`}
+                          >
+                            {category.name}
+                          </span>
+                          <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-200">
+                            {
+                              categories.filter((c) => c.name === category.name)
+                                .length
+                            }{" "}
+                            {t("products", "addProduct").toLowerCase()}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleCategoryStatus(category.id)}
+                            className={`text-xs px-2 py-1 rounded ${
+                              category.enabled
+                                ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                : "bg-red-100 text-red-800 hover:bg-red-200"
+                            }`}
+                          >
+                            {category.enabled
+                              ? t("disable", "common") || "Disable"
+                              : t("enable", "common") || "Enable"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCategory(category.id)}
+                            className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                          >
+                            {t("delete", "common")}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -283,7 +489,7 @@ const AddProduct = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   {/* Selling Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -298,7 +504,7 @@ const AddProduct = () => {
                         width="100%"
                       />
                       <DollarSign
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                         size={18}
                       />
                     </div>
@@ -318,8 +524,30 @@ const AddProduct = () => {
                         width="100%"
                       />
                       <Tag
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                         size={18}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Discount Percentage - الجديد */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t("discountPercentage", "addProduct")}
+                    </label>
+                    <div className="relative">
+                      <NumberBox
+                        placeholder="0"
+                        value={formData.discount}
+                        onValueChange={(value) =>
+                          handleChange("discount", value)
+                        }
+                        format="#0 %"
+                        showSpinButtons={true}
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        width="100%"
                       />
                     </div>
                   </div>
@@ -339,6 +567,36 @@ const AddProduct = () => {
                     />
                   </div>
                 </div>
+
+                {/* Display Final Price After Discount - الجديد */}
+                {formData.discount > 0 && formData.price && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-blue-800 font-medium">
+                          {t("priceAfterDiscount", "addProduct") ||
+                            "Price After Discount"}
+                        </p>
+                        <p className="text-2xl font-bold text-blue-900">
+                          {calculateDiscountedPrice(
+                            formData.price,
+                            formData.discount
+                          )}
+                        </p>
+                        <p className="text-sm text-blue-700 mt-1">
+                          {t("saveAmount", "addProduct") || "Save"}:{" "}
+                          {calculateSavingsAmount(
+                            formData.price,
+                            formData.discount
+                          )}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-blue-100 rounded-lg">
+                        <Tag className="text-blue-600" size={24} />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Low Stock Alert */}
                 <div className="mt-6">
@@ -474,7 +732,7 @@ const AddProduct = () => {
                         </button>
                       </div>
                       <p className="text-sm text-gray-600">
-                        {t("imagePreview", "common") || "Image preview"}
+                        {t("imagePreview", "addProduct") || "Image preview"}
                       </p>
                     </div>
                   ) : (
@@ -529,7 +787,7 @@ const AddProduct = () => {
                   <span className="text-gray-700">{t("status", "common")}</span>
                   <select
                     className="bg-white border border-gray-300 rounded-lg px-3 py-1"
-                    name="status"
+                    name={t("status", "common") || "Status"}
                     value={formData.status}
                     onChange={handleInputChange}
                   >

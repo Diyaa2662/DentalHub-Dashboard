@@ -7,16 +7,7 @@ import {
   Paging,
   Pager,
 } from "devextreme-react/data-grid";
-import {
-  Users,
-  Mail,
-  Phone,
-  MapPin,
-  Star,
-  Calendar,
-  UserPlus,
-  TrendingUp,
-} from "lucide-react";
+import { Users, Mail, Phone, MapPin, Calendar, UserPlus } from "lucide-react";
 
 const Customers = () => {
   const { t } = useLanguage();
@@ -32,8 +23,6 @@ const Customers = () => {
       orders: 15,
       totalSpent: "$8,450",
       joinDate: "2023-03-15",
-      rating: 4.8,
-      status: "Active",
     },
     {
       id: 2,
@@ -44,8 +33,6 @@ const Customers = () => {
       orders: 8,
       totalSpent: "$12,800",
       joinDate: "2023-05-22",
-      rating: 4.9,
-      status: "Active",
     },
     {
       id: 3,
@@ -56,8 +43,6 @@ const Customers = () => {
       orders: 23,
       totalSpent: "$5,320",
       joinDate: "2023-01-10",
-      rating: 4.7,
-      status: "Active",
     },
     {
       id: 4,
@@ -68,8 +53,6 @@ const Customers = () => {
       orders: 12,
       totalSpent: "$3,180",
       joinDate: "2023-06-30",
-      rating: 4.6,
-      status: "Active",
     },
     {
       id: 5,
@@ -80,8 +63,6 @@ const Customers = () => {
       orders: 18,
       totalSpent: "$9,250",
       joinDate: "2023-02-18",
-      rating: 4.9,
-      status: "Active",
     },
     {
       id: 6,
@@ -92,8 +73,6 @@ const Customers = () => {
       orders: 7,
       totalSpent: "$4,890",
       joinDate: "2023-08-05",
-      rating: 4.5,
-      status: "Inactive",
     },
     {
       id: 7,
@@ -104,8 +83,6 @@ const Customers = () => {
       orders: 14,
       totalSpent: "$7,450",
       joinDate: "2023-04-12",
-      rating: 4.8,
-      status: "Active",
     },
     {
       id: 8,
@@ -116,8 +93,6 @@ const Customers = () => {
       orders: 9,
       totalSpent: "$2,560",
       joinDate: "2023-07-25",
-      rating: 4.4,
-      status: "Active",
     },
   ];
 
@@ -153,7 +128,7 @@ const Customers = () => {
       </div>
 
       {/* Customer Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -168,23 +143,6 @@ const Customers = () => {
           </div>
           <p className="text-sm text-green-600 mt-2">
             ↑ 12.5% {t("fromLastMonth", "orders")}
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">
-                {t("activeCustomers", "customers")}
-              </p>
-              <p className="text-3xl font-bold text-gray-800">856</p>
-            </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <TrendingUp className="text-green-500" size={24} />
-            </div>
-          </div>
-          <p className="text-sm text-green-600 mt-2">
-            ↑ 8.2% {t("fromLastMonth", "orders")}
           </p>
         </div>
 
@@ -270,34 +228,10 @@ const Customers = () => {
             caption={t("totalSpent", "customers")}
           />
           <Column
-            dataField="rating"
-            caption={t("rating", "products")}
-            cellRender={({ data }) => (
-              <div className="flex items-center">
-                <Star size={14} className="text-yellow-500 fill-current mr-1" />
-                <span>{data.rating}</span>
-              </div>
-            )}
-          />
-          <Column
-            dataField="status"
-            caption={t("status", "common")}
-            cellRender={({ data }) => (
-              <span
-                className={`
-                px-3 py-1 rounded-full text-xs font-medium
-                ${
-                  data.status === "Active"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
-                }
-              `}
-              >
-                {data.status === "Active"
-                  ? t("active", "common")
-                  : t("inactive", "common")}
-              </span>
-            )}
+            dataField="joinDate"
+            caption={t("joinDate", "customers")}
+            dataType="date"
+            format="yyyy-MM-dd"
           />
         </DataGrid>
       </div>
@@ -313,7 +247,7 @@ const Customers = () => {
               {t("highestSpendingCustomers", "customers")}
             </p>
           </div>
-          <Star className="text-dental-teal" size={24} />
+          <Users className="text-dental-teal" size={24} />
         </div>
 
         <div className="space-y-4">

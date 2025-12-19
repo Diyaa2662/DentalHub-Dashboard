@@ -5,7 +5,6 @@
   "addCustomerMessage": "Lägg till kundfunktionalitet",
   "sendingEmailTo": "Skickar e-post till",
   "totalCustomers": "Totalt antal kunder",
-  "activeCustomers": "Aktiva kunder",
   "searchCustomers": "Sök kunder...",
   "name": "Namn",
   "phone": "Telefon",
@@ -14,5 +13,6 @@
   "topCustomers": "Toppkunder",
   "highestSpendingCustomers": "Kunder som spenderat mest",
   "total": "Totalt",
-  "growth": "Tillväxt"
+  "growth": "Tillväxt",
+  "joinDate": "Anslöt sig"
 }

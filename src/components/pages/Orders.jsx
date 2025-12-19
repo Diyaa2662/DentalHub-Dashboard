@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom"; // ← تمت الإضافة
 import { useLanguage } from "../../contexts/LanguageContext";
 import {
   DataGrid,
@@ -18,11 +19,17 @@ import {
   Truck,
   DollarSign,
   Calendar,
+  CreditCard,
+  Wallet,
+  Building,
+  Smartphone,
+  Banknote,
 } from "lucide-react";
 
 const Orders = () => {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const { t } = useLanguage();
+  const navigate = useNavigate(); // ← تمت الإضافة
 
   // Mock data for orders
   const ordersData = [
@@ -33,7 +40,7 @@ const Orders = () => {
       status: "Completed",
       date: "2024-01-15",
       items: 3,
-      payment: "Paid",
+      paymentMethod: "credit_card",
       shipping: "Delivered",
     },
     {
@@ -43,7 +50,7 @@ const Orders = () => {
       status: "Processing",
       date: "2024-01-14",
       items: 1,
-      payment: "Pending",
+      paymentMethod: "bank_transfer",
       shipping: "Processing",
     },
     {
@@ -53,7 +60,7 @@ const Orders = () => {
       status: "Pending",
       date: "2024-01-14",
       items: 5,
-      payment: "Pending",
+      paymentMethod: "cash",
       shipping: "Not Shipped",
     },
     {
@@ -63,7 +70,7 @@ const Orders = () => {
       status: "Completed",
       date: "2024-01-13",
       items: 2,
-      payment: "Paid",
+      paymentMethod: "mobile_payment",
       shipping: "Delivered",
     },
     {
@@ -73,7 +80,7 @@ const Orders = () => {
       status: "Shipped",
       date: "2024-01-12",
       items: 4,
-      payment: "Paid",
+      paymentMethod: "credit_card",
       shipping: "In Transit",
     },
     {
@@ -83,7 +90,7 @@ const Orders = () => {
       status: "Processing",
       date: "2024-01-12",
       items: 2,
-      payment: "Pending",
+      paymentMethod: "online_banking",
       shipping: "Processing",
     },
     {
@@ -93,7 +100,7 @@ const Orders = () => {
       status: "Completed",
       date: "2024-01-11",
       items: 3,
-      payment: "Paid",
+      paymentMethod: "credit_card",
       shipping: "Delivered",
     },
     {
@@ -103,10 +110,55 @@ const Orders = () => {
       status: "Cancelled",
       date: "2024-01-11",
       items: 1,
-      payment: "Refunded",
+      paymentMethod: "credit_card",
       shipping: "Cancelled",
     },
   ];
+
+  // دوال مساعدة لعرض Payment Method
+  const getPaymentMethodDisplay = (method) => {
+    const methods = {
+      credit_card: {
+        text: t("creditCard", "orders") || "Credit Card",
+        icon: <CreditCard size={14} />,
+        color: "text-blue-600",
+        bg: "bg-blue-50",
+      },
+      bank_transfer: {
+        text: t("bankTransfer", "orders") || "Bank Transfer",
+        icon: <Building size={14} />,
+        color: "text-green-600",
+        bg: "bg-green-50",
+      },
+      cash: {
+        text: t("cash", "orders") || "Cash",
+        icon: <Banknote size={14} />,
+        color: "text-green-600",
+        bg: "bg-green-50",
+      },
+      mobile_payment: {
+        text: t("mobilePayment", "orders") || "Mobile Payment",
+        icon: <Smartphone size={14} />,
+        color: "text-purple-600",
+        bg: "bg-purple-50",
+      },
+      online_banking: {
+        text: t("onlineBanking", "orders") || "Online Banking",
+        icon: <Wallet size={14} />,
+        color: "text-indigo-600",
+        bg: "bg-indigo-50",
+      },
+    };
+
+    return (
+      methods[method] || {
+        text: method,
+        icon: <CreditCard size={14} />,
+        color: "text-gray-600",
+        bg: "bg-gray-50",
+      }
+    );
+  };
 
   const statusFilters = [
     {
@@ -165,7 +217,8 @@ const Orders = () => {
   };
 
   const handleViewOrder = (orderId) => {
-    alert(`${t("viewingOrder", "orders")} #${orderId}`);
+    // تغيير: الانتقال إلى صفحة تفاصيل الطلب
+    navigate(`/orders/view/${orderId}`);
   };
 
   const handlePrintInvoice = (orderId) => {
@@ -376,7 +429,25 @@ const Orders = () => {
                 );
               }}
             />
-            <Column dataField="payment" caption={t("payment", "orders")} />
+            {/* عمود Payment Method الجديد */}
+            <Column
+              dataField="paymentMethod"
+              caption={t("paymentMethod", "orders")}
+              width={140}
+              cellRender={({ data }) => {
+                const payment = getPaymentMethodDisplay(data.paymentMethod);
+                return (
+                  <div
+                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg ${payment.bg}`}
+                  >
+                    {payment.icon}
+                    <span className={`text-sm font-medium ${payment.color}`}>
+                      {payment.text}
+                    </span>
+                  </div>
+                );
+              }}
+            />
             <Column dataField="shipping" caption={t("shipping", "orders")} />
             <Column
               dataField="date"

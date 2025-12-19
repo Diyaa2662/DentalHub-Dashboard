@@ -6,6 +6,7 @@ import {
   Package,
   ShoppingCart,
   Users,
+  UserPlus,
   BarChart3,
   Settings,
   Activity,
@@ -13,6 +14,8 @@ import {
   X,
   LogOut,
   FileText,
+  Truck,
+  ChevronRight,
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -45,6 +48,36 @@ const Sidebar = () => {
       label: t("customers", "navigation"),
       icon: <Users size={20} />,
       path: "/customers",
+    },
+    {
+      id: "employees",
+      label: t("employees", "navigation"),
+      icon: <Users size={20} />,
+      path: "/employees",
+    },
+    {
+      id: "inventory",
+      label: t("inventoryManagement", "navigation"),
+      icon: <Package size={20} />,
+      path: "/inventory",
+    },
+    {
+      id: "procurement",
+      label: t("procurement", "navigation"),
+      icon: <Truck size={20} />,
+      path: "/procurement", // ← صفحة رئيسية
+      children: [
+        {
+          path: "/procurement/suppliers",
+          label: t("suppliers", "navigation"),
+          icon: <Users size={16} />,
+        },
+        {
+          path: "/procurement/purchase-orders",
+          label: t("purchaseOrders", "navigation"),
+          icon: <FileText size={16} />,
+        },
+      ],
     },
     {
       id: "invoices",
@@ -105,30 +138,101 @@ const Sidebar = () => {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.id}
-              to={item.path}
-              className={({ isActive }) => `
-                flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors
-                ${
-                  isActive
-                    ? "bg-primary-50 text-primary-700 border-l-4 border-primary-600"
-                    : "text-gray-700 hover:bg-gray-100"
-                }
-              `}
-              onClick={() => setActiveItem(item.id)}
-            >
-              <span
-                className={
-                  activeItem === item.id ? "text-primary-600" : "text-gray-500"
-                }
-              >
-                {item.icon}
-              </span>
-              <span className="font-medium">{item.label}</span>
-            </NavLink>
-          ))}
+          {menuItems.map((item) => {
+            // إذا كان العنصر ليس له قائمة فرعية
+            if (!item.children) {
+              return (
+                <NavLink
+                  key={item.id}
+                  to={item.path}
+                  className={({ isActive }) => `
+            flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors
+            ${
+              isActive
+                ? "bg-primary-50 text-primary-700 border-l-4 border-primary-600"
+                : "text-gray-700 hover:bg-gray-100"
+            }
+          `}
+                  onClick={() => setActiveItem(item.id)}
+                  end // ← مهم للصفحة الرئيسية
+                >
+                  <span
+                    className={
+                      activeItem === item.id
+                        ? "text-primary-600"
+                        : "text-gray-500"
+                    }
+                  >
+                    {item.icon}
+                  </span>
+                  <span className="font-medium">{item.label}</span>
+                </NavLink>
+              );
+            }
+
+            // إذا كان العنصر له قائمة فرعية (مثل procurement)
+            return (
+              <div key={item.id} className="space-y-1">
+                {/* العنصر الرئيسي */}
+                <div
+                  className={`
+            flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer
+            ${
+              activeItem === item.id
+                ? "bg-primary-50 text-primary-700 border-l-4 border-primary-600"
+                : "text-gray-700 hover:bg-gray-100"
+            }
+          `}
+                  onClick={() =>
+                    setActiveItem(activeItem === item.id ? "" : item.id)
+                  }
+                >
+                  <div className="flex items-center space-x-3">
+                    <span
+                      className={
+                        activeItem === item.id
+                          ? "text-primary-600"
+                          : "text-gray-500"
+                      }
+                    >
+                      {item.icon}
+                    </span>
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  {/* سهم للفتح/الإغلاق */}
+                  <ChevronRight
+                    className={`transform transition-transform ${
+                      activeItem === item.id ? "rotate-90" : ""
+                    }`}
+                    size={16}
+                  />
+                </div>
+
+                {/* القائمة الفرعية */}
+                {activeItem === item.id && (
+                  <div className="ml-8 space-y-1">
+                    {item.children.map((child, index) => (
+                      <NavLink
+                        key={index}
+                        to={child.path}
+                        className={({ isActive }) => `
+                  flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm
+                  ${
+                    isActive
+                      ? "bg-gray-100 text-primary-600"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }
+                `}
+                      >
+                        <span className="text-gray-400">{child.icon}</span>
+                        <span>{child.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-gray-200 space-y-4">

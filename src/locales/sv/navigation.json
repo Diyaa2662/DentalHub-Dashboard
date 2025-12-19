@@ -14,5 +14,14 @@
   "adminDashboard": "Administratörspanel",
   "adminUser": "Administratörsanvändare",
   "dentalAdmin": "Tandläkaradministratör",
-  "superAdmin": "Superadministratör"
+  "superAdmin": "Superadministratör",
+  "inventoryManagement": "Lagerhantering",
+  "procurement": "Inköp",
+  "suppliers": "Leverantörer",
+  "purchaseOrders": "Inköpsordrar",
+  "supplierManagement": "Leverantörshantering",
+  "purchaseOrderManagement": "Inköpsorderhantering",
+  "employees": "Personal",
+  "staff": "Personal",
+  "teamManagement": "Teamhantering"
 }

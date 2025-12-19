@@ -250,5 +250,6 @@
   "stockTurnover": "Lageromsättning",
   "annualStockTurnover": "Årlig lageromsättningsgrad",
   "units": "enheter",
-  "products": "produkter"
+  "products": "produkter",
+  "priceAfterDiscount": "Pris efter rabatt"
 }

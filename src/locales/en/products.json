@@ -250,5 +250,6 @@
   "stockTurnover": "Stock Turnover",
   "annualStockTurnover": "Annual stock turnover rate",
   "units": "units",
-  "products": "products"
+  "products": "products",
+  "priceAfterDiscount": "Price After Discount"
 }

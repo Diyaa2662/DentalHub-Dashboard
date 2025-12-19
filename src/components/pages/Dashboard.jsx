@@ -44,9 +44,9 @@ const Dashboard = () => {
       trend: "up",
     },
     {
-      title: "activeCustomers",
-      value: "1,234",
-      change: "+12.5%",
+      title: "totalCustomers",
+      value: "3,456",
+      change: "+8.3%",
       icon: <Users className="text-purple-500" size={24} />,
       color: "bg-purple-50",
       trend: "up",
