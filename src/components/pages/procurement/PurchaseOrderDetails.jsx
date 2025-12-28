@@ -1,121 +1,97 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useLanguage } from "../../contexts/LanguageContext";
+import { useLanguage } from "../../../contexts/LanguageContext";
 import {
   ArrowLeft,
   Printer,
   Mail,
   Truck,
-  Package,
   DollarSign,
   CreditCard,
-  User,
-  MapPin,
   Calendar,
   Phone,
   FileText,
   CheckCircle,
   Clock,
   XCircle,
-  Filter,
-  Tag,
   ShoppingCart,
   Box,
   ChevronRight,
   PackageIcon,
+  Building,
+  FileText as FileTextIcon,
 } from "lucide-react";
 
-const OrderDetails = () => {
+const PurchaseOrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useLanguage();
 
-  // بيانات وهمية للطلب (ستأتي من API لاحقاً)
-  const [order, setOrder] = useState(null);
+  const [purchaseOrder, setPurchaseOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // محاكاة جلب بيانات الطلب من API
     setTimeout(() => {
-      const mockOrder = {
+      const mockPurchaseOrder = {
         id: parseInt(id),
-        customerName: "Dr. Sarah Johnson",
-        customerEmail: "sarah@dentalclinic.com",
-        customerPhone: "(555) 123-4567",
+        poNumber: "PO-2024-001",
+        supplierName: "Dental Equipment Co.",
+        supplierEmail: "john@dentalequip.com",
+        supplierPhone: "+1-555-123-4567",
         orderDate: "2024-01-15",
-        estimatedDelivery: "2024-01-22",
+        expectedDelivery: "2024-01-22",
 
-        // تفاصيل المبلغ
-        subtotal: 450,
-        tax: 45,
-        discount: 22.5,
-        shippingFee: 15,
-        totalAmount: 487.5,
+        // ✅ فقط totalAmount يظهر في العرض
+        totalAmount: 5325,
         currency: "USD",
 
-        // طريقة الدفع
         paymentMethod: "credit_card",
-        transactionId: "TXN-7890123456",
-        paymentStatus: "paid",
+        paymentStatus: "pending",
+        paymentTerms: "Net 30",
 
-        // معلومات الشحن
-        shippingAddress: "123 Dental Street, Suite 456, New York, NY 10001",
-        billingAddress: "123 Dental Street, Suite 456, New York, NY 10001",
         shippingMethod: "Express Delivery",
         trackingNumber: "TRK-7894561230",
-        orderStatus: "completed",
+        orderStatus: "confirmed",
 
-        // ملاحظات العميل
-        customerNotes:
-          "Please deliver between 9 AM - 5 PM. Call before delivery.",
+        notes: "Urgent order for new clinic setup",
 
-        // عناصر الطلب مع قيم ثابتة
         items: [
           {
             id: 1,
             product: "Advanced Dental Chair",
             quantity: 1,
-            unitPrice: 450,
-            // ✅ قيم ثابتة كما طلبت
-            subTotal: 450,
-            discountAmount: 45, // خصم ثابت بالدولار
-            taxAmount: 22.5, // ضريبة قيمة ثابتة
-            finalPrice: 427.5,
-            currentStock: 12,
+            subTotal: 4500, // ✅ يظهر في العرض
+            taxAmount: 675, // ✅ يظهر في العرض
+            finalPrice: 5175, // ✅ يظهر في العرض
+            currentStock: 12, // ✅ يظهر في العرض
             image:
               "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w-400&auto=format&fit=crop",
           },
           {
             id: 2,
-            product: "Surgical Gloves (Box of 100)",
-            quantity: 2,
-            unitPrice: 25,
-            // ✅ قيم ثابتة كما طلبت
-            subTotal: 50,
-            discountAmount: 5,
-            taxAmount: 2.5,
-            finalPrice: 47.5,
-            currentStock: 45,
+            product: "Dental X-Ray Unit",
+            quantity: 1,
+            subTotal: 3200,
+            taxAmount: 480,
+            finalPrice: 3680,
+            currentStock: 8,
             image:
               "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w-400&auto=format&fit=crop",
           },
           {
             id: 3,
-            product: "Dental Mirror Set",
-            quantity: 3,
-            unitPrice: 15,
-            // ✅ قيم ثابتة كما طلبت
-            subTotal: 45,
-            discountAmount: 4.5,
-            taxAmount: 2.25,
-            finalPrice: 42.75,
-            currentStock: 28,
+            product: "Sterilization Equipment",
+            quantity: 2,
+            subTotal: 1900,
+            taxAmount: 285,
+            finalPrice: 2185,
+            currentStock: 15,
             image:
               "https://images.unsplash.com/photo-1551601651-2a8555f1a136?w-400&auto=format&fit=crop",
           },
         ],
       };
-      setOrder(mockOrder);
+      setPurchaseOrder(mockPurchaseOrder);
       setLoading(false);
     }, 500);
   }, [id]);
@@ -123,11 +99,9 @@ const OrderDetails = () => {
   // ترجمة العملة
   const getCurrencyDisplay = (currencyCode) => {
     const currencies = {
-      USD: t("USD", "orderDetails"),
-      EUR: t("EUR", "orderDetails"),
-      GBP: t("GBP", "orderDetails"),
-      SAR: t("SAR", "orderDetails"),
-      AED: t("AED", "orderDetails"),
+      USD: t("USD", "procurement") || "US Dollar",
+      EUR: t("EUR", "procurement") || "Euro",
+      GBP: t("GBP", "procurement") || "British Pound",
     };
     return currencies[currencyCode] || currencyCode;
   };
@@ -136,27 +110,27 @@ const OrderDetails = () => {
   const getOrderStatusDisplay = (status) => {
     const statuses = {
       pending: {
-        text: t("pending", "common"),
+        text: t("pending", "procurement") || "Pending",
         color: "bg-yellow-100 text-yellow-800",
         icon: <Clock size={16} />,
       },
-      processing: {
-        text: t("processing", "common"),
-        color: "bg-blue-100 text-blue-800",
-        icon: <Filter size={16} />,
-      },
-      completed: {
-        text: t("completed", "common"),
+      confirmed: {
+        text: t("confirmed", "procurement") || "Confirmed",
         color: "bg-green-100 text-green-800",
         icon: <CheckCircle size={16} />,
       },
       shipped: {
-        text: t("shipped", "orders"),
-        color: "bg-purple-100 text-purple-800",
+        text: t("shipped", "procurement") || "Shipped",
+        color: "bg-blue-100 text-blue-800",
         icon: <Truck size={16} />,
       },
+      delivered: {
+        text: t("delivered", "procurement") || "Delivered",
+        color: "bg-green-100 text-green-800",
+        icon: <CheckCircle size={16} />,
+      },
       cancelled: {
-        text: t("cancelled", "common"),
+        text: t("cancelled", "procurement") || "Cancelled",
         color: "bg-red-100 text-red-800",
         icon: <XCircle size={16} />,
       },
@@ -174,28 +148,22 @@ const OrderDetails = () => {
   const getPaymentMethodDisplay = (method) => {
     const methods = {
       credit_card: {
-        text: t("creditCard", "orders") || "Credit Card",
+        text: t("creditCard", "procurement") || "Credit Card",
         icon: <CreditCard size={16} />,
         color: "text-blue-600",
         bg: "bg-blue-50",
       },
       bank_transfer: {
-        text: t("bankTransfer", "orders") || "Bank Transfer",
-        icon: <Box size={16} />,
+        text: t("bankTransfer", "procurement") || "Bank Transfer",
+        icon: <Building size={16} />,
         color: "text-green-600",
         bg: "bg-green-50",
       },
       cash: {
-        text: t("cash", "orders") || "Cash",
+        text: t("cash", "procurement") || "Cash",
         icon: <DollarSign size={16} />,
         color: "text-green-600",
         bg: "bg-green-50",
-      },
-      mobile_payment: {
-        text: t("mobilePayment", "orders") || "Mobile Payment",
-        icon: <Phone size={16} />,
-        color: "text-purple-600",
-        bg: "bg-purple-50",
       },
     };
     return (
@@ -212,19 +180,15 @@ const OrderDetails = () => {
   const getPaymentStatusDisplay = (status) => {
     const statuses = {
       paid: {
-        text: t("paid", "orderDetails"),
+        text: t("paid", "procurement") || "Paid",
         color: "bg-green-100 text-green-800",
       },
       pending: {
-        text: t("pending", "common"),
+        text: t("pending", "procurement") || "Pending",
         color: "bg-yellow-100 text-yellow-800",
       },
-      refunded: {
-        text: t("refunded", "orderDetails"),
-        color: "bg-red-100 text-red-800",
-      },
-      failed: {
-        text: t("failed", "orderDetails"),
+      overdue: {
+        text: t("overdue", "procurement") || "Overdue",
         color: "bg-red-100 text-red-800",
       },
     };
@@ -236,44 +200,39 @@ const OrderDetails = () => {
     );
   };
 
-  const handlePrintInvoice = () => {
+  const handlePrintPO = () => {
     window.print();
   };
 
-  const handleContactCustomer = () => {
-    window.location.href = `mailto:${order.customerEmail}`;
+  const handleContactSupplier = () => {
+    window.location.href = `mailto:${purchaseOrder.supplierEmail}`;
   };
 
   const handleUpdateStatus = () => {
     const newStatus = prompt(
-      `${t("enterNewStatus", "orderDetails")} (${t("pending", "common")}/${t(
-        "processing",
-        "common"
-      )}/${t("completed", "common")}/${t("shipped", "orders")}/${t(
-        "cancelled",
-        "common"
-      )}):`
+      `${t("enterNewStatus", "procurement") || "Enter new status"} (${
+        t("pending", "procurement") || "Pending"
+      }/${t("confirmed", "procurement") || "Confirmed"}/${
+        t("shipped", "orderDetails") || "Shipped"
+      }/${t("delivered", "procurement") || "Delivered"}/${
+        t("cancelled", "procurement") || "Cancelled"
+      }):`
     );
     if (newStatus) {
       alert(
-        `${t("orderStatus", "orderDetails")} ${t(
-          "updatedTo",
-          "orderDetails"
-        )} ${newStatus}`
+        `${t("poStatus", "procurement") || "PO Status"} ${
+          t("updatedTo", "procurement") || "updated to"
+        } ${newStatus}`
       );
     }
   };
 
-  const handleConfirmDelivery = () => {
-    // تأكيد التوصيل - مؤقت حتى ربط الباك اند
+  const handleMarkAsDelivered = () => {
     alert(
-      `✅ ${t("order", "orderDetails")} #${order.id} ${t(
-        "markedDelivered",
-        "orderDetails"
-      )}`
+      `✅ ${t("purchaseOrder", "procurement") || "Purchase Order"} #${
+        purchaseOrder.poNumber
+      } ${t("markedDelivered", "procurement") || "marked as delivered"}`
     );
-    // يمكنك إضافة منطق هنا لاحقاً
-    // مثل: setOrder({...order, orderStatus: 'completed'});
   };
 
   if (loading) {
@@ -284,30 +243,31 @@ const OrderDetails = () => {
     );
   }
 
-  if (!order) {
+  if (!purchaseOrder) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <ShoppingCart className="mx-auto text-gray-400" size={48} />
+          <FileTextIcon className="mx-auto text-gray-400" size={48} />
           <h3 className="mt-4 text-lg font-semibold text-gray-800">
-            {t("orderNotFound", "orderDetails")}
+            {t("purchaseOrderNotFound", "procurement") ||
+              "Purchase Order not found"}
           </h3>
           <button
-            onClick={() => navigate("/orders")}
+            onClick={() => navigate("/procurement/purchase-orders")}
             className="mt-4 px-4 py-2 bg-dental-blue text-white rounded-lg hover:bg-blue-600 transition"
           >
-            {t("backToOrders", "orderDetails")}
+            {t("backToPurchaseOrders", "procurement") ||
+              "Back to Purchase Orders"}
           </button>
         </div>
       </div>
     );
   }
 
-  const orderStatus = getOrderStatusDisplay(order.orderStatus);
-  const paymentMethod = getPaymentMethodDisplay(order.paymentMethod);
-  const paymentStatus = getPaymentStatusDisplay(order.paymentStatus);
+  const orderStatus = getOrderStatusDisplay(purchaseOrder.orderStatus);
+  const paymentMethod = getPaymentMethodDisplay(purchaseOrder.paymentMethod);
+  const paymentStatus = getPaymentStatusDisplay(purchaseOrder.paymentStatus);
 
-  // تنسيق المبلغ
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -321,18 +281,20 @@ const OrderDetails = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => navigate("/orders")}
+            onClick={() => navigate("/procurement/purchase-orders")}
             className="p-2 hover:bg-gray-100 rounded-lg transition"
           >
             <ArrowLeft size={24} className="text-gray-600" />
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              {t("orderDetails", "orderDetails")}
+              {t("purchaseOrderDetails", "procurement") ||
+                "Purchase Order Details"}
             </h1>
             <div className="flex items-center space-x-4 mt-1">
               <p className="text-gray-600">
-                {t("order", "orderDetails")} #{order.id} • {order.customerName}
+                {t("purchaseOrder", "procurement") || "PO"} #
+                {purchaseOrder.poNumber} • {purchaseOrder.supplierName}
               </p>
               <span
                 className={`px-3 py-1 rounded-full text-sm font-medium inline-flex items-center space-x-1 ${orderStatus.color}`}
@@ -346,18 +308,18 @@ const OrderDetails = () => {
 
         <div className="flex space-x-3">
           <button
-            onClick={handlePrintInvoice}
+            onClick={handlePrintPO}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2"
           >
             <Printer size={20} />
-            <span>{t("printInvoice", "orderDetails")}</span>
+            <span>{t("printPO", "procurement") || "Print PO"}</span>
           </button>
           <button
             onClick={handleUpdateStatus}
             className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition flex items-center space-x-2"
           >
             <CheckCircle size={20} />
-            <span>{t("updateStatus", "orderDetails")}</span>
+            <span>{t("updateStatus", "procurement") || "Update Status"}</span>
           </button>
         </div>
       </div>
@@ -373,22 +335,22 @@ const OrderDetails = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">
-                  {t("orderItems", "orderDetails")}
+                  {t("orderedItems", "procurement") || "Ordered Items"}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  {order.items.length} {t("items", "orderDetails")}
+                  {purchaseOrder.items.length}{" "}
+                  {t("items", "procurement") || "items"}
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
-              {order.items.map((item) => (
+              {purchaseOrder.items.map((item) => (
                 <div
                   key={item.id}
                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
                 >
                   <div className="flex items-center space-x-4 flex-1">
-                    {/* ✅ حجم الصورة أكبر */}
                     <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                       <img
                         src={item.image}
@@ -402,46 +364,31 @@ const OrderDetails = () => {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      {/* ✅ اسم المنتج أكبر وبارز */}
                       <p className="font-bold text-gray-800 text-lg mb-6 truncate">
                         {item.product}
                       </p>
 
-                      {/* ✅ المعلومات في سطر واحد مرتب */}
                       <div className="text-sm text-gray-700 flex flex-wrap items-center gap-4">
                         <div className="flex items-center bg-gray-50 px-1 py-1 rounded">
                           <span className="font-medium mr-1">
-                            {t("quantity", "orderDetails")}:
+                            {t("quantity", "orderDetails") || "Qty"}:
                           </span>
-                          <span className="font-medium text-gray-800">
-                            {item.quantity}
-                          </span>
+                          <span className="text-gray-800">{item.quantity}</span>
                         </div>
-
-                        <div className="flex items-center bg-blue-50 px-1 py-1 rounded">
+                        <div className="flex items-center">
                           <span className="font-medium mr-1">
-                            {t("subtotal", "orderDetails")}:
+                            {t("subtotal", "orderDetails") || "Subtotal"}:
                           </span>
-                          <span className="font-medium text-blue-700">
+                          <span className="text-blue-600">
                             {formatCurrency(item.subTotal)}
                           </span>
                         </div>
-
-                        <div className="flex items-center bg-red-50 px-1 py-1 rounded">
+                        <div className="flex items-center">
                           <span className="font-medium mr-1">
-                            {t("discount", "orderDetails")}:
+                            {t("tax", "orderDetails") || "Tax"}:
                           </span>
-                          <span className="font-medium text-red-600">
-                            -{formatCurrency(item.discountAmount)}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center bg-green-50 px-1 py-1 rounded">
-                          <span className="font-medium mr-1">
-                            {t("tax", "orderDetails")}:
-                          </span>
-                          <span className="font-medium text-green-700">
-                            +{formatCurrency(item.taxAmount)}
+                          <span className="text-green-600">
+                            {formatCurrency(item.taxAmount)}
                           </span>
                         </div>
                       </div>
@@ -449,22 +396,21 @@ const OrderDetails = () => {
                   </div>
 
                   <div className="text-right ml-4 min-w-[140px] flex flex-col items-end">
-                    {/* ✅ التوتال النهائي بخط واضح */}
-                    <div className="mb-1">
+                    <div className="mb-2">
                       <p className="font-extrabold text-gray-800 text-xl">
                         {formatCurrency(item.finalPrice)}
                       </p>
                       <p className="text-xs text-gray-500 font-medium">
-                        {t("total", "orderDetails")}
+                        {t("total", "orderDetails") || "Total"}
                       </p>
                     </div>
 
-                    {/* ✅ Current Stock محاذاة مع التوتال */}
                     <div className="mt-auto pt-2">
                       <div className="inline-flex items-center px-3 py-1.5 bg-blue-100 rounded-lg border border-blue-200">
                         <PackageIcon size={14} className="text-blue-600 mr-2" />
                         <span className="text-sm font-bold text-blue-800">
-                          {t("stock", "orderDetails")}: {item.currentStock}
+                          {t("stock", "orderDetails") || "Stock"}:{" "}
+                          {item.currentStock}
                         </span>
                       </div>
                     </div>
@@ -482,40 +428,39 @@ const OrderDetails = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">
-                  {t("orderSummary", "orderDetails")}
+                  {t("orderSummary", "procurement") || "Order Summary"}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  {t("totalAmount", "orderDetails")}
+                  {t("totalAmount", "procurement") || "Total Amount"}
                 </p>
               </div>
             </div>
 
             <div className="space-y-3">
-              {/* Total Amount فقط */}
               <div className="flex justify-between items-center py-4 border-t border-gray-200">
                 <div>
                   <p className="text-lg font-bold text-gray-800">
-                    {t("totalAmount", "orderDetails")}
+                    {t("totalAmount", "procurement") || "Total Amount"}
                   </p>
                   <p className="text-sm text-gray-600">
-                    {t("currency", "orderDetails")}:{" "}
-                    {getCurrencyDisplay(order.currency)}
+                    {t("currency", "procurement") || "Currency"}:{" "}
+                    {getCurrencyDisplay(purchaseOrder.currency)}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-gray-800">
-                    {formatCurrency(order.totalAmount)}
+                    {formatCurrency(purchaseOrder.totalAmount)}
                   </p>
                   <p className="text-sm text-gray-600">
-                    {t("grandTotal", "orderDetails")}
+                    {t("grandTotal", "procurement") || "Grand Total"}
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Customer Notes */}
-          {order.customerNotes && (
+          {/* Notes */}
+          {purchaseOrder.notes && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="p-2 bg-yellow-50 rounded-lg">
@@ -523,31 +468,33 @@ const OrderDetails = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">
-                    {t("customerNotes", "orderDetails")}
+                    {t("notes", "procurement") || "Notes"}
                   </h3>
                 </div>
               </div>
               <p className="text-gray-600 bg-yellow-50 p-4 rounded-lg">
-                {order.customerNotes}
+                {purchaseOrder.notes}
               </p>
             </div>
           )}
         </div>
 
-        {/* Right Column - Order & Customer Information */}
+        {/* Right Column - Supplier & Order Information */}
         <div className="space-y-6">
           {/* Order Information */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <div className="flex items-center space-x-3 mb-6">
               <div className="p-2 bg-purple-50 rounded-lg">
-                <Package className="text-purple-500" size={24} />
+                <FileTextIcon className="text-purple-500" size={24} />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">
-                  {t("orderInformation", "orderDetails")}
+                  {t("purchaseOrderInformation", "procurement") ||
+                    "PO Information"}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  #{order.id} • {t("orderStatus", "orderDetails")}
+                  #{purchaseOrder.poNumber} •{" "}
+                  {t("poStatus", "procurement") || "PO Status"}
                 </p>
               </div>
             </div>
@@ -557,57 +504,65 @@ const OrderDetails = () => {
                 <div className="flex items-center">
                   <Calendar className="text-gray-500 mr-2" size={18} />
                   <span className="text-gray-700">
-                    {t("orderDate", "orderDetails")}
+                    {t("orderDate", "procurement") || "Order Date"}
                   </span>
                 </div>
-                <span className="font-medium">{order.orderDate}</span>
+                <span className="font-medium">{purchaseOrder.orderDate}</span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
                   <Truck className="text-gray-500 mr-2" size={18} />
                   <span className="text-gray-700">
-                    {t("estimatedDelivery", "orderDetails")}
+                    {t("expectedDelivery", "procurement") ||
+                      "Expected Delivery"}
                   </span>
                 </div>
-                <span className="font-medium">{order.estimatedDelivery}</span>
+                <span className="font-medium">
+                  {purchaseOrder.expectedDelivery}
+                </span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
                   <ChevronRight className="text-gray-500 mr-2" size={18} />
                   <span className="text-gray-700">
-                    {t("shippingMethod", "orderDetails")}
+                    {t("shippingMethod", "orderDetails") || "Shipping Method"}
                   </span>
                 </div>
-                <span className="font-medium">{order.shippingMethod}</span>
+                <span className="font-medium">
+                  {purchaseOrder.shippingMethod}
+                </span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
                   <Box className="text-gray-500 mr-2" size={18} />
                   <span className="text-gray-700">
-                    {t("trackingNumber", "orderDetails")}
+                    {t("trackingNumber", "orderDetails") || "Tracking Number"}
                   </span>
                 </div>
                 <span className="font-medium text-blue-600">
-                  {order.trackingNumber}
+                  {purchaseOrder.trackingNumber}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Customer Information */}
+          {/* Supplier Information */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <div className="flex items-center space-x-3 mb-6">
               <div className="p-2 bg-green-50 rounded-lg">
-                <User className="text-green-500" size={24} />
+                <Building className="text-green-500" size={24} />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">
-                  {t("customerInformation", "orderDetails")}
+                  {t("supplierInformation", "procurement") ||
+                    "Supplier Information"}
                 </h3>
-                <p className="text-sm text-gray-600">{order.customerName}</p>
+                <p className="text-sm text-gray-600">
+                  {purchaseOrder.supplierName}
+                </p>
               </div>
             </div>
 
@@ -616,9 +571,9 @@ const OrderDetails = () => {
                 <Mail className="text-gray-500 mr-3" size={18} />
                 <div>
                   <p className="text-sm text-gray-600">
-                    {t("email", "orderDetails")}
+                    {t("email", "procurement") || "Email"}
                   </p>
-                  <p className="font-medium">{order.customerEmail}</p>
+                  <p className="font-medium">{purchaseOrder.supplierEmail}</p>
                 </div>
               </div>
 
@@ -626,18 +581,20 @@ const OrderDetails = () => {
                 <Phone className="text-gray-500 mr-3" size={18} />
                 <div>
                   <p className="text-sm text-gray-600">
-                    {t("phoneNumber", "orderDetails")}
+                    {t("phone", "procurement") || "Phone"}
                   </p>
-                  <p className="font-medium">{order.customerPhone}</p>
+                  <p className="font-medium">{purchaseOrder.supplierPhone}</p>
                 </div>
               </div>
 
               <button
-                onClick={handleContactCustomer}
+                onClick={handleContactSupplier}
                 className="w-full py-3 px-4 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center justify-center space-x-2"
               >
                 <Mail size={18} />
-                <span>{t("contactCustomer", "orderDetails")}</span>
+                <span>
+                  {t("contactSupplier", "procurement") || "Contact Supplier"}
+                </span>
               </button>
             </div>
           </div>
@@ -650,11 +607,11 @@ const OrderDetails = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">
-                  {t("paymentDetails", "orderDetails")}
+                  {t("paymentDetails", "orderDetails") || "Payment Details"}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  {t("paymentMethod", "orderDetails")} •{" "}
-                  {t("paymentStatus", "orderDetails")}
+                  {t("paymentMethod", "procurement") || "Payment Method"} •{" "}
+                  {t("paymentStatus", "procurement") || "Payment Status"}
                 </p>
               </div>
             </div>
@@ -665,17 +622,17 @@ const OrderDetails = () => {
                   <div className="flex items-center">
                     {paymentMethod.icon}
                     <span className="ml-2 text-gray-700">
-                      {t("paymentMethod", "orderDetails")}
+                      {t("paymentMethod", "procurement") || "Payment Method"}
                     </span>
                   </div>
                   <span className="font-medium">{paymentMethod.text}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">
-                    {t("transactionId", "orderDetails")}
+                    {t("paymentTerms", "procurement") || "Payment Terms"}
                   </span>
                   <span className="text-sm font-medium">
-                    {order.transactionId}
+                    {purchaseOrder.paymentTerms}
                   </span>
                 </div>
               </div>
@@ -683,7 +640,7 @@ const OrderDetails = () => {
               <div className="p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-700">
-                    {t("paymentStatus", "orderDetails")}
+                    {t("paymentStatus", "procurement") || "Payment Status"}
                   </span>
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${paymentStatus.color}`}
@@ -696,15 +653,15 @@ const OrderDetails = () => {
               <div className="p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-700">
-                    {t("currency", "orderDetails")}
+                    {t("currency", "procurement") || "Currency"}
                   </span>
                   <div className="flex items-center">
                     <DollarSign className="text-green-500 mr-1" size={16} />
                     <span className="font-medium">
-                      {getCurrencyDisplay(order.currency)}
+                      {getCurrencyDisplay(purchaseOrder.currency)}
                     </span>
                     <span className="ml-1 text-sm text-gray-600">
-                      ({order.currency})
+                      ({purchaseOrder.currency})
                     </span>
                   </div>
                 </div>
@@ -717,29 +674,33 @@ const OrderDetails = () => {
       {/* Bottom Actions */}
       <div className="flex justify-between items-center pt-6 border-t border-gray-200">
         <button
-          onClick={() => navigate("/orders")}
+          onClick={() => navigate("/procurement/purchase-orders")}
           className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition flex items-center space-x-2"
         >
           <ArrowLeft size={20} />
-          <span>{t("backToOrders", "orderDetails")}</span>
+          <span>
+            {t("backToPurchaseOrders", "procurement") ||
+              "Back to Purchase Orders"}
+          </span>
         </button>
 
         <div className="flex space-x-3">
           <button
-            onClick={handlePrintInvoice}
+            onClick={handlePrintPO}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2"
           >
             <Printer size={20} />
-            <span>{t("printInvoice", "orderDetails")}</span>
+            <span>{t("printPO", "procurement") || "Print PO"}</span>
           </button>
 
-          {/* ✅ زر تأكيد الطلب الجديد */}
           <button
-            onClick={handleConfirmDelivery}
+            onClick={handleMarkAsDelivered}
             className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition flex items-center space-x-2"
           >
             <CheckCircle size={20} />
-            <span>{t("confirmDelivery", "orderDetails")}</span>
+            <span>
+              {t("markAsDelivered", "procurement") || "Mark as Delivered"}
+            </span>
           </button>
         </div>
       </div>
@@ -747,4 +708,4 @@ const OrderDetails = () => {
   );
 };
 
-export default OrderDetails;
+export default PurchaseOrderDetails;

@@ -14,11 +14,14 @@ import orderDetails from "./orderDetails.json";
 import inventory from "./inventory.json";
 import procurement from "./procurement.json";
 import employees from "./employees.json";
+import categories from "./categories.json";
+import editProduct from "./editProduct.json";
 
 export default {
   common,
   dashboard,
   products,
+  editProduct,
   navigation,
   login,
   orders,
@@ -32,4 +35,5 @@ export default {
   inventory,
   procurement,
   employees,
+  categories,
 };

@@ -39,6 +39,17 @@
   "USD": "Amerikansk dollar",
   "EUR": "Euro",
   "GBP": "Brittiskt pund",
-  "SAR": "Saudiska riyal",
-  "AED": "UAE-dirham"
+  "SAR": "Saudisk riyal",
+  "AED": "UAEs dirham",
+  "confirmDelivery": "Bekräfta leverans",
+  "order": "Beställning",
+  "orderNotFound": "Beställningen hittades inte",
+  "total": "Totalt",
+  "stock": "Lager",
+  "enterNewStatus": "Ange ny status",
+  "updatedTo": "uppdaterad till",
+  "markedDelivered": "markerad som levererad!",
+  "paid": "Betald",
+  "refunded": "Återbetalad",
+  "failed": "Misslyckades"
 }

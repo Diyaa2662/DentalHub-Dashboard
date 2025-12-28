@@ -23,5 +23,13 @@
   "purchaseOrderManagement": "Inköpsorderhantering",
   "employees": "Personal",
   "staff": "Personal",
-  "teamManagement": "Teamhantering"
+  "teamManagement": "Teamhantering",
+  "salesCustomers": "Försäljning & Kunder",
+  "inventoryProducts": "Lager & Produkter",
+  "procurementSuppliers": "Inköp & Leverantörer",
+  "teamAdministration": "Team & Administration",
+  "reportsAnalytics": "Rapporter & Analys",
+  "suppliersInvoices": "Leverantörer & Fakturor",
+  "supplierInvoices": "Leverantörsfakturor",
+  "supplierInvoicesManagement": "Hantering av Leverantörsfakturor"
 }

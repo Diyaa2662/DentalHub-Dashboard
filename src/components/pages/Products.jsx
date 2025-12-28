@@ -7,10 +7,11 @@ import {
   SearchPanel,
   Paging,
   Pager,
+  GroupPanel,
+  HeaderFilter,
 } from "devextreme-react/data-grid";
 import {
   Plus,
-  Filter,
   Download,
   Edit,
   Trash2,
@@ -22,6 +23,7 @@ import {
   TrendingUp,
   DollarSign,
   Tag,
+  Star,
 } from "lucide-react";
 
 const Products = () => {
@@ -29,15 +31,7 @@ const Products = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
 
-  // دالة لحساب المبلغ الذي تم توفيره
-  const calculateSavings = (originalPrice, discountedPrice) => {
-    const original = parseFloat(originalPrice.replace(/[^0-9.-]+/g, ""));
-    const discounted = parseFloat(discountedPrice.replace(/[^0-9.-]+/g, ""));
-    const savings = original - discounted;
-    return `$${savings.toLocaleString()}`;
-  };
-
-  // Mock data for products
+  // Mock data for products مع الحقول الجديدة
   const productsData = [
     {
       id: 1,
@@ -49,6 +43,8 @@ const Products = () => {
       stock: 12,
       status: "In Stock",
       sales: 45,
+      unit: "piece",
+      taxRate: "15%",
     },
     {
       id: 2,
@@ -60,6 +56,8 @@ const Products = () => {
       stock: 8,
       status: "Low Stock",
       sales: 32,
+      unit: "set",
+      taxRate: "15%",
     },
     {
       id: 3,
@@ -71,6 +69,8 @@ const Products = () => {
       stock: 25,
       status: "In Stock",
       sales: 78,
+      unit: "kit",
+      taxRate: "10%",
     },
     {
       id: 4,
@@ -82,6 +82,8 @@ const Products = () => {
       stock: 5,
       status: "Low Stock",
       sales: 18,
+      unit: "piece",
+      taxRate: "20%",
     },
     {
       id: 5,
@@ -93,6 +95,8 @@ const Products = () => {
       stock: 15,
       status: "In Stock",
       sales: 56,
+      unit: "box",
+      taxRate: "15%",
     },
     {
       id: 6,
@@ -104,6 +108,8 @@ const Products = () => {
       stock: 42,
       status: "In Stock",
       sales: 120,
+      unit: "pack",
+      taxRate: "10%",
     },
     {
       id: 7,
@@ -115,6 +121,8 @@ const Products = () => {
       stock: 0,
       status: "Out of Stock",
       sales: 23,
+      unit: "piece",
+      taxRate: "15%",
     },
     {
       id: 8,
@@ -126,15 +134,19 @@ const Products = () => {
       stock: 7,
       status: "Low Stock",
       sales: 34,
+      unit: "set",
+      taxRate: "20%",
     },
   ];
 
-  const handleExport = () => {
-    alert(
-      t("exportSuccess", "products") ||
-        "Export functionality would be implemented here"
-    );
-  };
+  // خيارات وحدة القياس
+  const unitOptions = [
+    { value: "piece", label: "Piece" },
+    { value: "set", label: "Set" },
+    { value: "box", label: "Box" },
+    { value: "kit", label: "Kit" },
+    { value: "pack", label: "Pack" },
+  ];
 
   const handleDelete = (id, name) => {
     if (window.confirm(`${t("confirmDelete", "products")} "${name}"?`)) {
@@ -172,6 +184,21 @@ const Products = () => {
     );
   };
 
+  // دالة للحصول على نص وحدة القياس
+  const getUnitLabel = (unitValue) => {
+    const unit = unitOptions.find((u) => u.value === unitValue);
+    return unit ? unit.label : unitValue;
+  };
+
+  // دالة لتحديد إذا كان هناك خصم
+  const hasDiscount = (price, priceAfterDiscount) => {
+    const priceNum = parseFloat(price.replace(/[^0-9.-]+/g, ""));
+    const discountedPriceNum = parseFloat(
+      priceAfterDiscount.replace(/[^0-9.-]+/g, "")
+    );
+    return priceNum > discountedPriceNum;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -183,13 +210,7 @@ const Products = () => {
           <p className="text-gray-600">{t("manageInventory", "products")}</p>
         </div>
         <div className="flex space-x-3 mt-4 md:mt-0">
-          <button
-            onClick={handleExport}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center space-x-2"
-          >
-            <Download size={20} />
-            <span>{t("export", "common")}</span>
-          </button>
+          {/* تم إزالة زر Export وأبقينا على زر Add Product */}
           <button
             onClick={() => navigate("/products/add")}
             className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center space-x-2"
@@ -249,13 +270,25 @@ const Products = () => {
           dataSource={productsData}
           showBorders={true}
           columnAutoWidth={true}
+          allowColumnResizing={true}
+          columnMinWidth={50}
           height={500}
           selection={{ mode: "multiple" }}
           onSelectionChanged={(e) => setSelectedRows(e.selectedRowsData)}
+          allowColumnReordering={true}
         >
+          <HeaderFilter visible={true} />
           <SearchPanel
             visible={true}
             placeholder={t("searchProducts", "products")}
+          />
+          <GroupPanel
+            visible={true}
+            emptyPanelText={
+              t("dragColumnHereToGroup", "products") ||
+              "Drag a column header here to group by that column"
+            }
+            allowColumnDragging={true}
           />
           <Paging defaultPageSize={10} />
           <Pager
@@ -264,56 +297,119 @@ const Products = () => {
             showInfo={true}
           />
 
-          <Column dataField="id" caption={t("id", "products")} width={70} />
-          <Column dataField="name" caption={t("productName", "products")} />
-          <Column dataField="category" caption={t("category", "products")} />
-          <Column dataField="price" caption={t("price", "products")} />
-
-          {/* عمود الخصم الجديد */}
           <Column
-            dataField="discount"
-            caption={t("discount", "products")}
-            width={100}
-            cellRender={({ data }) => (
-              <div className="flex items-center">
-                {data.discount !== "0%" && (
-                  <Tag className="text-red-500 mr-1" size={14} />
-                )}
-                <span
-                  className={`
-                  font-medium
-                  ${data.discount !== "0%" ? "text-red-600" : "text-gray-500"}
-                `}
-                >
-                  {data.discount}
-                </span>
-              </div>
-            )}
+            dataField="id"
+            caption={t("id", "products")}
+            width="auto"
+            alignment="left"
+            allowGrouping={false}
+          />
+          <Column
+            dataField="name"
+            caption={t("productName", "products")}
+            width="auto"
+            alignment="left"
+            allowGrouping={false}
+          />
+          <Column
+            dataField="category"
+            caption={t("category", "products")}
+            width="auto"
+            alignment="left"
+            allowGrouping={true}
+          />
+          <Column
+            dataField="price"
+            caption={t("price", "products")}
+            width="auto"
+            alignment="left"
+            allowGrouping={false}
           />
 
-          {/* عمود السعر بعد الخصم الجديد */}
+          {/* ✅ عمود السعر بعد الخصم بدل الخصم */}
           <Column
             dataField="priceAfterDiscount"
-            caption={t("priceAfterDiscount", "products")}
-            width={140}
+            caption={t("priceAfterDiscount", "products") || "Discount Price"}
+            width="auto"
+            alignment="left"
+            allowGrouping={false}
+            cellRender={({ data }) => {
+              const hasDisc = hasDiscount(data.price, data.priceAfterDiscount);
+              return (
+                <div className="flex flex-col">
+                  <div className="flex items-center">
+                    <span
+                      className={`font-semibold ${
+                        hasDisc ? "text-green-600" : "text-gray-800"
+                      }`}
+                    >
+                      {data.priceAfterDiscount}
+                    </span>
+                    {hasDisc && <Tag className="text-red-500 ml-2" size={12} />}
+                  </div>
+                  {hasDisc && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      {t("discountApplied", "products") || "Discount applied"}
+                    </div>
+                  )}
+                </div>
+              );
+            }}
+          />
+
+          {/* عمود المخزون */}
+          <Column
+            dataField="stock"
+            caption={t("stock", "products")}
+            width="auto"
+            alignment="left"
+            allowGrouping={false}
+          />
+
+          {/* عمود الوحدة الجديد */}
+          <Column
+            dataField="unit"
+            caption={t("unit", "products") || "Unit"}
+            width="auto"
+            alignment="left"
+            allowGrouping={true}
             cellRender={({ data }) => (
-              <div className="flex flex-col">
-                <span className="font-bold text-gray-800">
-                  {data.priceAfterDiscount}
+              <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm font-medium">
+                {getUnitLabel(data.unit)}
+              </span>
+            )}
+          />
+
+          {/* عمود معدل الضريبة الجديد */}
+          <Column
+            dataField="taxRate"
+            caption={t("taxRate", "products") || "Tax Rate"}
+            width="auto"
+            alignment="left"
+            allowGrouping={true}
+            cellRender={({ data }) => (
+              <div className="flex items-center">
+                <span
+                  className={`font-medium ${
+                    data.taxRate === "20%"
+                      ? "text-red-600"
+                      : data.taxRate === "15%"
+                      ? "text-orange-600"
+                      : "text-green-600"
+                  }`}
+                >
+                  {data.taxRate}
                 </span>
-                {data.discount !== "0%" && (
-                  <span className="text-xs text-green-600">
-                    Save {calculateSavings(data.price, data.priceAfterDiscount)}
-                  </span>
-                )}
               </div>
             )}
           />
 
-          <Column dataField="stock" caption={t("stock", "products")} />
           <Column
             dataField="status"
             caption={t("status", "common")}
+            width="auto"
+            alignment="left"
+            allowGrouping={true}
             cellRender={({ data }) => {
               let statusConfig = {
                 "In Stock": {
@@ -348,10 +444,17 @@ const Products = () => {
               );
             }}
           />
-          <Column dataField="sales" caption={t("sales", "products")} />
+          <Column
+            dataField="sales"
+            caption={t("sales", "products")}
+            width="auto"
+            alignment="left"
+            allowGrouping={false}
+          />
           <Column
             caption={t("actions", "products")}
-            width={140}
+            width="auto"
+            alignment="left"
             cellRender={({ data }) => (
               <div className="flex space-x-2">
                 <button
@@ -410,30 +513,6 @@ const Products = () => {
           </div>
         </div>
       )}
-
-      {/* Quick Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          {t("filterByCategory", "products")}
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { value: "all", label: t("allCategories", "products") },
-            { value: "equipment", label: t("equipment", "products") },
-            { value: "imaging", label: t("imaging", "products") },
-            { value: "surgical", label: t("surgical", "products") },
-            { value: "restorative", label: t("restorative", "products") },
-            { value: "hygiene", label: t("hygiene", "products") },
-          ].map((category) => (
-            <button
-              key={category.value}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
-            >
-              {category.label}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

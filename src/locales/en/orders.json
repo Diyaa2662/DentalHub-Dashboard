@@ -32,5 +32,11 @@
   "bankTransfer": "Bank Transfer",
   "cash": "Cash",
   "mobilePayment": "Mobile Payment",
-  "onlineBanking": "Online Banking"
+  "onlineBanking": "Online Banking",
+  "dragColumnHereToGroup": "Drag a column header here to group by that column",
+  "orderNumber": "Order Number",
+  "customer": "Customer",
+  "status": "Status",
+  "amount": "Amount",
+  "actions": "Actions"
 }

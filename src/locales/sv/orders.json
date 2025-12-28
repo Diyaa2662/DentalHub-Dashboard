@@ -32,5 +32,11 @@
   "bankTransfer": "Banköverföring",
   "cash": "Kontant",
   "mobilePayment": "Mobilbetalning",
-  "onlineBanking": "Internetbank"
+  "onlineBanking": "Internetbank",
+  "dragColumnHereToGroup": "Dra en kolumnrubrik hit för att gruppera efter den kolumnen",
+  "orderNumber": "Beställningsnummer",
+  "customer": "Kund",
+  "status": "Status",
+  "amount": "Belopp",
+  "actions": "Åtgärder"
 }

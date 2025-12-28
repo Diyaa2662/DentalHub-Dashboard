@@ -23,5 +23,13 @@
   "purchaseOrderManagement": "Purchase Order Management",
   "employees": "Employees",
   "staff": "Staff",
-  "teamManagement": "Team Management"
+  "teamManagement": "Team Management",
+  "salesCustomers": "Sales & Customers",
+  "inventoryProducts": "Inventory & Products",
+  "procurementSuppliers": "Procurement & Suppliers",
+  "teamAdministration": "Team & Administration",
+  "reportsAnalytics": "Reports & Analytics",
+  "suppliersInvoices": "Suppliers & Invoices",
+  "supplierInvoices": "Supplier Invoices",
+  "supplierInvoicesManagement": "Supplier Invoices Management"
 }

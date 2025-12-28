@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { TextBox, TextArea } from "devextreme-react";
 import { SelectBox } from "devextreme-react/select-box";
@@ -19,9 +19,12 @@ import {
   Percent,
   Globe,
   Flag,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 
-const AddProduct = () => {
+const EditProduct = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useLanguage();
 
@@ -38,24 +41,23 @@ const AddProduct = () => {
     { id: 9, name_en: "Orthodontic", name_sv: "Ortodontisk" },
   ];
 
+  // حالة المنتج الأصلي (للمقارنة ولإمكانية التراجع)
+  const [originalData, setOriginalData] = useState(null);
+
   const [formData, setFormData] = useState({
-    // ✅ حقلين للاسم
     name_en: "",
     name_sv: "",
-
     sku: "",
     category: "",
-    costPrice: "", // ✅ إضافة حقل سعر التكلفة
+    costPrice: "",
     price: "",
-    discountPrice: "", // ✅ إضافة حقل سعر الخصم (بدل نسبة الخصم)
+    discountPrice: "",
     taxRate: 0,
     stock: "",
-
-    // ✅ حقلين للوصف
     description_en: "",
     description_sv: "",
-
     image: null,
+    imageUrl: "", // رابط الصورة الحالية من الخادم
     status: "active",
     featured: false,
     trackInventory: true,
@@ -65,8 +67,10 @@ const AddProduct = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [success, setSuccess] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
   // قائمة الوحدات
   const units = [
@@ -76,6 +80,58 @@ const AddProduct = () => {
     t("kit", "common"),
     t("pack", "common"),
   ];
+
+  // ✅ محاكاة جلب بيانات المنتج من API
+  useEffect(() => {
+    const fetchProduct = () => {
+      setLoading(true);
+
+      // بيانات وهمية للمنتج (بديل لـ API)
+      setTimeout(() => {
+        const mockProduct = {
+          id: parseInt(id),
+          name_en: "Advanced Dental Chair",
+          name_sv: "Avancerad Tandstol",
+          sku: "DENT-5678",
+          category: 1, // ID of Equipment category
+          costPrice: 3800,
+          price: 4500,
+          discountPrice: 4200,
+          taxRate: 15,
+          stock: 12,
+          description_en:
+            "High-end dental chair with ergonomic design, adjustable positions, and advanced features for patient comfort and dentist efficiency.",
+          description_sv:
+            "Högkvalitativ tandstol med ergonomisk design, justerbara positioner och avancerade funktioner för patientkomfort och tandläkareffektivitet.",
+          imageUrl:
+            "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=400&auto=format&fit=crop",
+          status: "active",
+          featured: true,
+          trackInventory: true,
+          lowStockAlert: 5,
+          unit: "Piece",
+          rate: 4.7,
+        };
+
+        setOriginalData(mockProduct);
+        setFormData(mockProduct);
+        setImagePreview(mockProduct.imageUrl);
+        setLoading(false);
+      }, 800);
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  // ✅ تتبع التغييرات لمقارنة مع البيانات الأصلية
+  useEffect(() => {
+    if (originalData && formData) {
+      const isChanged =
+        JSON.stringify(formData) !== JSON.stringify(originalData);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHasChanges(isChanged);
+    }
+  }, [formData, originalData]);
 
   // دالة للحصول على اسم الفئة المناسب للغة الحالية
   const getCategoryDisplayName = (category) => {
@@ -151,7 +207,7 @@ const AddProduct = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setFormData((prev) => ({ ...prev, image: file }));
+      setFormData((prev) => ({ ...prev, image: file, imageUrl: "" }));
 
       // إنشاء معاينة للصورة
       const reader = new FileReader();
@@ -162,22 +218,31 @@ const AddProduct = () => {
     }
   };
 
-  const generateSKU = () => {
-    const prefix = "DENT";
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const sku = `${prefix}-${randomNum}`;
-    setFormData((prev) => ({ ...prev, sku }));
+  const removeImage = () => {
+    setFormData((prev) => ({ ...prev, image: null, imageUrl: "" }));
+    setImagePreview(null);
+  };
+
+  const resetForm = () => {
+    if (originalData) {
+      setFormData(originalData);
+      setImagePreview(originalData.imageUrl);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
+    setUpdating(true);
 
-    // محاكاة إرسال البيانات إلى الخادم
+    // محاكاة إرسال البيانات إلى الخادم للتحديث
     setTimeout(() => {
-      console.log("Product data:", formData);
-      setLoading(false);
+      console.log("Updated product data:", formData);
+      setUpdating(false);
       setSuccess(true);
+
+      // تحديث البيانات الأصلية بعد التعديل الناجح
+      setOriginalData(formData);
+      setHasChanges(false);
 
       // إعادة التوجيه بعد 2 ثانية
       setTimeout(() => {
@@ -185,6 +250,20 @@ const AddProduct = () => {
       }, 2000);
     }, 1500);
   };
+
+  // دالة للعودة للتفاصيل
+  const goToProductDetails = () => {
+    navigate(`/products/${id}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dental-blue"></div>
+        <span className="ml-4 text-gray-600">Loading product data...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -200,22 +279,53 @@ const AddProduct = () => {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              {t("addNewProduct", "addProduct")}
+              {t("editProduct", "editProduct") || "Edit Product"}
             </h1>
-            <p className="text-gray-600">
-              {t("addDentalEquipment", "addProduct")}
-            </p>
+            <div className="flex items-center space-x-4 mt-1">
+              <p className="text-gray-600">
+                {t("editingProduct", "editProduct") || "Editing"}{" "}
+                {formData.name_en} • {formData.sku}
+              </p>
+              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                ID: {id}
+              </span>
+            </div>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => navigate("/products")}
-          className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
-        >
-          {t("cancel", "common")}
-        </button>
+        <div className="flex space-x-3">
+          <button
+            type="button"
+            onClick={goToProductDetails}
+            className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+          >
+            {t("viewDetails", "editProduct") || "View Details"}
+          </button>
+        </div>
       </div>
+
+      {/* Change Indicator */}
+      {hasChanges && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <AlertCircle className="text-yellow-600" size={20} />
+              <span className="text-yellow-800 font-medium">
+                {t("unsavedChanges", "editProduct") ||
+                  "You have unsaved changes"}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition flex items-center space-x-2"
+            >
+              <RotateCcw size={16} />
+              <span>{t("resetChanges", "editProduct") || "Reset Changes"}</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {success ? (
         /* Success Message */
@@ -225,39 +335,71 @@ const AddProduct = () => {
               <CheckCircle className="text-green-600" size={32} />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">
-              {t("productAddedSuccess", "addProduct")}
+              {t("productUpdatedSuccess", "editProduct") ||
+                "Product Updated Successfully!"}
             </h3>
             <p className="text-gray-600 mb-6">
-              {t("productAddedInventory", "addProduct")}
+              {t("productUpdatedInventory", "editProduct") ||
+                "The product has been updated in your inventory."}
             </p>
-            <button
-              type="button"
-              onClick={() => navigate("/products")}
-              className="px-6 py-3 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition"
-            >
-              {t("goBackProducts", "addProduct")}
-            </button>
+            <div className="flex justify-center space-x-3">
+              <button
+                type="button"
+                onClick={goToProductDetails}
+                className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                {t("viewUpdatedProduct", "editProduct") ||
+                  "View Updated Product"}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/products")}
+                className="px-6 py-3 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition"
+              >
+                {t("backToProducts", "editProduct") || "Back to Products"}
+              </button>
+            </div>
           </div>
         </div>
       ) : (
-        /* Product Form */
+        /* Edit Form */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Basic Information Card */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <Package className="text-dental-blue" size={24} />
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <Package className="text-dental-blue" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        {t("basicInformation", "addProduct")}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {t("updateProductDetails", "editProduct") ||
+                          "Update product details"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      {t("basicInformation", "addProduct")}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {t("enterProductDetails", "addProduct")}
-                    </p>
+
+                  {/* Product Status */}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">Status:</span>
+                    <div className="flex items-center">
+                      <div
+                        className={`w-3 h-3 rounded-full mr-2 ${
+                          formData.status === "active"
+                            ? "bg-green-500"
+                            : "bg-gray-400"
+                        }`}
+                      ></div>
+                      <span className="text-sm font-medium capitalize">
+                        {formData.status}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -299,32 +441,27 @@ const AddProduct = () => {
                     </p>
                   </div>
 
-                  {/* SKU */}
+                  {/* SKU (غير قابل للتعديل) */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        {t("skuStockKeeping", "addProduct")}
-                      </label>
-                      <button
-                        type="button"
-                        onClick={generateSKU}
-                        className="text-sm text-dental-blue hover:text-blue-600"
-                      >
-                        {t("generateSku", "addProduct")}
-                      </button>
-                    </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t("skuStockKeeping", "addProduct")}
+                    </label>
                     <div className="relative">
                       <TextBox
-                        placeholder="DENT-1234"
                         value={formData.sku}
-                        onValueChange={(value) => handleChange("sku", value)}
+                        readOnly
                         width="100%"
+                        className="bg-gray-50"
                       />
                       <Hash
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                         size={18}
                       />
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t("skuCannotBeChanged", "editProduct") ||
+                        "SKU cannot be changed"}
+                    </p>
                   </div>
 
                   {/* Category */}
@@ -363,18 +500,41 @@ const AddProduct = () => {
                   </div>
                 </div>
 
-                {/* Link to manage categories */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <p className="text-sm text-gray-600">
-                    {t("Need to add a new category?", "addProduct")}{" "}
-                    <button
-                      type="button"
-                      onClick={() => navigate("/categories")}
-                      className="text-dental-blue hover:text-blue-600 font-medium"
-                    >
-                      {t("Manage categories here", "addProduct")}
-                    </button>
-                  </p>
+                {/* Product Status & Featured */}
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.trackInventory}
+                        onChange={(e) =>
+                          handleChange("trackInventory", e.target.checked)
+                        }
+                        className="h-5 w-5 text-dental-blue rounded"
+                      />
+                      <span className="text-sm text-gray-700">
+                        {t("trackInventory", "editProduct") ||
+                          "Track inventory for this product"}
+                      </span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.featured}
+                        onChange={(e) =>
+                          handleChange("featured", e.target.checked)
+                        }
+                        className="h-5 w-5 text-dental-blue rounded"
+                      />
+                      <span className="text-sm text-gray-700">
+                        {t("featuredProduct", "editProduct") ||
+                          "Mark as featured product"}
+                      </span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -389,13 +549,14 @@ const AddProduct = () => {
                       {t("pricingStock", "addProduct")}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {t("setPricingInventory", "addProduct")}
+                      {t("updatePricingInventory", "editProduct") ||
+                        "Update pricing and inventory"}
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  {/* ✅ Cost Price - الجديد */}
+                  {/* Cost Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t("costPrice", "productDetails") || "Cost Price"} *
@@ -437,7 +598,7 @@ const AddProduct = () => {
                     </div>
                   </div>
 
-                  {/* ✅ Discount Price - بدل Discount Percentage */}
+                  {/* Discount Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t("discountPrice", "addProduct") || "Discount Price"}
@@ -482,6 +643,44 @@ const AddProduct = () => {
                   </div>
                 </div>
 
+                {/* Current Stock */}
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t("currentStock", "editProduct") || "Current Stock"}
+                  </label>
+                  <div className="relative">
+                    <NumberBox
+                      placeholder="0"
+                      value={formData.stock}
+                      onValueChange={(value) => handleChange("stock", value)}
+                      showSpinButtons={true}
+                      min={0}
+                      width="100%"
+                    />
+                    <div className="absolute right-10 top-1/2 transform -translate-y-1/2 text-gray-500">
+                      {formData.unit}
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center text-sm">
+                    <div
+                      className={`w-3 h-3 rounded-full mr-2 ${
+                        formData.stock > (formData.lowStockAlert || 10)
+                          ? "bg-green-500"
+                          : formData.stock > 0
+                          ? "bg-yellow-500"
+                          : "bg-red-500"
+                      }`}
+                    ></div>
+                    <span className="text-gray-600">
+                      {formData.stock > (formData.lowStockAlert || 10)
+                        ? "In Stock"
+                        : formData.stock > 0
+                        ? "Low Stock"
+                        : "Out of Stock"}
+                    </span>
+                  </div>
+                </div>
+
                 {/* Product Rating */}
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -508,6 +707,26 @@ const AddProduct = () => {
                     <p className="text-sm text-gray-500 mt-1">
                       {t("enterRatingBetween", "addProduct") ||
                         "Enter rating between 0.0 and 5.0"}
+                    </p>
+                  </div>
+
+                  {/* Low Stock Alert */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t("lowStockAlert", "addProduct")}
+                    </label>
+                    <NumberBox
+                      placeholder="10"
+                      value={formData.lowStockAlert}
+                      onValueChange={(value) =>
+                        handleChange("lowStockAlert", value)
+                      }
+                      showSpinButtons={true}
+                      min={0}
+                      width="100%"
+                    />
+                    <p className="text-sm text-gray-500 mt-2">
+                      {t("getNotifiedWhenStock", "addProduct")}
                     </p>
                   </div>
                 </div>
@@ -606,26 +825,6 @@ const AddProduct = () => {
                       </div>
                     </div>
                   )}
-
-                {/* Low Stock Alert */}
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t("lowStockAlert", "addProduct")}
-                  </label>
-                  <NumberBox
-                    placeholder="10"
-                    value={formData.lowStockAlert}
-                    onValueChange={(value) =>
-                      handleChange("lowStockAlert", value)
-                    }
-                    showSpinButtons={true}
-                    min={0}
-                    width="100%"
-                  />
-                  <p className="text-sm text-gray-500 mt-2">
-                    {t("getNotifiedWhenStock", "addProduct")}
-                  </p>
-                </div>
               </div>
 
               {/* Description Card */}
@@ -639,7 +838,8 @@ const AddProduct = () => {
                       {t("descriptionDetails", "addProduct")}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {t("addProductDescription", "addProduct")}
+                      {t("updateProductDescription", "editProduct") ||
+                        "Update product description"}
                     </p>
                   </div>
                 </div>
@@ -681,36 +881,55 @@ const AddProduct = () => {
                 </div>
               </div>
 
-              {/* Submit Button */}
-              <div className="flex justify-end space-x-3 pt-6">
-                <button
-                  type="button"
-                  onClick={() => navigate("/products")}
-                  className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
-                >
-                  {t("cancel", "common")}
-                </button>
+              {/* Submit Buttons */}
+              <div className="flex justify-between items-center pt-6">
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/products")}
+                    className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    {t("cancel", "common")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    disabled={!hasChanges}
+                    className={`
+                      px-4 py-2 border border-gray-300 rounded-lg font-medium transition flex items-center space-x-2
+                      ${
+                        hasChanges
+                          ? "text-gray-700 hover:bg-gray-50"
+                          : "text-gray-400 cursor-not-allowed"
+                      }
+                    `}
+                  >
+                    <RotateCcw size={18} />
+                    <span>{t("reset", "common")}</span>
+                  </button>
+                </div>
+
                 <button
                   type="submit"
-                  disabled={loading || !formData.name_en.trim()}
+                  disabled={updating || !formData.name_en.trim() || !hasChanges}
                   className={`
                     px-6 py-2 rounded-lg font-medium transition flex items-center justify-center
                     ${
-                      loading || !formData.name_en.trim()
+                      updating || !formData.name_en.trim() || !hasChanges
                         ? "bg-gray-400 cursor-not-allowed text-white"
                         : "bg-dental-blue text-white hover:bg-blue-600"
                     }
                   `}
                 >
-                  {loading ? (
+                  {updating ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      {t("saving", "addProduct")}
+                      {t("updating", "editProduct") || "Updating..."}
                     </>
                   ) : (
                     <>
                       <Save size={20} className="mr-2" />
-                      {t("saveProduct", "addProduct")}
+                      {t("updateProduct", "editProduct") || "Update Product"}
                     </>
                   )}
                 </button>
@@ -722,18 +941,31 @@ const AddProduct = () => {
           <div className="space-y-6">
             {/* Image Upload Card */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="p-2 bg-orange-50 rounded-lg">
-                  <ImageIcon className="text-orange-500" size={24} />
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-orange-50 rounded-lg">
+                    <ImageIcon className="text-orange-500" size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {t("productImage", "addProduct")}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {t("updateProductPhoto", "editProduct") ||
+                        "Update product photo"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    {t("productImage", "addProduct")}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {t("uploadProductPhotos", "addProduct")}
-                  </p>
-                </div>
+
+                {imagePreview && (
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
               </div>
 
               {/* Image Preview */}
@@ -747,19 +979,16 @@ const AddProduct = () => {
                           alt="Preview"
                           className="w-full h-full object-cover rounded-lg"
                         />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImagePreview(null);
-                            setFormData((prev) => ({ ...prev, image: null }));
-                          }}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full"
-                        >
-                          ✕
-                        </button>
+                        <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs px-2 py-1 rounded-bl-lg">
+                          {formData.image ? "New" : "Current"}
+                        </div>
                       </div>
                       <p className="text-sm text-gray-600">
-                        {t("imagePreview", "addProduct") || "Image preview"}
+                        {formData.image
+                          ? t("newImagePreview", "editProduct") ||
+                            "New image preview"
+                          : t("currentImage", "editProduct") ||
+                            "Current product image"}
                       </p>
                     </div>
                   ) : (
@@ -796,59 +1025,118 @@ const AddProduct = () => {
                   <div className="flex items-center justify-center space-x-2">
                     <Upload size={18} />
                     <span className="font-medium">
-                      {t("chooseImage", "addProduct")}
+                      {imagePreview
+                        ? t("changeImage", "editProduct") || "Change Image"
+                        : t("uploadImage", "editProduct") || "Upload Image"}
                     </span>
                   </div>
                 </label>
               </div>
+
+              {/* Image Info */}
+              {formData.imageUrl && !formData.image && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    {t("currentImageStored", "editProduct") ||
+                      "Current image is stored on the server."}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {t("uploadNewReplace", "editProduct") ||
+                      "Upload a new image to replace it."}
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Quick Tips */}
+            {/* Product Information Card */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                ℹ️{" "}
+                {t("productInformation", "editProduct") ||
+                  "Product Information"}
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-gray-600">Product ID</p>
+                  <p className="font-medium">{id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Last Updated</p>
+                  <p className="font-medium">
+                    {new Date().toLocaleDateString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Created On</p>
+                  <p className="font-medium">2024-01-15</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Inventory Status</p>
+                  <div className="flex items-center space-x-2">
+                    <div
+                      className={`w-3 h-3 rounded-full ${
+                        formData.stock > 0 ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    ></div>
+                    <p className="font-medium">
+                      {formData.stock > 0
+                        ? `${formData.stock} in stock`
+                        : "Out of stock"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Tips for Editing */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-blue-800 mb-4">
-                📝 {t("quickTips", "addProduct")}
+                ✏️ {t("editingTips", "editProduct") || "Editing Tips"}
               </h3>
               <ul className="space-y-3 text-sm text-blue-700">
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">1</span>
                   </div>
-                  <span>{t("useClearDescriptive", "addProduct")}</span>
+                  <span>
+                    {t("updatePricingAccurately", "editProduct") ||
+                      "Update pricing accurately to reflect current costs"}
+                  </span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">2</span>
                   </div>
-                  <span>{t("setRealisticStock", "addProduct")}</span>
+                  <span>
+                    {t("maintainStockLevels", "editProduct") ||
+                      "Maintain accurate stock levels for inventory management"}
+                  </span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">3</span>
                   </div>
-                  <span>{t("highQualityImages", "addProduct")}</span>
+                  <span>
+                    {t("updateDescriptionsBoth", "editProduct") ||
+                      "Update descriptions in both languages for better reach"}
+                  </span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">4</span>
                   </div>
-                  <span>{t("accuratePricing", "addProduct")}</span>
+                  <span>
+                    {t("useResetToUndo", "editProduct") ||
+                      "Use 'Reset' to undo all changes if needed"}
+                  </span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">5</span>
                   </div>
                   <span>
-                    {t("setTaxRateProperly", "addProduct") ||
-                      "Set the correct tax rate for accurate pricing"}
-                  </span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-blue-600">6</span>
-                  </div>
-                  <span>
-                    Fill both English and Swedish fields for better
-                    multi-language support
+                    {t("saveBeforeLeaving", "editProduct") ||
+                      "Remember to save changes before leaving the page"}
                   </span>
                 </li>
               </ul>
@@ -860,4 +1148,4 @@ const AddProduct = () => {
   );
 };
 
-export default AddProduct;
+export default EditProduct;

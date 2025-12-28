@@ -6,7 +6,6 @@ import {
   Package,
   ShoppingCart,
   Users,
-  UserPlus,
   BarChart3,
   Settings,
   Activity,
@@ -16,86 +15,152 @@ import {
   FileText,
   Truck,
   ChevronRight,
+  FolderTree,
+  Building,
+  Briefcase,
+  TrendingUp,
+  Users2,
+  Receipt,
 } from "lucide-react";
 
 const Sidebar = () => {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(true);
-  const [activeItem, setActiveItem] = useState("dashboard");
+  const [expandedGroups, setExpandedGroups] = useState({
+    sales: true,
+    inventory: true,
+    suppliersInvoices: true,
+    team: true,
+    reports: true,
+  });
   const navigate = useNavigate();
 
-  const menuItems = [
+  const toggleGroup = (groupName) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupName]: !prev[groupName],
+    }));
+  };
+
+  const menuGroups = [
     {
       id: "dashboard",
-      label: t("dashboard", "navigation") || t("dashboard", "common"),
-      icon: <LayoutDashboard size={20} />,
-      path: "/",
-    },
-    {
-      id: "products",
-      label: t("products", "navigation") || t("products", "products"),
-      icon: <Package size={20} />,
-      path: "/products",
-    },
-    {
-      id: "orders",
-      label: t("orders", "navigation"),
-      icon: <ShoppingCart size={20} />,
-      path: "/orders",
-    },
-    {
-      id: "customers",
-      label: t("customers", "navigation"),
-      icon: <Users size={20} />,
-      path: "/customers",
-    },
-    {
-      id: "employees",
-      label: t("employees", "navigation"),
-      icon: <Users size={20} />,
-      path: "/employees",
-    },
-    {
-      id: "inventory",
-      label: t("inventoryManagement", "navigation"),
-      icon: <Package size={20} />,
-      path: "/inventory",
-    },
-    {
-      id: "procurement",
-      label: t("procurement", "navigation"),
-      icon: <Truck size={20} />,
-      path: "/procurement", // ← صفحة رئيسية
-      children: [
+      singleItem: true,
+      items: [
         {
-          path: "/procurement/suppliers",
-          label: t("suppliers", "navigation"),
-          icon: <Users size={16} />,
-        },
-        {
-          path: "/procurement/purchase-orders",
-          label: t("purchaseOrders", "navigation"),
-          icon: <FileText size={16} />,
+          id: "dashboard",
+          label: t("dashboard", "navigation"),
+          icon: <LayoutDashboard size={20} />,
+          path: "/",
         },
       ],
     },
     {
-      id: "invoices",
-      label: t("invoices", "navigation"),
-      icon: <FileText size={20} />,
-      path: "/invoices",
+      id: "sales",
+      label: t("salesCustomers", "navigation"),
+      icon: <ShoppingCart size={20} />,
+      items: [
+        {
+          id: "orders",
+          label: t("orders", "navigation"),
+          icon: <ShoppingCart size={18} />,
+          path: "/orders",
+        },
+        {
+          id: "customers",
+          label: t("customers", "navigation"),
+          icon: <Users size={18} />,
+          path: "/customers",
+        },
+        {
+          id: "invoices",
+          label: t("invoices", "navigation"),
+          icon: <FileText size={18} />,
+          path: "/invoices",
+        },
+      ],
     },
     {
-      id: "analytics",
-      label: t("analytics", "navigation") || t("analytics", "common"),
-      icon: <BarChart3 size={20} />,
-      path: "/analytics",
+      id: "inventory",
+      label: t("inventoryProducts", "navigation"),
+      icon: <Package size={20} />,
+      items: [
+        {
+          id: "products",
+          label: t("products", "navigation") || t("products", "products"),
+          icon: <Package size={18} />,
+          path: "/products",
+        },
+        {
+          id: "categories",
+          label: t("categories", "navigation"),
+          icon: <FolderTree size={18} />,
+          path: "/categories",
+        },
+        {
+          id: "inventory",
+          label: t("inventoryManagement", "navigation"),
+          icon: <Package size={18} />,
+          path: "/inventory",
+        },
+      ],
     },
     {
-      id: "settings",
-      label: t("settings", "navigation") || t("settings", "common"),
-      icon: <Settings size={20} />,
-      path: "/settings",
+      id: "suppliersInvoices",
+      label: t("suppliersInvoices", "navigation") || "Suppliers & Invoices",
+      icon: <Receipt size={20} />,
+      items: [
+        {
+          id: "suppliers",
+          label: t("suppliers", "navigation"),
+          icon: <Building size={18} />,
+          path: "/procurement/suppliers",
+        },
+        {
+          id: "purchase-orders",
+          label: t("purchaseOrders", "navigation"),
+          icon: <FileText size={18} />,
+          path: "/procurement/purchase-orders",
+        },
+        {
+          id: "supplier-invoices",
+          label: t("supplierInvoices", "navigation"),
+          icon: <Receipt size={18} />,
+          path: "/procurement/supplier-invoices",
+        },
+      ],
+    },
+    {
+      id: "team",
+      label: t("teamAdministration", "navigation"),
+      icon: <Users2 size={20} />,
+      items: [
+        {
+          id: "employees",
+          label: t("employees", "navigation"),
+          icon: <Briefcase size={18} />,
+          path: "/employees",
+        },
+        {
+          id: "settings",
+          label: t("settings", "navigation") || t("settings", "common"),
+          icon: <Settings size={18} />,
+          path: "/settings",
+        },
+      ],
+    },
+    {
+      id: "reports",
+      label: t("reportsAnalytics", "navigation"),
+      icon: <TrendingUp size={20} />,
+      items: [
+        {
+          id: "analytics",
+          label: t("analytics", "navigation") || t("analytics", "common"),
+          icon: <BarChart3 size={18} />,
+          path: "/analytics",
+        },
+      ],
     },
   ];
 
@@ -131,101 +196,96 @@ const Sidebar = () => {
                 DentalPro Shop
               </h1>
               <p className="text-sm text-gray-500">
-                {t("adminDashboard", "navigation") || "Admin Dashboard"}
+                {t("adminDashboard", "navigation") || "لوحة التحكم"}
               </p>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
-          {menuItems.map((item) => {
-            // إذا كان العنصر ليس له قائمة فرعية
-            if (!item.children) {
-              return (
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {menuGroups.map((group) => {
+            // إذا كان عنصر منفرد (مثل Dashboard)
+            if (group.singleItem) {
+              return group.items.map((item) => (
                 <NavLink
                   key={item.id}
                   to={item.path}
                   className={({ isActive }) => `
-            flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors
-            ${
-              isActive
-                ? "bg-primary-50 text-primary-700 border-l-4 border-primary-600"
-                : "text-gray-700 hover:bg-gray-100"
-            }
-          `}
-                  onClick={() => setActiveItem(item.id)}
-                  end // ← مهم للصفحة الرئيسية
-                >
-                  <span
-                    className={
-                      activeItem === item.id
-                        ? "text-primary-600"
-                        : "text-gray-500"
+                    flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors mb-2
+                    ${
+                      isActive
+                        ? "bg-primary-50 text-primary-700 border-l-4 border-primary-600"
+                        : "text-gray-700 hover:bg-gray-100"
                     }
-                  >
-                    {item.icon}
-                  </span>
-                  <span className="font-medium">{item.label}</span>
+                  `}
+                  end
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span
+                        className={
+                          isActive ? "text-primary-600" : "text-gray-500"
+                        }
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="font-medium">{item.label}</span>
+                    </>
+                  )}
                 </NavLink>
-              );
+              ));
             }
 
-            // إذا كان العنصر له قائمة فرعية (مثل procurement)
+            // المجموعات مع عناصر فرعية
             return (
-              <div key={item.id} className="space-y-1">
-                {/* العنصر الرئيسي */}
+              <div key={group.id} className="mb-2">
+                {/* عنوان المجموعة */}
                 <div
-                  className={`
-            flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer
-            ${
-              activeItem === item.id
-                ? "bg-primary-50 text-primary-700 border-l-4 border-primary-600"
-                : "text-gray-700 hover:bg-gray-100"
-            }
-          `}
-                  onClick={() =>
-                    setActiveItem(activeItem === item.id ? "" : item.id)
-                  }
+                  className="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50"
+                  onClick={() => toggleGroup(group.id)}
                 >
-                  <div className="flex items-center space-x-3">
-                    <span
-                      className={
-                        activeItem === item.id
-                          ? "text-primary-600"
-                          : "text-gray-500"
-                      }
-                    >
-                      {item.icon}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-gray-500">{group.icon}</span>
+                    <span className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                      {group.label}
                     </span>
-                    <span className="font-medium">{item.label}</span>
                   </div>
-                  {/* سهم للفتح/الإغلاق */}
                   <ChevronRight
                     className={`transform transition-transform ${
-                      activeItem === item.id ? "rotate-90" : ""
+                      expandedGroups[group.id] ? "rotate-90" : ""
                     }`}
                     size={16}
                   />
                 </div>
 
-                {/* القائمة الفرعية */}
-                {activeItem === item.id && (
-                  <div className="ml-8 space-y-1">
-                    {item.children.map((child, index) => (
+                {/* العناصر الفرعية */}
+                {expandedGroups[group.id] && (
+                  <div className="ml-1 space-y-1 mt-1">
+                    {group.items.map((item) => (
                       <NavLink
-                        key={index}
-                        to={child.path}
+                        key={item.id}
+                        to={item.path}
                         className={({ isActive }) => `
-                  flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm
-                  ${
-                    isActive
-                      ? "bg-gray-100 text-primary-600"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }
-                `}
+                          flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors text-sm
+                          ${
+                            isActive
+                              ? "bg-primary-50 text-primary-700 border-l-2 border-primary-600"
+                              : "text-gray-600 hover:bg-gray-50"
+                          }
+                        `}
                       >
-                        <span className="text-gray-400">{child.icon}</span>
-                        <span>{child.label}</span>
+                        {({ isActive }) => (
+                          <>
+                            <span
+                              className={
+                                isActive ? "text-primary-600" : "text-gray-400"
+                              }
+                            >
+                              {item.icon}
+                            </span>
+                            <span>{item.label}</span>
+                          </>
+                        )}
                       </NavLink>
                     ))}
                   </div>
@@ -243,7 +303,7 @@ const Sidebar = () => {
             </div>
             <div className="flex-1">
               <p className="font-medium text-gray-800">
-                {t("adminUser", "navigation") || "Admin User"}
+                {t("adminUser", "navigation") || "المدير"}
               </p>
               <p className="text-sm text-gray-500">admin@dentalpro.com</p>
             </div>

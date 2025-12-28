@@ -250,6 +250,9 @@
   "stockTurnover": "Stock Turnover",
   "annualStockTurnover": "Annual stock turnover rate",
   "units": "units",
+  "unit": "unit",
   "products": "products",
-  "priceAfterDiscount": "Price After Discount"
+  "priceAfterDiscount": "Discount Price",
+  "discountApplied": "Discount Applied",
+  "dragColumnHereToGroup": "Drag a column header here to group by that column"
 }

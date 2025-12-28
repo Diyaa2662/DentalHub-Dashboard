@@ -6,6 +6,9 @@ import {
   SearchPanel,
   Paging,
   Pager,
+  Grouping,
+  GroupPanel,
+  HeaderFilter,
 } from "devextreme-react/data-grid";
 import { Users, Mail, Phone, MapPin, Calendar, UserPlus } from "lucide-react";
 
@@ -96,10 +99,6 @@ const Customers = () => {
     },
   ];
 
-  const handleAddCustomer = () => {
-    alert(t("addCustomerMessage", "customers") || "Add customer functionality");
-  };
-
   const handleSendEmail = (email) => {
     alert(`${t("sendingEmailTo", "customers")} ${email}`);
   };
@@ -115,15 +114,6 @@ const Customers = () => {
           <p className="text-gray-600">
             {t("manageDentalProfessionals", "customers")}
           </p>
-        </div>
-        <div className="flex space-x-3 mt-4 md:mt-0">
-          <button
-            onClick={handleAddCustomer}
-            className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center space-x-2"
-          >
-            <UserPlus size={20} />
-            <span>{t("addCustomer", "customers")}</span>
-          </button>
         </div>
       </div>
 
@@ -164,18 +154,39 @@ const Customers = () => {
         </div>
       </div>
 
-      {/* Customers Table */}
+      {/* Customers Table مع الخصائص المطلوبة */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <DataGrid
           dataSource={customersData}
           showBorders={true}
           columnAutoWidth={true}
           height={500}
+          allowColumnResizing={true}
+          allowColumnReordering={true}
+          columnResizingMode="widget"
+          showColumnLines={true}
+          showRowLines={true}
+          rowAlternationEnabled={true}
         >
+          {/* ✅ HeaderFilter للفلترة من الهيدر */}
+          <HeaderFilter visible={true} />
+
+          {/* ✅ Search Panel للبحث العام */}
           <SearchPanel
             visible={true}
             placeholder={t("searchCustomers", "customers")}
           />
+
+          {/* ✅ GroupPanel للتجميع */}
+          <GroupPanel
+            visible={true}
+            emptyPanelText={
+              t("dragColumnHereToGroup", "common") ||
+              "Drag a column header here to group by that column"
+            }
+            allowColumnDragging={true}
+          />
+
           <Paging defaultPageSize={10} />
           <Pager
             showPageSizeSelector={true}
@@ -183,11 +194,33 @@ const Customers = () => {
             showInfo={true}
           />
 
-          <Column dataField="id" caption={t("id", "products")} width={70} />
-          <Column dataField="name" caption={t("name", "customers")} />
+          {/* ✅ الأعمدة بنفس العرض والمحاذاة */}
+          <Column
+            dataField="id"
+            caption={t("id", "products")}
+            width={"auto"}
+            alignment="left"
+            allowHeaderFiltering={true}
+            allowFiltering={true}
+          />
+
+          <Column
+            dataField="name"
+            caption={t("name", "customers")}
+            width={"auto"}
+            alignment="left"
+            allowHeaderFiltering={true}
+            allowFiltering={true}
+            allowGrouping={true}
+          />
+
           <Column
             dataField="email"
             caption={t("email", "common")}
+            width={"auto"}
+            alignment="left"
+            allowHeaderFiltering={true}
+            allowFiltering={true}
             cellRender={({ data }) => (
               <div
                 className="flex items-center cursor-pointer hover:text-blue-600"
@@ -198,9 +231,14 @@ const Customers = () => {
               </div>
             )}
           />
+
           <Column
             dataField="phone"
             caption={t("phone", "customers")}
+            width={"auto"}
+            alignment="left"
+            allowHeaderFiltering={true}
+            allowFiltering={true}
             cellRender={({ data }) => (
               <div className="flex items-center">
                 <Phone size={14} className="mr-2 text-gray-400" />
@@ -208,9 +246,15 @@ const Customers = () => {
               </div>
             )}
           />
+
           <Column
             dataField="location"
             caption={t("location", "customers")}
+            width={"auto"}
+            alignment="left"
+            allowHeaderFiltering={true}
+            allowFiltering={true}
+            allowGrouping={true}
             cellRender={({ data }) => (
               <div className="flex items-center">
                 <MapPin size={14} className="mr-2 text-gray-400" />
@@ -218,20 +262,37 @@ const Customers = () => {
               </div>
             )}
           />
+
           <Column
             dataField="orders"
             caption={t("orders", "navigation")}
-            width={80}
+            width={"auto"}
+            alignment="left"
+            allowHeaderFiltering={true}
+            allowFiltering={true}
+            allowGrouping={true}
           />
+
           <Column
             dataField="totalSpent"
             caption={t("totalSpent", "customers")}
+            width={"auto"}
+            alignment="left"
+            allowHeaderFiltering={true}
+            allowFiltering={true}
+            allowGrouping={true}
           />
+
           <Column
             dataField="joinDate"
             caption={t("joinDate", "customers")}
+            width={"auto"}
+            alignment="left"
             dataType="date"
             format="yyyy-MM-dd"
+            allowHeaderFiltering={true}
+            allowFiltering={true}
+            allowGrouping={true}
           />
         </DataGrid>
       </div>

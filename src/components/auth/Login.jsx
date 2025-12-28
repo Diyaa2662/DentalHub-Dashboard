@@ -16,8 +16,8 @@ const Login = () => {
 
   // بيانات تسجيل الدخول الثابتة
   const validCredentials = {
-    email: "admin@dentalpro.com",
-    password: "admin123",
+    email: "admin@dentalhub.com",
+    password: "admin1234",
   };
 
   const handleChange = (e) => {

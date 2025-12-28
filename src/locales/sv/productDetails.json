@@ -16,6 +16,8 @@
   "specifications": "Specifikationer",
   "additionalInformation": "Ytterligare information",
   "productStatus": "Produktstatus",
+  "productRating": "Produktbetyg",
+  "costPrice": "Kostnadspris",
   "isFeatured": "Är utvald?",
   "trackInventory": "Spåra lager?",
   "inventoryManagement": "Lagerhantering",

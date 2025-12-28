@@ -36,6 +36,7 @@
   "setRealisticStock": "Set realistic stock levels and alerts",
   "highQualityImages": "High-quality images increase sales",
   "accuratePricing": "Accurate pricing ensures profitability",
+  "setTaxRateProperly": "Set tax rates properly for compliance",
   "productAddedSuccess": "Product Added Successfully!",
   "productAddedInventory": "The new product has been added to your inventory.",
   "goBackProducts": "Go Back to Products",
@@ -53,5 +54,10 @@
   "enable": "Enable",
   "disable": "Disable", 
   "products": "Products",
-  "discountPercentage": "Discount Percentage"
+  "discountPrice": "Discount Price",
+  "productRating": "Product Rating",
+  "requiredField": "Required field",
+  "Optional - will use English name if left empty": "Optional - will use English name if left empty",
+  "Need to add a new category?": "Need to add a new category?",
+  "Manage categories here": "Manage categories here"
 }

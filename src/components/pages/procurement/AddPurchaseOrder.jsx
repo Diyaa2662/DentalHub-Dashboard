@@ -1,0 +1,792 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../../../contexts/LanguageContext";
+import {
+  ArrowLeft,
+  Save,
+  Plus,
+  Trash2,
+  DollarSign,
+  CreditCard,
+  FileText,
+  Building,
+  ShoppingCart,
+  ChevronDown,
+  Percent,
+} from "lucide-react";
+
+const AddPurchaseOrder = () => {
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+  const [showProductSuggestions, setShowProductSuggestions] = useState({});
+
+  // حالة النموذج الرئيسي
+  const [formData, setFormData] = useState({
+    supplierName: "",
+    supplierEmail: "",
+    supplierPhone: "",
+    notes: "",
+    paymentMethod: "credit_card",
+    paymentTerms: "Net 30",
+  });
+
+  // حالة عناصر الطلب (مع taxRate)
+  const [orderItems, setOrderItems] = useState([
+    {
+      id: 1,
+      product: "",
+      quantity: 1,
+      unitPrice: 0,
+      taxRate: 15, // إرجاع taxRate
+    },
+  ]);
+
+  // قائمة الموردين
+  const [suppliers] = useState([
+    {
+      id: 1,
+      name: "Dental Equipment Co.",
+      email: "contact@dentalequip.com",
+      phone: "+1-555-123-4567",
+    },
+    {
+      id: 2,
+      name: "MediDental Supplies",
+      email: "sales@medidental.com",
+      phone: "+1-555-987-6543",
+    },
+    {
+      id: 3,
+      name: "DentalTech Solutions",
+      email: "info@dentaltech.com",
+      phone: "+1-555-456-7890",
+    },
+    {
+      id: 4,
+      name: "Oral Care Distributors",
+      email: "orders@oralcare.com",
+      phone: "+1-555-321-0987",
+    },
+  ]);
+
+  // قائمة المنتجات
+  const [products] = useState([
+    { id: 1, name: "Advanced Dental Chair", price: 4500, stock: 12 },
+    { id: 2, name: "Dental X-Ray Unit", price: 3200, stock: 8 },
+    { id: 3, name: "Sterilization Equipment", price: 950, stock: 15 },
+    { id: 4, name: "Dental Handpiece", price: 350, stock: 25 },
+    { id: 5, name: "Dental Composite", price: 85, stock: 50 },
+    { id: 6, name: "Dental Anesthesia Kit", price: 120, stock: 30 },
+  ]);
+
+  // معالجة تغيير النموذج الرئيسي
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  // معالجة تغيير عنصر الطلب (مع taxRate)
+  const handleItemChange = (id, field, value) => {
+    setOrderItems(
+      orderItems.map((item) => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value };
+
+          // حساب Subtotal و Tax
+          if (
+            field === "quantity" ||
+            field === "unitPrice" ||
+            field === "taxRate"
+          ) {
+            const subtotal = updatedItem.quantity * updatedItem.unitPrice;
+            const taxAmount = subtotal * (updatedItem.taxRate / 100);
+            updatedItem.subTotal = subtotal;
+            updatedItem.taxAmount = taxAmount;
+          }
+
+          return updatedItem;
+        }
+        return item;
+      })
+    );
+
+    // ✅ إذا كان التغيير في حقل المنتج، افتح القائمة
+    if (field === "product" && value) {
+      setShowProductSuggestions((prev) => ({
+        ...prev,
+        [id]: true,
+      }));
+    } else if (field === "product" && !value) {
+      // ✅ إذا تم مسح المنتج، أغلق القائمة
+      setShowProductSuggestions((prev) => ({
+        ...prev,
+        [id]: false,
+      }));
+    }
+  };
+
+  // إضافة عنصر جديد للطلب
+  const addOrderItem = () => {
+    const newId =
+      orderItems.length > 0
+        ? Math.max(...orderItems.map((item) => item.id)) + 1
+        : 1;
+    setOrderItems([
+      ...orderItems,
+      {
+        id: newId,
+        product: "",
+        quantity: 1,
+        unitPrice: 0,
+        taxRate: 15, // القيمة الافتراضية
+        subTotal: 0,
+        taxAmount: 0,
+      },
+    ]);
+
+    // ✅ إغلاق القائمة للعنصر الجديد
+    setShowProductSuggestions((prev) => ({
+      ...prev,
+      [newId]: false,
+    }));
+  };
+
+  // حذف عنصر من الطلب
+  const removeOrderItem = (id) => {
+    if (orderItems.length > 1) {
+      setOrderItems(orderItems.filter((item) => item.id !== id));
+    }
+  };
+
+  // اختيار مورد من القائمة
+  const selectSupplier = (supplier) => {
+    setFormData({
+      ...formData,
+      supplierName: supplier.name,
+      supplierEmail: supplier.email,
+      supplierPhone: supplier.phone,
+    });
+  };
+
+  // ✅ دالة اختيار منتج مع إغلاق القائمة
+  const selectProduct = (itemId, product) => {
+    setOrderItems(
+      orderItems.map((item) => {
+        if (item.id === itemId) {
+          const updatedItem = {
+            ...item,
+            product: product.name,
+            unitPrice: product.price,
+          };
+
+          // إعادة الحساب
+          const subtotal = updatedItem.quantity * updatedItem.unitPrice;
+          const taxAmount = subtotal * (updatedItem.taxRate / 100);
+          updatedItem.subTotal = subtotal;
+          updatedItem.taxAmount = taxAmount;
+
+          return updatedItem;
+        }
+        return item;
+      })
+    );
+
+    // ✅ إغلاق قائمة المنتجات لهذا العنصر
+    setShowProductSuggestions((prev) => ({
+      ...prev,
+      [itemId]: false,
+    }));
+  };
+
+  // حساب الإجماليات
+  const calculateTotals = () => {
+    const subtotal = orderItems.reduce(
+      (sum, item) => sum + (item.subTotal || 0),
+      0
+    );
+    const tax = orderItems.reduce(
+      (sum, item) => sum + (item.taxAmount || 0),
+      0
+    );
+    const totalAmount = subtotal + tax;
+
+    return {
+      subtotal,
+      tax,
+      totalAmount,
+    };
+  };
+
+  const totals = calculateTotals();
+
+  // تنسيق المبلغ
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
+  };
+
+  // تقديم النموذج
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // التحقق من البيانات المطلوبة
+    if (!formData.supplierName) {
+      alert(
+        t("supplierNameRequired", "procurement") || "Supplier name is required"
+      );
+      return;
+    }
+
+    if (orderItems.some((item) => !item.product || item.unitPrice <= 0)) {
+      alert(
+        t("validItemsRequired", "procurement") ||
+          "Please add valid items with prices"
+      );
+      return;
+    }
+
+    // إنشاء طلب الشراء
+    const newPurchaseOrder = {
+      ...formData,
+      items: orderItems.map((item) => ({
+        ...item,
+        currentStock: products.find((p) => p.name === item.product)?.stock || 0,
+        image: `https://images.unsplash.com/photo-${Math.floor(
+          Math.random() * 1000
+        )}?w=400&auto=format&fit=crop`,
+      })),
+      ...totals,
+      poNumber: `PO-${new Date().getFullYear()}-${Math.floor(
+        // eslint-disable-next-line react-hooks/purity
+        Math.random() * 1000
+      )
+        .toString()
+        .padStart(3, "0")}`,
+      orderStatus: "pending",
+      paymentStatus: "pending",
+    };
+
+    console.log("New Purchase Order:", newPurchaseOrder);
+
+    // عرض رسالة نجاح والانتقال
+    alert(
+      t("purchaseOrderCreated", "procurement") ||
+        "Purchase Order created successfully!"
+    );
+    navigate("/procurement/purchase-orders");
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate("/procurement/purchase-orders")}
+            className="p-2 hover:bg-gray-100 rounded-lg transition"
+          >
+            <ArrowLeft size={24} className="text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {t("addPurchaseOrder", "procurement") || "Add New Purchase Order"}
+            </h1>
+            <p className="text-gray-600">
+              {t("createNewPurchaseOrder", "procurement") ||
+                "Create a new purchase order for dental supplies"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Order Items */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Order Items Section */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <ShoppingCart className="text-dental-blue" size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {t("orderItems", "orderDetails") || "Order Items"}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {t("addItemsToPurchase", "procurement") ||
+                        "Add items to purchase order"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={addOrderItem}
+                  className="px-4 py-2 bg-blue-50 text-dental-blue rounded-lg hover:bg-blue-100 transition flex items-center space-x-2"
+                >
+                  <Plus size={20} />
+                  <span>{t("addItem", "procurement") || "Add Item"}</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {orderItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-medium text-gray-800">
+                        {t("item", "procurement") || "Item"} #{item.id}
+                      </h4>
+                      {orderItems.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeOrderItem(item.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* ✅ إرجاع الحقول الأربعة: المنتج، الكمية، سعر الوحدة، نسبة الضريبة */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* Product Selection */}
+                      <div className="relative">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t("product", "orderDetails") || "Product"} *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={item.product}
+                            onChange={(e) =>
+                              handleItemChange(
+                                item.id,
+                                "product",
+                                e.target.value
+                              )
+                            }
+                            onFocus={() => {
+                              if (item.product) {
+                                setShowProductSuggestions((prev) => ({
+                                  ...prev,
+                                  [item.id]: true,
+                                }));
+                              }
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder={
+                              t("selectProduct", "procurement") ||
+                              "Select product"
+                            }
+                            required
+                          />
+                          <div className="absolute right-3 top-2.5">
+                            <ChevronDown size={20} className="text-gray-400" />
+                          </div>
+                        </div>
+
+                        {/* Product Suggestions - تظهر فقط إذا كانت الحالة true */}
+                        {showProductSuggestions[item.id] && item.product && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                            {products
+                              .filter((p) =>
+                                p.name
+                                  .toLowerCase()
+                                  .includes(item.product.toLowerCase())
+                              )
+                              .map((product) => (
+                                <div
+                                  key={product.id}
+                                  onClick={() =>
+                                    selectProduct(item.id, product)
+                                  }
+                                  className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                >
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-medium">
+                                      {product.name}
+                                    </span>
+                                    <span className="text-blue-600 font-bold">
+                                      {formatCurrency(product.price)}
+                                    </span>
+                                  </div>
+                                  <div className="text-sm text-gray-500 mt-1">
+                                    <span>
+                                      {t("stock", "procurement") || "Stock"}:{" "}
+                                      {product.stock}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Quantity */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t("quantity", "orderDetails") || "Quantity"} *
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            handleItemChange(
+                              item.id,
+                              "quantity",
+                              parseInt(e.target.value) || 1
+                            )
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+
+                      {/* Unit Price */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t("unitPrice", "procurement") || "Unit Price"} *
+                        </label>
+                        <div className="relative">
+                          <div className="absolute left-3 top-2.5 text-gray-500">
+                            <DollarSign size={18} />
+                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.unitPrice}
+                            onChange={(e) =>
+                              handleItemChange(
+                                item.id,
+                                "unitPrice",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* ✅ Tax Rate - إرجاعه */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t("taxRate", "procurement") || "Tax Rate"} %
+                        </label>
+                        <div className="relative">
+                          <div className="absolute left-3 top-2.5 text-gray-500">
+                            <Percent size={18} />
+                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={item.taxRate}
+                            onChange={(e) =>
+                              handleItemChange(
+                                item.id,
+                                "taxRate",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Item Summary */}
+                    {item.product && (
+                      <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
+                        <div className="flex justify-between items-center">
+                          <div className="space-y-1">
+                            <p className="font-medium text-gray-800">
+                              {item.product}
+                            </p>
+                            <div className="flex space-x-4 text-sm text-gray-600">
+                              <span>
+                                {t("quantity", "procurement") || "Qty"}:{" "}
+                                {item.quantity}
+                              </span>
+                              <span>× {formatCurrency(item.unitPrice)}</span>
+                              <span>
+                                {t("taxRate", "procurement") || "Tax Rate"}:{" "}
+                                {item.taxRate}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-gray-600">
+                              {t("subtotal", "procurement") || "Subtotal"}
+                            </p>
+                            <p className="font-bold text-lg text-blue-600">
+                              {formatCurrency(item.subTotal || 0)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {t("tax", "procurement") || "Tax"}:{" "}
+                              {formatCurrency(item.taxAmount || 0)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes Section */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-yellow-50 rounded-lg">
+                  <FileText className="text-yellow-500" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {t("notes", "procurement") || "Notes"}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {t("addAdditionalNotes", "procurement") ||
+                      "Add any additional notes for this order"}
+                  </p>
+                </div>
+              </div>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleFormChange}
+                rows="4"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder={
+                  t("enterNotesHere", "procurement") ||
+                  "Enter any special instructions or notes here..."
+                }
+              />
+            </div>
+          </div>
+
+          {/* Right Column - Order Information */}
+          <div className="space-y-6">
+            {/* Supplier Information */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="p-2 bg-green-50 rounded-lg">
+                  <Building className="text-green-500" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {t("supplierInformation", "procurement") ||
+                      "Supplier Information"}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {t("selectOrEnterSupplier", "procurement") ||
+                      "Select or enter supplier details"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* Supplier Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t("selectSupplier", "procurement") || "Select Supplier"}
+                  </label>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                    {suppliers.map((supplier) => (
+                      <div
+                        key={supplier.id}
+                        onClick={() => selectSupplier(supplier)}
+                        className={`p-3 border rounded-lg cursor-pointer transition ${
+                          formData.supplierName === supplier.name
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-gray-800">
+                              {supplier.name}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {supplier.email}
+                            </p>
+                          </div>
+                          {formData.supplierName === supplier.name && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Manual Supplier Input */}
+                <div className="pt-4 border-t border-gray-200">
+                  <h4 className="font-medium text-gray-800 mb-3">
+                    {t("orEnterManually", "procurement") || "Or Enter Manually"}
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t("supplierName", "procurement") || "Supplier Name"} *
+                      </label>
+                      <input
+                        type="text"
+                        name="supplierName"
+                        value={formData.supplierName}
+                        onChange={handleFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t("email", "procurement") || "Email"}
+                        </label>
+                        <input
+                          type="email"
+                          name="supplierEmail"
+                          value={formData.supplierEmail}
+                          onChange={handleFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t("phone", "procurement") || "Phone"}
+                        </label>
+                        <input
+                          type="tel"
+                          name="supplierPhone"
+                          value={formData.supplierPhone}
+                          onChange={handleFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Details */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <CreditCard className="text-dental-blue" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {t("paymentDetails", "procurement") || "Payment Details"}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {t("paymentMethodTerms", "procurement") ||
+                      "Payment method and terms"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t("paymentMethod", "procurement") || "Payment Method"} *
+                  </label>
+                  <select
+                    name="paymentMethod"
+                    value={formData.paymentMethod}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="credit_card">
+                      {t("creditCard", "procurement") || "Credit Card"}
+                    </option>
+                    <option value="bank_transfer">
+                      {t("bankTransfer", "procurement") || "Bank Transfer"}
+                    </option>
+                    <option value="cash">
+                      {t("cash", "procurement") || "Cash"}
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t("paymentTerms", "procurement") || "Payment Terms"} *
+                  </label>
+                  <select
+                    name="paymentTerms"
+                    value={formData.paymentTerms}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="Net 15">Net 15</option>
+                    <option value="Net 30">Net 30</option>
+                    <option value="Net 60">Net 60</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* ✅ Order Summary - فقط Total Amount كما طلبت */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="p-2 bg-green-50 rounded-lg">
+                  <DollarSign className="text-green-500" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {t("orderSummary", "procurement") || "Order Summary"}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {t("totalAmount", "procurement") || "Total Amount"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {/* ✅ فقط Total Amount كما طلبت */}
+                <div className="flex justify-between pt-3 border-t border-gray-200">
+                  <span className="text-lg font-bold text-gray-800">
+                    {t("totalAmount", "procurement") || "Total Amount"}
+                  </span>
+                  <span className="text-xl font-bold text-gray-800">
+                    {formatCurrency(totals.totalAmount)}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full mt-6 py-3 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center justify-center space-x-2"
+              >
+                <Save size={20} />
+                <span>
+                  {t("createPurchaseOrder", "procurement") ||
+                    "Create Purchase Order"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default AddPurchaseOrder;

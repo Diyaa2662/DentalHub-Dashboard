@@ -36,6 +36,7 @@
   "setRealisticStock": "Ställ in realistiska lager nivåer och aviseringar",
   "highQualityImages": "Högkvalitativa bilder ökar försäljningen",
   "accuratePricing": "Exakt prissättning säkerställer lönsamhet",
+  "setTaxRateProperly": "Ställ in skattesatser korrekt för efterlevnad",
   "productAddedSuccess": "Produkten har lagts till framgångsrikt!",
   "productAddedInventory": "Den nya produkten har lagts till i ditt lager.",
   "goBackProducts": "Gå tillbaka till produkter",
@@ -53,5 +54,10 @@
   "enable": "Aktivera",
   "disable": "Inaktivera",
   "products": "Produkter",
-  "discountPercentage": "Rabattprocent"
+  "discountPrice": "Rabattpris",
+  "productRating": "Produktbetyg",
+  "requiredField": "Obligatoriskt fält",
+  "Optional - will use English name if left empty": "Valfritt - kommer att använda engelska namnet om det lämnas tomt",
+  "Need to add a new category?": "Behöver du lägga till en ny kategori?",
+  "Manage categories here": "Hantera kategorier här"
 }

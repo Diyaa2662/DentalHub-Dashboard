@@ -40,5 +40,16 @@
   "EUR": "Euro",
   "GBP": "British Pound",
   "SAR": "Saudi Riyal",
-  "AED": "UAE Dirham"
+  "AED": "UAE Dirham",
+  "confirmDelivery": "Confirm Delivery",
+  "order": "Order",
+  "orderNotFound": "Order not found",
+  "total": "Total",
+  "stock": "Stock",
+  "enterNewStatus": "Enter new status",
+  "updatedTo": "updated to",
+  "markedDelivered": "marked as delivered successfully!",
+  "paid": "Paid",
+  "refunded": "Refunded",
+  "failed": "Failed"
 }

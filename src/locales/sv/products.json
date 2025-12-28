@@ -250,6 +250,9 @@
   "stockTurnover": "Lageromsättning",
   "annualStockTurnover": "Årlig lageromsättningsgrad",
   "units": "enheter",
+  "unit": "enhet",
   "products": "produkter",
-  "priceAfterDiscount": "Pris efter rabatt"
+  "priceAfterDiscount": "Rabattpris",
+  "discountApplied": "Rabatt tillämpad",
+  "dragColumnHereToGroup": "Dra en kolumnrubrik hit för att gruppera efter den kolumnen"
 }

@@ -16,6 +16,8 @@
   "specifications": "Specifications",
   "additionalInformation": "Additional Information",
   "productStatus": "Product Status",
+  "productRating": "Product Rating",
+  "costPrice": "Cost Price",
   "isFeatured": "Is Featured?",
   "trackInventory": "Track Inventory?",
   "inventoryManagement": "Inventory Management",
