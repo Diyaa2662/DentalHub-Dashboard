@@ -15,6 +15,7 @@ import Customers from "./components/pages/Customers";
 import Analytics from "./components/pages/Analytics";
 import Settings from "./components/pages/Settings";
 import Invoices from "./components/pages/Invoices";
+import InvoiceDetails from "./components/pages/InvoiceDetails";
 import Login from "./components/auth/Login";
 import ProductDetails from "./components/pages/ProductDetails";
 import OrderDetails from "./components/pages/OrderDetails";
@@ -147,6 +148,17 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <Invoices />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/invoices/:id"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <InvoiceDetails />
                 </MainLayout>
               </ProtectedRoute>
             }

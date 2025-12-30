@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
 import {
   DataGrid,
@@ -6,6 +7,8 @@ import {
   SearchPanel,
   Paging,
   Pager,
+  HeaderFilter,
+  GroupPanel,
 } from "devextreme-react/data-grid";
 import {
   FileText,
@@ -13,174 +16,133 @@ import {
   Eye,
   Printer,
   Plus,
-  ArrowDownCircle,
-  ArrowUpCircle,
-  Filter,
   DollarSign,
-  Building,
   User,
   CheckCircle,
   Clock,
   AlertCircle,
   Calendar,
+  Edit,
+  Trash2,
 } from "lucide-react";
 
 const Invoices = () => {
-  const [activeTab, setActiveTab] = useState("all");
   const [selectedRows, setSelectedRows] = useState([]);
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
-  // بيانات وهمية لفواتير الدخل (مشتريات من الموردين)
-  const incomeInvoices = [
+  // بيانات وهمية لفواتير الزبائن فقط
+  const customerInvoices = [
     {
-      id: "INV-IN-001",
-      type: "Income",
-      supplier: "Dental Supplies Inc.",
-      amount: "$4,500.00",
-      date: "2024-01-15",
-      dueDate: "2024-02-15",
-      status: "Paid",
-      items: 12,
-      tax: "$450.00",
-      total: "$4,950.00",
-    },
-    {
-      id: "INV-IN-002",
-      type: "Income",
-      supplier: "Medical Equipment Co.",
-      amount: "$8,200.00",
-      date: "2024-01-10",
-      dueDate: "2024-02-10",
-      status: "Paid",
-      items: 8,
-      tax: "$820.00",
-      total: "$9,020.00",
-    },
-    {
-      id: "INV-IN-003",
-      type: "Income",
-      supplier: "Surgical Tools Ltd.",
-      amount: "$2,300.00",
-      date: "2024-01-05",
-      dueDate: "2024-02-05",
-      status: "Pending",
-      items: 25,
-      tax: "$230.00",
-      total: "$2,530.00",
-    },
-    {
-      id: "INV-IN-004",
-      type: "Income",
-      supplier: "Dental Materials Corp.",
-      amount: "$1,800.00",
-      date: "2024-01-03",
-      dueDate: "2024-02-03",
-      status: "Overdue",
-      items: 15,
-      tax: "$180.00",
-      total: "$1,980.00",
-    },
-  ];
-
-  // بيانات وهمية لفواتير الخرج (مبيعات للعملاء)
-  const outcomeInvoices = [
-    {
-      id: "INV-OUT-001",
-      type: "Outcome",
+      id: "INV-CUST-001",
       customer: "Dr. Sarah Johnson",
       amount: "$850.00",
+      total: "$935.00",
       date: "2024-01-16",
       dueDate: "2024-02-16",
       status: "Paid",
-      items: 3,
-      tax: "$85.00",
-      total: "$935.00",
     },
     {
-      id: "INV-OUT-002",
-      type: "Outcome",
+      id: "INV-CUST-002",
       customer: "Dr. Michael Chen",
       amount: "$2,800.00",
+      total: "$3,080.00",
       date: "2024-01-14",
       dueDate: "2024-02-14",
       status: "Pending",
-      items: 1,
-      tax: "$280.00",
-      total: "$3,080.00",
     },
     {
-      id: "INV-OUT-003",
-      type: "Outcome",
+      id: "INV-CUST-003",
       customer: "Dr. Emily Williams",
       amount: "$320.00",
+      total: "$352.00",
       date: "2024-01-14",
       dueDate: "2024-02-14",
       status: "Paid",
-      items: 5,
-      tax: "$32.00",
-      total: "$352.00",
     },
     {
-      id: "INV-OUT-004",
-      type: "Outcome",
+      id: "INV-CUST-004",
       customer: "Dr. Robert Kim",
       amount: "$1,250.00",
+      total: "$1,375.00",
       date: "2024-01-12",
       dueDate: "2024-02-12",
-      status: "Shipped",
-      items: 4,
-      tax: "$125.00",
-      total: "$1,375.00",
+      status: "Pending",
     },
     {
-      id: "INV-OUT-005",
-      type: "Outcome",
+      id: "INV-CUST-005",
       customer: "Dr. Lisa Martinez",
       amount: "$3,450.00",
+      total: "$3,795.00",
       date: "2024-01-11",
       dueDate: "2024-02-11",
+      status: "Overdue",
+    },
+    {
+      id: "INV-CUST-006",
+      customer: "Dr. Ahmed Hassan",
+      amount: "$1,800.00",
+      total: "$1,980.00",
+      date: "2024-01-10",
+      dueDate: "2024-02-10",
       status: "Paid",
-      items: 7,
-      tax: "$345.00",
-      total: "$3,795.00",
+    },
+    {
+      id: "INV-CUST-007",
+      customer: "Dr. Maria Garcia",
+      amount: "$920.00",
+      total: "$1,012.00",
+      date: "2024-01-09",
+      dueDate: "2024-02-09",
+      status: "Pending",
+    },
+    {
+      id: "INV-CUST-008",
+      customer: "Dr. James Wilson",
+      amount: "$2,150.00",
+      total: "$2,365.00",
+      date: "2024-01-08",
+      dueDate: "2024-02-08",
+      status: "Paid",
     },
   ];
 
-  // دمج الفواتير
-  const allInvoices = [...incomeInvoices, ...outcomeInvoices];
-
-  // فلترة الفواتير حسب النوع المحدد
-  const filteredInvoices =
-    activeTab === "all"
-      ? allInvoices
-      : activeTab === "income"
-      ? incomeInvoices
-      : outcomeInvoices;
-
   // إحصائيات الفواتير
   const invoiceStats = {
-    total: allInvoices.length,
-    income: incomeInvoices.length,
-    outcome: outcomeInvoices.length,
-    totalAmount: allInvoices.reduce(
+    total: customerInvoices.length,
+    totalAmount: customerInvoices.reduce(
       (sum, inv) =>
         sum + parseFloat(inv.amount.replace("$", "").replace(",", "")),
       0
     ),
-    pending: allInvoices.filter((inv) => inv.status === "Pending").length,
-    overdue: allInvoices.filter((inv) => inv.status === "Overdue").length,
+    pending: customerInvoices.filter((inv) => inv.status === "Pending").length,
+    overdue: customerInvoices.filter((inv) => inv.status === "Overdue").length,
+    paid: customerInvoices.filter((inv) => inv.status === "Paid").length,
   };
 
   const handlePrintInvoice = (invoiceId) => {
     alert(`${t("printingInvoice", "invoices")} ${invoiceId}`);
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleDownloadInvoice = (invoiceId) => {
     alert(`${t("downloadingInvoice", "invoices")} ${invoiceId}`);
   };
 
   const handleViewInvoice = (invoiceId) => {
-    alert(`${t("viewingInvoice", "invoices")} ${invoiceId}`);
+    navigate(`/invoices/${invoiceId}`);
+  };
+
+  const handleEditInvoice = (invoiceId) => {
+    alert(`${t("editingInvoice", "invoices")} ${invoiceId}`);
+  };
+
+  const handleDeleteInvoice = (invoiceId) => {
+    if (
+      window.confirm(`${t("confirmDeleteInvoice", "invoices")} ${invoiceId}?`)
+    ) {
+      alert(`${t("deletingInvoice", "invoices")} ${invoiceId}`);
+    }
   };
 
   const handleCreateInvoice = () => {
@@ -209,7 +171,7 @@ const Invoices = () => {
             {t("invoicesManagement", "invoices")}
           </h1>
           <p className="text-gray-600">
-            {t("manageIncomeOutcome", "invoices")}
+            {t("customerInvoices", "invoices") || "Manage Customer Invoices"}
           </p>
         </div>
         <div className="flex space-x-3 mt-4 md:mt-0">
@@ -235,7 +197,7 @@ const Invoices = () => {
         </div>
       </div>
 
-      {/* Invoice Stats */}
+      {/* Invoice Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between">
@@ -302,201 +264,50 @@ const Invoices = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">
-                {t("overdueInvoices", "invoices")}
+                {t("paidInvoices", "invoices")}
               </p>
-              <p className="text-2xl font-bold text-red-600">
-                {invoiceStats.overdue}
+              <p className="text-2xl font-bold text-green-600">
+                {invoiceStats.paid}
               </p>
             </div>
-            <div className="p-3 bg-red-50 rounded-lg">
-              <AlertCircle className="text-red-500" size={24} />
+            <div className="p-3 bg-green-50 rounded-lg">
+              <CheckCircle className="text-green-500" size={24} />
             </div>
           </div>
-          <p className="text-sm text-red-600 mt-2">
-            {t("immediateAction", "invoices")}
+          <p className="text-sm text-green-600 mt-2">
+            {t("collected", "invoices") || "Successfully collected"}
           </p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex space-x-2 mb-6">
-          <button
-            onClick={() => setActiveTab("all")}
-            className={`px-6 py-3 rounded-lg font-medium transition ${
-              activeTab === "all"
-                ? "bg-primary-600 text-white"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            {t("allInvoices", "invoices")} ({allInvoices.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("income")}
-            className={`px-6 py-3 rounded-lg font-medium transition flex items-center space-x-2 ${
-              activeTab === "income"
-                ? "bg-green-600 text-white"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <ArrowDownCircle size={18} />
-            <span>
-              {t("income", "invoices")} ({incomeInvoices.length})
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab("outcome")}
-            className={`px-6 py-3 rounded-lg font-medium transition flex items-center space-x-2 ${
-              activeTab === "outcome"
-                ? "bg-blue-600 text-white"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <ArrowUpCircle size={18} />
-            <span>
-              {t("outcome", "invoices")} ({outcomeInvoices.length})
-            </span>
-          </button>
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Income Summary */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <ArrowDownCircle className="text-green-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    {t("incomeInvoices", "invoices")}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {t("purchasesFromSuppliers", "invoices")}
-                  </p>
-                </div>
-              </div>
-              <Building className="text-green-600" size={20} />
-            </div>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">
-                  {t("totalAmount", "invoices")}
-                </span>
-                <span className="font-bold text-green-700">
-                  $
-                  {incomeInvoices
-                    .reduce(
-                      (sum, inv) =>
-                        sum +
-                        parseFloat(
-                          inv.amount.replace("$", "").replace(",", "")
-                        ),
-                      0
-                    )
-                    .toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">{t("pending", "common")}</span>
-                <span className="font-medium text-yellow-600">
-                  {
-                    incomeInvoices.filter((inv) => inv.status === "Pending")
-                      .length
-                  }{" "}
-                  {t("invoices", "navigation").toLowerCase()}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">
-                  {t("overdue", "invoices")}
-                </span>
-                <span className="font-medium text-red-600">
-                  {
-                    incomeInvoices.filter((inv) => inv.status === "Overdue")
-                      .length
-                  }{" "}
-                  {t("invoices", "navigation").toLowerCase()}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Outcome Summary */}
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <ArrowUpCircle className="text-blue-600" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">
-                    {t("outcomeInvoices", "invoices")}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {t("salesToCustomers", "invoices")}
-                  </p>
-                </div>
-              </div>
-              <User className="text-blue-600" size={20} />
-            </div>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">
-                  {t("totalAmount", "invoices")}
-                </span>
-                <span className="font-bold text-blue-700">
-                  $
-                  {outcomeInvoices
-                    .reduce(
-                      (sum, inv) =>
-                        sum +
-                        parseFloat(
-                          inv.amount.replace("$", "").replace(",", "")
-                        ),
-                      0
-                    )
-                    .toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">{t("pending", "common")}</span>
-                <span className="font-medium text-yellow-600">
-                  {
-                    outcomeInvoices.filter((inv) => inv.status === "Pending")
-                      .length
-                  }{" "}
-                  {t("invoices", "navigation").toLowerCase()}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">{t("shipped", "orders")}</span>
-                <span className="font-medium text-purple-600">
-                  {
-                    outcomeInvoices.filter((inv) => inv.status === "Shipped")
-                      .length
-                  }{" "}
-                  {t("invoices", "navigation").toLowerCase()}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Invoices Table */}
+      {/* Invoices Table */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <DataGrid
-            dataSource={filteredInvoices}
+            dataSource={customerInvoices}
             showBorders={true}
             columnAutoWidth={true}
             height={500}
             selection={{ mode: "multiple" }}
             onSelectionChanged={(e) => setSelectedRows(e.selectedRowsData)}
+            allowColumnResizing={true}
+            allowColumnReordering={true}
+            columnResizingMode="widget"
           >
+            <HeaderFilter visible={true} />
             <SearchPanel
               visible={true}
-              placeholder={t("searchInvoices", "invoices")}
+              placeholder={
+                t("searchInvoices", "invoices") || "Search invoices..."
+              }
+            />
+            <GroupPanel
+              visible={true}
+              emptyPanelText={
+                t("dragColumnHereToGroup", "products") ||
+                "Drag a column header here to group by that column"
+              }
+              allowColumnDragging={true}
             />
             <Paging defaultPageSize={10} />
             <Pager
@@ -505,127 +316,135 @@ const Invoices = () => {
               showInfo={true}
             />
 
+            {/* Invoice Number */}
             <Column
               dataField="id"
-              caption={t("invoiceId", "invoices")}
-              width={120}
+              caption={t("invoiceNumber", "invoices") || "Invoice #"}
+              width={"auto"}
+              alignment="left"
+              allowGrouping={false}
             />
+
+            {/* Customer */}
             <Column
-              dataField="type"
-              caption={t("type", "products")}
+              dataField="customer"
+              caption={t("customer", "invoices") || "Customer"}
+              width={"auto"}
+              alignment="left"
+            />
+
+            {/* Total Amount */}
+            <Column
+              dataField="total"
+              caption={t("totalAmount", "invoices") || "Total Amount"}
+              width={"auto"}
+              alignment="left"
+              allowGrouping={false}
               cellRender={({ data }) => (
-                <span
-                  className={`
-                  px-3 py-1 rounded-full text-xs font-medium inline-flex items-center
-                  ${
-                    data.type === "Income"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-blue-100 text-blue-800"
-                  }
-                `}
-                >
-                  {data.type === "Income" ? (
-                    <ArrowDownCircle size={12} className="mr-1" />
-                  ) : (
-                    <ArrowUpCircle size={12} className="mr-1" />
-                  )}
-                  {data.type === "Income"
-                    ? t("income", "invoices")
-                    : t("outcome", "invoices")}
-                </span>
+                <div className="font-bold text-gray-800">{data.total}</div>
               )}
             />
-            <Column
-              dataField={activeTab === "income" ? "supplier" : "customer"}
-              caption={
-                activeTab === "income"
-                  ? t("supplier", "products")
-                  : t("customer", "navigation")
-              }
-            />
-            <Column dataField="amount" caption={t("amount", "common")} />
-            <Column dataField="tax" caption={t("tax", "products")} />
-            <Column dataField="total" caption={t("total", "customers")} />
+
+            {/* Date */}
             <Column
               dataField="date"
-              caption={t("date", "orders")}
-              width={100}
+              caption={t("date", "orders") || "Date"}
+              width={"auto"}
+              alignment="left"
             />
+
+            {/* Due Date */}
             <Column
               dataField="dueDate"
-              caption={t("dueDate", "invoices")}
-              width={100}
+              caption={t("dueDate", "invoices") || "Due Date"}
+              width={"auto"}
+              alignment="left"
+              cellRender={({ data }) => (
+                <div
+                  className={`${
+                    data.status === "Overdue" ? "text-red-600 font-medium" : ""
+                  }`}
+                >
+                  {data.dueDate}
+                </div>
+              )}
             />
+
+            {/* Payment Status */}
             <Column
               dataField="status"
-              caption={t("status", "common")}
+              caption={t("paymentStatus", "invoices") || "Payment Status"}
+              width={"auto"}
+              alignment="left"
               cellRender={({ data }) => {
                 const statusConfig = {
                   Paid: {
                     color: "bg-green-100 text-green-800",
                     icon: <CheckCircle size={12} />,
+                    text: t("paid", "invoices") || "Paid",
                   },
                   Pending: {
                     color: "bg-yellow-100 text-yellow-800",
                     icon: <Clock size={12} />,
-                  },
-                  Shipped: {
-                    color: "bg-purple-100 text-purple-800",
-                    icon: <ArrowUpCircle size={12} />,
+                    text: t("pending", "common") || "Pending",
                   },
                   Overdue: {
                     color: "bg-red-100 text-red-800",
                     icon: <AlertCircle size={12} />,
+                    text: t("overdue", "invoices") || "Overdue",
                   },
                 };
 
                 const config = statusConfig[data.status] || {
                   color: "bg-gray-100 text-gray-800",
+                  text: data.status,
                 };
 
                 return (
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center ${config.color}`}
+                  <div
+                    className={`flex items-center px-3 py-1 rounded-full text-xs font-medium ${config.color}`}
                   >
-                    {config.icon && <>{config.icon}</>}
-                    <span className="ml-1">
-                      {data.status === "Paid"
-                        ? t("paid", "invoices")
-                        : data.status === "Pending"
-                        ? t("pending", "common")
-                        : data.status === "Shipped"
-                        ? t("shipped", "orders")
-                        : t("overdue", "invoices")}
-                    </span>
-                  </span>
+                    {config.icon}
+                    <span className="ml-1">{config.text}</span>
+                  </div>
                 );
               }}
             />
+
+            {/* Actions */}
             <Column
-              caption={t("actions", "products")}
-              width={140}
+              caption={t("actions", "products") || "Actions"}
+              width={"auto"}
+              alignment="left"
               cellRender={({ data }) => (
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 justify-center">
                   <button
                     onClick={() => handleViewInvoice(data.id)}
                     className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
-                    title={t("view", "common")}
+                    title={t("view", "common") || "View"}
                   >
                     <Eye size={16} />
                   </button>
                   <button
-                    onClick={() => handlePrintInvoice(data.id)}
+                    onClick={() => handleEditInvoice(data.id)}
                     className="p-1.5 text-gray-600 hover:bg-gray-50 rounded transition"
-                    title={t("print", "common")}
+                    title={t("edit", "common") || "Edit"}
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button
+                    onClick={() => handlePrintInvoice(data.id)}
+                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded transition"
+                    title={t("print", "common") || "Print"}
                   >
                     <Printer size={16} />
                   </button>
                   <button
-                    onClick={() => handleDownloadInvoice(data.id)}
-                    className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
-                    title={t("download", "common")}
+                    onClick={() => handleDeleteInvoice(data.id)}
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                    title={t("delete", "common") || "Delete"}
                   >
-                    <Download size={16} />
+                    <Trash2 size={16} />
                   </button>
                 </div>
               )}
@@ -634,174 +453,94 @@ const Invoices = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          {t("quickActions", "invoices")}
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button
-            onClick={() => {
-              setActiveTab("income");
-              handleCreateInvoice();
-            }}
-            className="p-4 border border-green-200 rounded-lg hover:bg-green-50 transition flex items-center justify-center space-x-3"
-          >
-            <ArrowDownCircle className="text-green-600" size={24} />
-            <div className="text-left">
-              <p className="font-medium text-gray-800">
-                {t("createIncomeInvoice", "invoices")}
-              </p>
-              <p className="text-sm text-gray-600">
-                {t("recordSupplierPurchase", "invoices")}
-              </p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("outcome");
-              handleCreateInvoice();
-            }}
-            className="p-4 border border-blue-200 rounded-lg hover:bg-blue-50 transition flex items-center justify-center space-x-3"
-          >
-            <ArrowUpCircle className="text-blue-600" size={24} />
-            <div className="text-left">
-              <p className="font-medium text-gray-800">
-                {t("createOutcomeInvoice", "invoices")}
-              </p>
-              <p className="text-sm text-gray-600">
-                {t("recordCustomerSale", "invoices")}
-              </p>
-            </div>
-          </button>
-
-          <button
-            onClick={handlePrintSelected}
-            className="p-4 border border-purple-200 rounded-lg hover:bg-purple-50 transition flex items-center justify-center space-x-3"
-          >
-            <FileText className="text-purple-600" size={24} />
-            <div className="text-left">
-              <p className="font-medium text-gray-800">
-                {t("generateReports", "invoices")}
-              </p>
-              <p className="text-sm text-gray-600">
-                {t("monthlyInvoiceReports", "invoices")}
-              </p>
-            </div>
-          </button>
-        </div>
-      </div>
-
       {/* Upcoming Due Dates */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-800">
-              {t("upcomingDueDates", "invoices")}
+              {t("upcomingDueDates", "invoices") || "Upcoming Due Dates"}
             </h3>
             <p className="text-sm text-gray-600">
-              {t("invoicesDueSoon", "invoices")}
+              {t("invoicesDueSoon", "invoices") ||
+                "Invoices due in the next 30 days"}
             </p>
           </div>
           <Calendar className="text-dental-teal" size={24} />
         </div>
 
         <div className="space-y-3">
-          {[
-            {
-              id: "INV-IN-003",
-              type: "Income",
-              to: "Surgical Tools Ltd.",
-              amount: "$2,530",
-              dueDate: "2024-02-05",
-              status: "pending",
-            },
-            {
-              id: "INV-OUT-002",
-              type: "Outcome",
-              to: "Dr. Michael Chen",
-              amount: "$3,080",
-              dueDate: "2024-02-14",
-              status: "pending",
-            },
-            {
-              id: "INV-IN-004",
-              type: "Income",
-              to: "Dental Materials Corp.",
-              amount: "$1,980",
-              dueDate: "2024-02-03",
-              status: "overdue",
-            },
-            {
-              id: "INV-OUT-001",
-              type: "Outcome",
-              to: "Dr. Sarah Johnson",
-              amount: "$935",
-              dueDate: "2024-02-16",
-              status: "pending",
-            },
-          ].map((invoice) => (
-            <div
-              key={invoice.id}
-              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-            >
-              <div className="flex items-center space-x-4">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    invoice.status === "overdue"
-                      ? "bg-red-100"
-                      : "bg-yellow-100"
-                  }`}
-                >
-                  {invoice.type === "Income" ? (
-                    <ArrowDownCircle
+          {customerInvoices
+            .filter(
+              (invoice) =>
+                invoice.status === "Pending" || invoice.status === "Overdue"
+            )
+            .slice(0, 5)
+            .map((invoice) => (
+              <div
+                key={invoice.id}
+                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                <div className="flex items-center space-x-4">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      invoice.status === "Overdue"
+                        ? "bg-red-100"
+                        : "bg-yellow-100"
+                    }`}
+                  >
+                    <User
                       className={
-                        invoice.status === "overdue"
+                        invoice.status === "Overdue"
                           ? "text-red-600"
                           : "text-yellow-600"
                       }
                       size={20}
                     />
-                  ) : (
-                    <ArrowUpCircle
-                      className={
-                        invoice.status === "overdue"
-                          ? "text-red-600"
-                          : "text-yellow-600"
-                      }
-                      size={20}
-                    />
-                  )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-800">
+                      {invoice.id} - {invoice.customer}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {t("due", "invoices") || "Due"}: {invoice.dueDate} •{" "}
+                      {invoice.total}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-gray-800">
-                    {invoice.id} - {invoice.to}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {invoice.type === "Income"
-                      ? t("income", "invoices")
-                      : t("outcome", "invoices")}{" "}
-                    • {t("due", "invoices")}: {invoice.dueDate}
-                  </p>
+                <div className="text-right">
+                  <div
+                    className={`text-sm font-medium ${
+                      invoice.status === "Overdue"
+                        ? "text-red-600"
+                        : "text-yellow-600"
+                    }`}
+                  >
+                    {invoice.status === "Overdue"
+                      ? t("overdue", "invoices") || "Overdue"
+                      : t("dueSoon", "invoices") || "Due Soon"}
+                  </div>
+                  <button
+                    onClick={() => handleViewInvoice(invoice.id)}
+                    className="mt-2 text-sm text-dental-blue hover:text-blue-700 font-medium"
+                  >
+                    {t("viewDetails", "invoices") || "View Details"}
+                  </button>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-800">{invoice.amount}</p>
-                <p
-                  className={`text-sm font-medium ${
-                    invoice.status === "overdue"
-                      ? "text-red-600"
-                      : "text-yellow-600"
-                  }`}
-                >
-                  {invoice.status === "overdue"
-                    ? t("overdue", "invoices")
-                    : t("dueSoon", "invoices")}
-                </p>
-              </div>
+            ))}
+
+          {customerInvoices.filter(
+            (invoice) =>
+              invoice.status === "Pending" || invoice.status === "Overdue"
+          ).length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <CheckCircle size={32} className="mx-auto mb-2 text-green-500" />
+              <p>
+                {t("noPendingInvoices", "invoices") ||
+                  "No pending or overdue invoices"}
+              </p>
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>
