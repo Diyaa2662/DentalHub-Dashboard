@@ -1,6 +1,8 @@
 {
+  "dentalhubAdmin": "DentalHub Admin",
   "dashboard": "Dashboard",
   "products": "Products",
+  "categories": "Categories",
   "orders": "Orders",
   "customers": "Customers",
   "invoices": "Invoices",

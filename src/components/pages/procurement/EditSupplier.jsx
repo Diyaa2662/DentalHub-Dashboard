@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLanguage } from "../../../contexts/LanguageContext";
+import api from "../../../services/api";
 import { TextBox, TextArea } from "devextreme-react";
 import {
   ArrowLeft,
@@ -15,7 +16,8 @@ import {
   XCircle,
   RotateCcw,
   Info,
-  User,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 
 const EditSupplier = () => {
@@ -32,17 +34,18 @@ const EditSupplier = () => {
     email: "",
     phone: "",
     address: "",
-    productType: "",
-    status: "active",
+    product_type: "", // ✅ snake_case للـAPI
     notes: "",
   });
 
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
 
-  // قائمة أنواع المنتجات (يمكن جلبها من API)
+  // قائمة أنواع المنتجات
   const productTypes = [
     "Equipment",
     "Disposables",
@@ -56,39 +59,55 @@ const EditSupplier = () => {
     "Restorative",
   ];
 
-  // ✅ محاكاة جلب بيانات المزود من API
+  // ✅ جلب بيانات المزود من API
   useEffect(() => {
-    const fetchSupplier = () => {
-      setLoading(true);
+    const fetchSupplier = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      // بيانات وهمية للمزود (بديل لـ API)
-      setTimeout(() => {
-        const mockSupplier = {
-          id: parseInt(id),
-          name: "Dental Equipment Co.",
-          email: "john@dentalequip.com",
-          phone: "+1-555-123-4567",
-          address: "123 Equipment St, New York, NY 10001",
-          productType: "Equipment",
-          status: "active",
-          notes: "Reliable supplier, fast delivery",
-        };
+        const response = await api.get(`/suppliers/${id}`);
 
-        setOriginalData(mockSupplier);
-        setFormData(mockSupplier);
+        if (response.data && response.data.data) {
+          const supplierData = response.data.data;
+          const formattedData = {
+            name: supplierData.name || "",
+            email: supplierData.email || "",
+            phone: supplierData.phone || "",
+            address: supplierData.address || "",
+            product_type:
+              supplierData.product_type || supplierData.productType || "",
+            notes: supplierData.notes || "",
+          };
+
+          setOriginalData(formattedData);
+          setFormData(formattedData);
+        } else {
+          setError(
+            t("supplierNotFound", "procurement") || "Supplier not found"
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching supplier:", err);
+        setError(
+          err.response?.data?.message ||
+            err.message ||
+            t("failedToLoadSupplier", "procurement") ||
+            "Failed to load supplier data"
+        );
+      } finally {
         setLoading(false);
-      }, 800);
+      }
     };
 
     fetchSupplier();
-  }, [id]);
+  }, [id, t]);
 
   // ✅ تتبع التغييرات لمقارنة مع البيانات الأصلية
   useEffect(() => {
     if (originalData && formData) {
       const isChanged =
         JSON.stringify(formData) !== JSON.stringify(originalData);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHasChanges(isChanged);
     }
   }, [formData, originalData]);
@@ -99,47 +118,179 @@ const EditSupplier = () => {
       ...prev,
       [name]: value,
     }));
+
+    // مسح خطأ التحقق عند التغيير
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [name]: null,
+      }));
+    }
+    setError(null);
+  };
+
+  // ✅ التحقق من صحة البيانات
+  const validateForm = () => {
+    const errors = {};
+
+    if (!formData.name.trim()) {
+      errors.name =
+        t("supplierNameRequired", "procurement") || "Supplier name is required";
+    }
+
+    if (!formData.email.trim()) {
+      errors.email = t("emailRequired", "procurement") || "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = t("invalidEmail", "procurement") || "Invalid email format";
+    }
+
+    if (!formData.phone.trim()) {
+      errors.phone = t("phoneRequired", "procurement") || "Phone is required";
+    }
+
+    if (!formData.address.trim()) {
+      errors.address =
+        t("addressRequired", "procurement") || "Address is required";
+    }
+
+    if (!formData.product_type) {
+      errors.product_type =
+        t("productTypeRequired", "procurement") || "Product type is required";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   // ✅ إعادة تعيين النموذج للبيانات الأصلية
   const resetForm = () => {
     if (originalData) {
       setFormData(originalData);
+      setValidationErrors({});
+      setError(null);
     }
   };
 
   // ✅ حفظ التعديلات
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
 
-    // التحقق من البيانات المطلوبة
-    if (!formData.name.trim()) {
-      alert("Supplier name is required");
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      alert("Email is required");
-      return;
-    }
-
-    if (!formData.phone.trim()) {
-      alert("Phone number is required");
+    // التحقق من صحة البيانات
+    if (!validateForm()) {
       return;
     }
 
     setUpdating(true);
+    setError(null);
+    setSuccess(false);
 
-    // محاكاة إرسال البيانات إلى الخادم للتحديث
-    setTimeout(() => {
-      console.log("Updated supplier data:", formData);
-      setUpdating(false);
+    try {
+      // ✅ إرسال البيانات إلى API للتحديث
+      // eslint-disable-next-line no-unused-vars
+      const response = await api.post(`/updatesupplier/${id}`, {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
+        product_type: formData.product_type,
+        notes: formData.notes.trim() || null,
+      });
+
+      // ✅ إذا وصلنا هنا بدون catch، الطلب نجح
       setSuccess(true);
 
-      // تحديث البيانات الأصلية بعد التعديل الناجح
+      // ✅ تحديث البيانات الأصلية
       setOriginalData(formData);
       setHasChanges(false);
-    }, 1500);
+
+      // ✅ الانتقال بعد 2 ثانية
+      setTimeout(() => {
+        navigate("/procurement/suppliers");
+      }, 2000);
+    } catch (err) {
+      // ✅ معالجة أخطاء API
+      if (err.response) {
+        const { status, data } = err.response;
+
+        // إذا كانت الاستجابة تحتوي على message نجاح
+        if (
+          data?.message?.includes("success") ||
+          data?.message?.includes("Success")
+        ) {
+          setSuccess(true);
+          setOriginalData(formData);
+          setHasChanges(false);
+          setTimeout(() => {
+            navigate("/procurement/suppliers");
+          }, 2000);
+          return;
+        }
+
+        switch (status) {
+          case 400:
+            if (data.errors) {
+              const apiErrors = {};
+              Object.keys(data.errors).forEach((key) => {
+                apiErrors[key] = data.errors[key][0];
+              });
+              setValidationErrors(apiErrors);
+            } else {
+              setError(
+                data.message ||
+                  t("validationError", "procurement") ||
+                  "Validation error"
+              );
+            }
+            break;
+          case 401:
+            setError(
+              t("unauthorized", "procurement") ||
+                "Unauthorized. Please login again."
+            );
+            break;
+          case 404:
+            setError(
+              t("supplierNotFound", "procurement") || "Supplier not found"
+            );
+            break;
+          case 422:
+            if (data.errors) {
+              const apiErrors = {};
+              Object.keys(data.errors).forEach((key) => {
+                apiErrors[key] = data.errors[key][0];
+              });
+              setValidationErrors(apiErrors);
+            }
+            break;
+          case 500:
+            setError(
+              t("serverError", "procurement") ||
+                "Server error. Please try again later."
+            );
+            break;
+          default:
+            setError(
+              data?.message ||
+                err.message ||
+                t("updateSupplierError", "procurement") ||
+                "Error updating supplier"
+            );
+        }
+      } else if (err.request) {
+        setError(
+          t("noResponse", "procurement") ||
+            "No response from server. Check your connection."
+        );
+      } else {
+        setError(
+          err.message ||
+            t("requestError", "procurement") ||
+            "Error setting up request"
+        );
+      }
+    } finally {
+      setUpdating(false);
+    }
   };
 
   // ✅ إلغاء والعودة
@@ -147,11 +298,103 @@ const EditSupplier = () => {
     navigate("/procurement/suppliers");
   };
 
+  // ✅ دالة لإعادة تحميل البيانات
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.get(`/supplier/${id}`);
+
+      if (response.data && response.data.data) {
+        const supplierData = response.data.data;
+        const formattedData = {
+          name: supplierData.name || "",
+          email: supplierData.email || "",
+          phone: supplierData.phone || "",
+          address: supplierData.address || "",
+          product_type:
+            supplierData.product_type || supplierData.productType || "",
+          notes: supplierData.notes || "",
+        };
+
+        setOriginalData(formattedData);
+        setFormData(formattedData);
+        setValidationErrors({});
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          t("failedToLoadSupplier", "procurement") ||
+          "Failed to load supplier data"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dental-blue"></div>
-        <span className="ml-4 text-gray-600">Loading supplier data...</span>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dental-blue mx-auto mb-4"></div>
+          <span className="text-gray-600">
+            {t("loadingSupplier", "procurement") || "Loading supplier data..."}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !originalData) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={handleCancel}
+              className="p-2 hover:bg-gray-100 rounded-lg transition"
+            >
+              <ArrowLeft size={24} className="text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                {t("editSupplier", "procurement") || "Edit Supplier"}
+              </h1>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <div className="flex items-center mb-4">
+            <AlertCircle className="text-red-600 mr-3" size={24} />
+            <div>
+              <h3 className="font-bold text-red-800">
+                {t("errorLoadingSupplier", "procurement") ||
+                  "Error Loading Supplier"}
+              </h3>
+              <p className="text-red-600">{error}</p>
+            </div>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              onClick={handleRefresh}
+              className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition flex items-center space-x-2"
+            >
+              <RefreshCw size={18} />
+              <span>{t("tryAgain", "common") || "Try Again"}</span>
+            </button>
+
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition"
+            >
+              {t("backToSuppliers", "procurement") || "Back to Suppliers"}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -182,10 +425,36 @@ const EditSupplier = () => {
             </div>
           </div>
         </div>
+
+        <div className="flex space-x-3">
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center space-x-2"
+            title={t("refresh", "common") || "Refresh"}
+          >
+            <RefreshCw size={18} />
+            <span>{t("refresh", "common") || "Refresh"}</span>
+          </button>
+        </div>
       </div>
 
+      {/* ✅ رسالة الخطأ العامة */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertCircle className="text-red-600 mr-3" size={20} />
+            <div>
+              <h3 className="font-medium text-red-800">
+                {t("error", "common") || "Error"}
+              </h3>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Change Indicator */}
-      {hasChanges && (
+      {hasChanges && !success && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -219,22 +488,14 @@ const EditSupplier = () => {
             </h3>
             <p className="text-gray-600 mb-6">
               {t("supplierUpdatedSystem", "procurement") ||
-                "The supplier has been updated in your system."}
+                "The supplier has been updated in your system. Redirecting..."}
             </p>
-            <div className="flex justify-center space-x-3">
-              <button
-                onClick={() => navigate("/procurement/suppliers")}
-                className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                {t("backToSuppliers", "procurement") || "Back to Suppliers"}
-              </button>
-              <button
-                onClick={resetForm}
-                className="px-6 py-3 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition"
-              >
-                {t("editMoreDetails", "procurement") || "Edit More Details"}
-              </button>
-            </div>
+            <button
+              onClick={() => navigate("/procurement/suppliers")}
+              className="px-6 py-3 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition"
+            >
+              {t("goBackSuppliers", "procurement") || "Go Back to Suppliers"}
+            </button>
           </div>
         </div>
       ) : (
@@ -267,18 +528,18 @@ const EditSupplier = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t("supplierName", "procurement") || "Supplier Name"} *
                     </label>
-                    <div className="relative">
-                      {/* <div className="absolute left-3 top-2.5 text-gray-500">
-                        <Building size={18} />
-                      </div> */}
-                      <TextBox
-                        placeholder="e.g., Dental Equipment Co."
-                        value={formData.name}
-                        onValueChange={(value) => handleChange("name", value)}
-                        width="100%"
-                        className="pl-10"
-                      />
-                    </div>
+                    <TextBox
+                      placeholder="e.g., Dental Equipment Co."
+                      value={formData.name}
+                      onValueChange={(value) => handleChange("name", value)}
+                      width="100%"
+                      isValid={!validationErrors.name}
+                    />
+                    {validationErrors.name && (
+                      <p className="text-red-600 text-xs mt-1">
+                        {validationErrors.name}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -287,17 +548,18 @@ const EditSupplier = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         {t("email", "procurement") || "Email"} *
                       </label>
-                      <div className="relative">
-                        <TextBox
-                          placeholder="contact@supplier.com"
-                          value={formData.email}
-                          onValueChange={(value) =>
-                            handleChange("email", value)
-                          }
-                          width="100%"
-                          className="pl-10"
-                        />
-                      </div>
+                      <TextBox
+                        placeholder="contact@supplier.com"
+                        value={formData.email}
+                        onValueChange={(value) => handleChange("email", value)}
+                        width="100%"
+                        isValid={!validationErrors.email}
+                      />
+                      {validationErrors.email && (
+                        <p className="text-red-600 text-xs mt-1">
+                          {validationErrors.email}
+                        </p>
+                      )}
                     </div>
 
                     {/* Phone */}
@@ -305,17 +567,18 @@ const EditSupplier = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         {t("phone", "procurement") || "Phone"} *
                       </label>
-                      <div className="relative">
-                        <TextBox
-                          placeholder="+1-555-123-4567"
-                          value={formData.phone}
-                          onValueChange={(value) =>
-                            handleChange("phone", value)
-                          }
-                          width="100%"
-                          className="pl-10"
-                        />
-                      </div>
+                      <TextBox
+                        placeholder="+1-555-123-4567"
+                        value={formData.phone}
+                        onValueChange={(value) => handleChange("phone", value)}
+                        width="100%"
+                        isValid={!validationErrors.phone}
+                      />
+                      {validationErrors.phone && (
+                        <p className="text-red-600 text-xs mt-1">
+                          {validationErrors.phone}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -324,22 +587,23 @@ const EditSupplier = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t("address", "procurement") || "Address"} *
                     </label>
-                    <div className="relative">
-                      <TextBox
-                        placeholder="123 Street, City, Country"
-                        value={formData.address}
-                        onValueChange={(value) =>
-                          handleChange("address", value)
-                        }
-                        width="100%"
-                        className="pl-10"
-                      />
-                    </div>
+                    <TextBox
+                      placeholder="123 Street, City, Country"
+                      value={formData.address}
+                      onValueChange={(value) => handleChange("address", value)}
+                      width="100%"
+                      isValid={!validationErrors.address}
+                    />
+                    {validationErrors.address && (
+                      <p className="text-red-600 text-xs mt-1">
+                        {validationErrors.address}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Product Type & Status */}
+              {/* Product Type */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="p-2 bg-green-50 rounded-lg">
@@ -347,70 +611,41 @@ const EditSupplier = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
-                      {t("productTypeStatus", "procurement") ||
-                        "Product Type & Status"}
+                      {t("productType", "procurement") || "Product Type"}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {t("updateProductTypeStatus", "procurement") ||
-                        "Update product type and supplier status"}
+                      {t("updateProductType", "procurement") ||
+                        "Update product type"}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Product Type */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("productType", "procurement") || "Product Type"} *
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-2.5 text-gray-500">
-                        <Package size={18} />
-                      </div>
-                      <select
-                        value={formData.productType}
-                        onChange={(e) =>
-                          handleChange("productType", e.target.value)
-                        }
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                      >
-                        <option value="">Select Product Type</option>
-                        {productTypes.map((type, index) => (
-                          <option key={index} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Status */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("status", "procurement") || "Status"} *
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-2.5 text-gray-500">
-                        {formData.status === "active" ? (
-                          <CheckCircle className="text-green-500" size={18} />
-                        ) : (
-                          <XCircle className="text-red-500" size={18} />
-                        )}
-                      </div>
-                      <select
-                        value={formData.status}
-                        onChange={(e) => handleChange("status", e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {t("statusDescription", "procurement") ||
-                        "Inactive suppliers won't appear in dropdowns"}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t("productType", "procurement") || "Product Type"} *
+                  </label>
+                  <select
+                    value={formData.product_type}
+                    onChange={(e) =>
+                      handleChange("product_type", e.target.value)
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  >
+                    <option value="">
+                      {t("selectProductType", "procurement") ||
+                        "Select Product Type"}
+                    </option>
+                    {productTypes.map((type, index) => (
+                      <option key={index} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                  {validationErrors.product_type && (
+                    <p className="text-red-600 text-xs mt-1">
+                      {validationErrors.product_type}
                     </p>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -479,23 +714,11 @@ const EditSupplier = () => {
 
                 <button
                   type="submit"
-                  disabled={
-                    updating ||
-                    !formData.name.trim() ||
-                    !formData.email.trim() ||
-                    !formData.phone.trim() ||
-                    !formData.address.trim() ||
-                    !formData.productType.trim()
-                  }
+                  disabled={updating}
                   className={`
                     px-6 py-2 rounded-lg font-medium transition flex items-center justify-center
                     ${
-                      updating ||
-                      !formData.name.trim() ||
-                      !formData.email.trim() ||
-                      !formData.phone.trim() ||
-                      !formData.address.trim() ||
-                      !formData.productType.trim()
+                      updating
                         ? "bg-gray-400 cursor-not-allowed text-white"
                         : "bg-dental-blue text-white hover:bg-blue-600"
                     }
@@ -537,30 +760,14 @@ const EditSupplier = () => {
                   <p className="font-medium text-gray-800">{id}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Current Status</p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    {formData.status === "active" ? (
-                      <>
-                        <CheckCircle className="text-green-500" size={16} />
-                        <span className="text-green-600 font-medium">
-                          Active
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="text-red-500" size={16} />
-                        <span className="text-red-600 font-medium">
-                          Inactive
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div>
                   <p className="text-sm text-gray-600">Product Type</p>
                   <div className="flex items-center space-x-2 mt-1">
                     <Package className="text-gray-500" size={16} />
-                    <span className="font-medium">{formData.productType}</span>
+                    <span className="font-medium">
+                      {formData.product_type ||
+                        t("notSpecified", "procurement") ||
+                        "Not specified"}
+                    </span>
                   </div>
                 </div>
                 <div className="pt-4 border-t border-gray-200">
@@ -572,49 +779,24 @@ const EditSupplier = () => {
               </div>
             </div>
 
-            {/* Editing Tips */}
-            <div className="bg-green-50 border border-green-200 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-green-800 mb-4">
-                💡 {t("editingTips", "procurement") || "Editing Tips"}
+            {/* API Information */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                🔗 {t("apiInformation", "procurement") || "API Information"}
               </h3>
-              <ul className="space-y-3 text-sm text-green-700">
-                <li className="flex items-start space-x-2">
-                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-green-600">✓</span>
-                  </div>
-                  <span>
-                    {t("updateAllFields", "procurement") ||
-                      "Update all fields to keep supplier information current"}
-                  </span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-green-600">✓</span>
-                  </div>
-                  <span>
-                    {t("setInactiveTemporarily", "procurement") ||
-                      "Set to 'Inactive' if supplier is temporarily unavailable"}
-                  </span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-green-600">✓</span>
-                  </div>
-                  <span>
-                    {t("addDetailedNotes", "procurement") ||
-                      "Add detailed notes for internal reference"}
-                  </span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-green-600">✓</span>
-                  </div>
-                  <span>
-                    {t("verifyContactInfo", "procurement") ||
-                      "Verify contact information before saving"}
-                  </span>
-                </li>
-              </ul>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>
+                  <span className="font-medium">GET:</span> /supplier/{id}
+                </p>
+                <p>
+                  <span className="font-medium">POST:</span> /updatesupplier/
+                  {id}
+                </p>
+                <p className="mt-2 text-xs">
+                  {t("dataWillBeUpdated", "procurement") ||
+                    "Data will be updated directly in the database via API."}
+                </p>
+              </div>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
+import api from "../../services/api";
 import { TextBox, TextArea } from "devextreme-react";
 import { SelectBox } from "devextreme-react/select-box";
 import { NumberBox } from "devextreme-react/number-box";
@@ -16,130 +17,73 @@ import {
   CheckCircle,
   Image as ImageIcon,
   Star,
-  Percent,
   Globe,
   Flag,
+  X,
 } from "lucide-react";
 
 const AddProduct = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
 
-  // بيانات وهمية للفئات
-  const categories = [
-    { id: 1, name_en: "Equipment", name_sv: "Utrustning" },
-    { id: 2, name_en: "Imaging", name_sv: "Bildbehandling" },
-    { id: 3, name_en: "Surgical", name_sv: "Kirurgisk" },
-    { id: 4, name_en: "Restorative", name_sv: "Restaurativ" },
-    { id: 5, name_en: "Hygiene", name_sv: "Hygien" },
-    { id: 6, name_en: "Digital", name_sv: "Digital" },
-    { id: 7, name_en: "Sterilization", name_sv: "Sterilisering" },
-    { id: 8, name_en: "Magnification", name_sv: "Förstoring" },
-    { id: 9, name_en: "Orthodontic", name_sv: "Ortodontisk" },
-  ];
-
-  const [formData, setFormData] = useState({
-    // ✅ حقلين للاسم
-    name_en: "",
-    name_sv: "",
-
-    sku: "",
-    category: "",
-    costPrice: "", // ✅ إضافة حقل سعر التكلفة
-    price: "",
-    discountPrice: "", // ✅ إضافة حقل سعر الخصم (بدل نسبة الخصم)
-    taxRate: 0,
-    stock: "",
-
-    // ✅ حقلين للوصف
-    description_en: "",
-    description_sv: "",
-
-    image: null,
-    status: "active",
-    featured: false,
-    trackInventory: true,
-    lowStockAlert: 10,
-    unit: "Piece",
-    rate: 0,
-  });
-
+  // State for categories from API
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [error, setError] = useState(null);
 
-  // قائمة الوحدات
-  const units = [
-    t("piece", "common"),
-    t("set", "common"),
-    t("box", "common"),
-    t("kit", "common"),
-    t("pack", "common"),
-  ];
+  // البيانات الرئيسية للمنتج
+  const [formData, setFormData] = useState({
+    name: "",
+    s_name: "",
+    sku: "",
+    category: "",
+    price: "",
+    cost: "",
+    stock_quantity: "",
+    low_stock_alert_threshold: 10,
+    tax_rate: 0,
+    discount_price: "",
+    description: "",
+    s_description: "",
+    product_rate: 0,
+  });
 
-  // دالة للحصول على اسم الفئة المناسب للغة الحالية
-  const getCategoryDisplayName = (category) => {
-    const currentLang = localStorage.getItem("language") || "en";
-    return currentLang === "sv" ? category.name_sv : category.name_en;
+  // State للصور
+  const [images, setImages] = useState([]);
+
+  // Fetch categories from API
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await api.get("/categories");
+      const apiData = response.data?.data;
+
+      if (Array.isArray(apiData)) {
+        const activeCategories = apiData.filter((cat) => cat.enabled === true);
+        setCategories(activeCategories);
+      }
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
-  // تحويل الفئات لخيارات الـ SelectBox
+  const getCategoryDisplayName = (category) => {
+    const currentLang = localStorage.getItem("language") || "en";
+    if (currentLang === "sv" && category.s_name) {
+      return category.s_name;
+    }
+    return category.name || category.name_en;
+  };
+
   const categoryOptions = categories.map((cat) => ({
     id: cat.id,
     name: getCategoryDisplayName(cat),
+    value: cat.name || cat.name_en,
   }));
-
-  // دالة لحساب مبلغ التوفير
-  const calculateSavingsAmount = (price, discountPrice) => {
-    if (!price || !discountPrice || discountPrice >= price) return "";
-    const original = parseFloat(price);
-    const discounted = parseFloat(discountPrice);
-    const savings = original - discounted;
-    return `$${savings.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
-
-  // دالة لحساب الضريبة
-  const calculateTaxAmount = (price, discountPrice, taxRate) => {
-    if (!price || taxRate === 0) return "";
-
-    let finalPrice = parseFloat(price);
-
-    // استخدام سعر الخصم إذا كان أقل من السعر الأصلي
-    if (discountPrice && discountPrice < price) {
-      finalPrice = parseFloat(discountPrice);
-    }
-
-    const taxAmount = finalPrice * (taxRate / 100);
-    return `$${taxAmount.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
-
-  // دالة لحساب السعر النهائي مع الضريبة
-  const calculateFinalPrice = (price, discountPrice, taxRate) => {
-    if (!price) return "";
-
-    let finalPrice = parseFloat(price);
-
-    // استخدام سعر الخصم إذا كان موجوداً
-    if (discountPrice && discountPrice < price) {
-      finalPrice = parseFloat(discountPrice);
-    }
-
-    // تطبيق الضريبة إذا كانت موجودة
-    if (taxRate && taxRate > 0) {
-      finalPrice = finalPrice * (1 + taxRate / 100);
-    }
-
-    return `$${finalPrice.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({
@@ -149,41 +93,297 @@ const AddProduct = () => {
   };
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, image: file }));
+    const files = Array.from(e.target.files);
+    const remainingSlots = 4 - images.length;
+    const filesToAdd = files.slice(0, remainingSlots);
 
-      // إنشاء معاينة للصورة
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    if (filesToAdd.length === 0) {
+      alert(
+        t("maxImagesAlert", "addProduct") ||
+          "You can only upload up to 4 images. You already have 4 images."
+      );
+      return;
     }
+
+    const newImagePreviews = filesToAdd.map((file) => {
+      const reader = new FileReader();
+      return new Promise((resolve) => {
+        reader.onloadend = () => {
+          resolve({
+            file,
+            preview: reader.result,
+            id: Date.now() + Math.random(),
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(newImagePreviews).then((previews) => {
+      setImages((prev) => [...prev, ...previews]);
+    });
+
+    e.target.value = "";
+  };
+
+  const handleRemoveImage = (imageId) => {
+    setImages((prev) => prev.filter((img) => img.id !== imageId));
+  };
+
+  const handleDragStart = (e, index) => {
+    e.dataTransfer.setData("imageIndex", index);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    const dragIndex = e.dataTransfer.getData("imageIndex");
+    const newImages = [...images];
+    const [draggedImage] = newImages.splice(dragIndex, 1);
+    newImages.splice(dropIndex, 0, draggedImage);
+    setImages(newImages);
   };
 
   const generateSKU = () => {
-    const prefix = "DENT";
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const sku = `${prefix}-${randomNum}`;
+    const prefix = "SKU";
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    const sku = `${prefix}-${year}${month}${day}${randomNum}`;
     setFormData((prev) => ({ ...prev, sku }));
   };
 
-  const handleSubmit = (e) => {
+  const calculateProfitMargin = () => {
+    if (!formData.cost || !formData.price) return 0;
+
+    const cost = parseFloat(formData.cost);
+    const price = parseFloat(formData.price);
+
+    if (cost === 0 || price <= cost) return 0;
+
+    const profit = price - cost;
+    const margin = (profit / cost) * 100;
+    return margin.toFixed(2);
+  };
+
+  const calculateProfitAmount = () => {
+    if (!formData.cost || !formData.price) return 0;
+
+    const cost = parseFloat(formData.cost);
+    const price = parseFloat(formData.price);
+
+    if (price <= cost) return 0;
+
+    return (price - cost).toFixed(2);
+  };
+
+  const calculateDiscountAmount = () => {
+    if (
+      !formData.price ||
+      !formData.discount_price ||
+      formData.discount_price >= formData.price
+    )
+      return 0;
+
+    const price = parseFloat(formData.price);
+    const discountPrice = parseFloat(formData.discount_price);
+
+    return (price - discountPrice).toFixed(2);
+  };
+
+  const calculateDiscountPercentage = () => {
+    if (
+      !formData.price ||
+      !formData.discount_price ||
+      formData.discount_price >= formData.price
+    )
+      return 0;
+
+    const price = parseFloat(formData.price);
+    const discountPrice = parseFloat(formData.discount_price);
+    const discountAmount = price - discountPrice;
+
+    return ((discountAmount / price) * 100).toFixed(1);
+  };
+
+  const calculateFinalPrice = () => {
+    if (!formData.price) return 0;
+
+    let finalPrice = parseFloat(formData.price);
+
+    if (formData.discount_price && formData.discount_price < formData.price) {
+      finalPrice = parseFloat(formData.discount_price);
+    }
+
+    const taxRate = parseFloat(formData.tax_rate || 0);
+
+    if (taxRate > 0) {
+      finalPrice = finalPrice * (1 + taxRate);
+    }
+
+    return finalPrice.toFixed(2);
+  };
+
+  const calculateTaxAmount = () => {
+    if (!formData.price || !formData.tax_rate) return 0;
+
+    let priceBeforeTax = parseFloat(formData.price);
+
+    if (formData.discount_price && formData.discount_price < formData.price) {
+      priceBeforeTax = parseFloat(formData.discount_price);
+    }
+
+    const taxRate = parseFloat(formData.tax_rate || 0);
+    return (priceBeforeTax * taxRate).toFixed(2);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.name.trim()) {
+      alert(
+        t("nameRequiredAlert", "addProduct") ||
+          "Please enter product name in English"
+      );
+      return;
+    }
+
+    if (!formData.price) {
+      alert(
+        t("priceRequiredAlert", "addProduct") || "Please enter product price"
+      );
+      return;
+    }
+
+    if (!formData.category) {
+      alert(
+        t("categoryRequiredAlert", "addProduct") || "Please select a category"
+      );
+      return;
+    }
+
+    if (!formData.sku.trim()) {
+      alert(t("skuRequiredAlert", "addProduct") || "Please enter SKU");
+      return;
+    }
+
     setLoading(true);
+    setError(null);
 
-    // محاكاة إرسال البيانات إلى الخادم
-    setTimeout(() => {
-      console.log("Product data:", formData);
+    try {
+      const formDataToSend = new FormData();
+
+      formDataToSend.append("name", formData.name.trim());
+
+      if (formData.s_name.trim()) {
+        formDataToSend.append("s_name", formData.s_name.trim());
+      }
+
+      formDataToSend.append("description", formData.description.trim() || "");
+
+      if (formData.s_description.trim()) {
+        formDataToSend.append("s_description", formData.s_description.trim());
+      }
+
+      formDataToSend.append("sku", formData.sku.trim());
+      formDataToSend.append("category", formData.category);
+      formDataToSend.append("price", parseFloat(formData.price).toFixed(2));
+      formDataToSend.append(
+        "cost",
+        formData.cost ? parseFloat(formData.cost).toFixed(2) : "0.00"
+      );
+      formDataToSend.append(
+        "stock_quantity",
+        parseInt(formData.stock_quantity) || 0
+      );
+
+      formDataToSend.append(
+        "tax_rate",
+        (parseFloat(formData.tax_rate || 0) * 100).toFixed(2)
+      );
+
+      if (formData.discount_price && formData.discount_price < formData.price) {
+        formDataToSend.append(
+          "discount_price",
+          parseFloat(formData.discount_price).toFixed(2)
+        );
+      }
+
+      formDataToSend.append(
+        "low_stock_alert_threshold",
+        parseInt(formData.low_stock_alert_threshold) || 10
+      );
+
+      formDataToSend.append(
+        "product_rate",
+        parseFloat(formData.product_rate || 0).toFixed(1)
+      );
+
+      images.forEach((image, index) => {
+        formDataToSend.append(`images[${index + 1}]`, image.file);
+      });
+
+      const response = await api.post("/createproduct", formDataToSend);
+
+      if (response.status === 200 || response.status === 201) {
+        if (
+          response.data.success === true ||
+          response.data.message?.toLowerCase().includes("success") ||
+          response.data.message?.toLowerCase().includes("created")
+        ) {
+          setSuccess(true);
+          setError(null);
+          setTimeout(() => {
+            navigate("/products");
+          }, 2000);
+        } else {
+          setError(
+            response.data.message ||
+              t("apiSuccessFalse", "addProduct") ||
+              "Operation completed but API returned success: false"
+          );
+        }
+      } else {
+        setError(
+          response.data.message ||
+            t("createProductFailed", "addProduct") ||
+            "Failed to create product"
+        );
+      }
+    } catch (err) {
+      if (err.response?.status === 422) {
+        const errors = err.response.data.errors || err.response.data;
+        let errorMessage =
+          t("validationError", "addProduct") || "Validation error:\n";
+
+        if (typeof errors === "object") {
+          Object.entries(errors).forEach(([field, messages]) => {
+            if (Array.isArray(messages)) {
+              errorMessage += `${field}: ${messages.join(", ")}\n`;
+            } else {
+              errorMessage += `${field}: ${messages}\n`;
+            }
+          });
+        } else if (err.response.data.message) {
+          errorMessage = err.response.data.message;
+        }
+
+        setError(errorMessage);
+      } else {
+        setError(
+          err.message ||
+            t("createProductError", "addProduct") ||
+            "Error creating product"
+        );
+      }
+    } finally {
       setLoading(false);
-      setSuccess(true);
-
-      // إعادة التوجيه بعد 2 ثانية
-      setTimeout(() => {
-        navigate("/products");
-      }, 2000);
-    }, 1500);
+    }
   };
 
   return (
@@ -200,10 +400,11 @@ const AddProduct = () => {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              {t("addNewProduct", "addProduct")}
+              {t("addNewProduct", "addProduct") || "Add New Product"}
             </h1>
             <p className="text-gray-600">
-              {t("addDentalEquipment", "addProduct")}
+              {t("addDentalEquipment", "addProduct") ||
+                "Add new dental equipment to inventory"}
             </p>
           </div>
         </div>
@@ -213,9 +414,24 @@ const AddProduct = () => {
           onClick={() => navigate("/products")}
           className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
         >
-          {t("cancel", "common")}
+          {t("cancel", "common") || "Cancel"}
         </button>
       </div>
+
+      {/* Error/Success Message */}
+      {error && !success && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-center">
+            <AlertCircle className="text-red-600 mr-3" size={24} />
+            <div>
+              <h3 className="font-bold text-red-800">
+                {t("error", "common") || "Error"}
+              </h3>
+              <p className="text-red-600">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {success ? (
         /* Success Message */
@@ -225,17 +441,19 @@ const AddProduct = () => {
               <CheckCircle className="text-green-600" size={32} />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">
-              {t("productAddedSuccess", "addProduct")}
+              {t("productAddedSuccess", "addProduct") ||
+                "Product Added Successfully!"}
             </h3>
             <p className="text-gray-600 mb-6">
-              {t("productAddedInventory", "addProduct")}
+              {t("productAddedInventory", "addProduct") ||
+                "The product has been added to your inventory."}
             </p>
             <button
               type="button"
               onClick={() => navigate("/products")}
               className="px-6 py-3 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition"
             >
-              {t("goBackProducts", "addProduct")}
+              {t("goBackProducts", "addProduct") || "Back to Products"}
             </button>
           </div>
         </div>
@@ -253,10 +471,12 @@ const AddProduct = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
-                      {t("basicInformation", "addProduct")}
+                      {t("basicInformation", "addProduct") ||
+                        "Basic Information"}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {t("enterProductDetails", "addProduct")}
+                      {t("enterProductDetails", "addProduct") ||
+                        "Enter product basic details"}
                     </p>
                   </div>
                 </div>
@@ -266,16 +486,20 @@ const AddProduct = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                       <Globe className="mr-2 text-blue-500" size={16} />
-                      {t("productName", "addProduct")} (English) *
+                      {t("productName", "products")} (
+                      {t("english", "common") || "English"}) *
                     </label>
                     <TextBox
-                      placeholder="e.g., Advanced Dental Chair"
-                      value={formData.name_en}
-                      onValueChange={(value) => handleChange("name_en", value)}
+                      placeholder={
+                        t("productNamePlaceholder", "addProduct") ||
+                        "e.g., Advanced Dental Chair"
+                      }
+                      value={formData.name}
+                      onValueChange={(value) => handleChange("name", value)}
                       width="100%"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      {t("requiredField", "addProduct")}
+                      {t("requiredField", "addProduct") || "Required field"}
                     </p>
                   </div>
 
@@ -283,19 +507,21 @@ const AddProduct = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                       <Flag className="mr-2 text-yellow-500" size={16} />
-                      {t("productName", "addProduct")} (Swedish)
+                      {t("productName", "products")} (
+                      {t("swedish", "common") || "Swedish"})
                     </label>
                     <TextBox
-                      placeholder="e.g., Avancerad Tandstol"
-                      value={formData.name_sv}
-                      onValueChange={(value) => handleChange("name_sv", value)}
+                      placeholder={
+                        t("productNameSvPlaceholder", "addProduct") ||
+                        "e.g., Avancerad Tandstol"
+                      }
+                      value={formData.s_name}
+                      onValueChange={(value) => handleChange("s_name", value)}
                       width="100%"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      {t(
-                        "Optional - will use English name if left empty",
-                        "addProduct"
-                      )}
+                      {t("optionalField", "addProduct") ||
+                        "Optional - will use English name if left empty"}
                     </p>
                   </div>
 
@@ -303,19 +529,19 @@ const AddProduct = () => {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-medium text-gray-700">
-                        {t("skuStockKeeping", "addProduct")}
+                        SKU *
                       </label>
                       <button
                         type="button"
                         onClick={generateSKU}
                         className="text-sm text-dental-blue hover:text-blue-600"
                       >
-                        {t("generateSku", "addProduct")}
+                        {t("generateSku", "addProduct") || "Generate SKU"}
                       </button>
                     </div>
                     <div className="relative">
                       <TextBox
-                        placeholder="DENT-1234"
+                        placeholder="SKU-202412001"
                         value={formData.sku}
                         onValueChange={(value) => handleChange("sku", value)}
                         width="100%"
@@ -329,56 +555,49 @@ const AddProduct = () => {
 
                   {/* Category */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("category", "products")} *
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        {t("category", "products")} *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/categories")}
+                        className="text-sm text-dental-blue hover:text-blue-600 hover:underline flex items-center"
+                      >
+                        <Package size={14} className="mr-1" />
+                        {t("manageCategories", "addProduct") ||
+                          "Manage Categories"}
+                      </button>
+                    </div>
                     <SelectBox
                       items={categoryOptions}
                       value={formData.category}
                       onValueChange={(value) => handleChange("category", value)}
                       displayExpr="name"
-                      valueExpr="id"
+                      valueExpr="value"
                       placeholder={
                         t("selectCategory", "addProduct") || "Select category"
                       }
                       searchEnabled={true}
                       width="100%"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t("categoryNotListed", "addProduct") ||
+                        "Can't find your category?"}{" "}
+                      <button
+                        type="button"
+                        onClick={() => navigate("/categories")}
+                        className="text-dental-blue hover:underline font-medium"
+                      >
+                        {t("addNewCategory", "addProduct") ||
+                          "Add new category"}
+                      </button>
+                    </p>
                   </div>
-
-                  {/* Unit */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("unit", "addProduct")}
-                    </label>
-                    <SelectBox
-                      items={units}
-                      value={formData.unit}
-                      onValueChange={(value) => handleChange("unit", value)}
-                      placeholder={
-                        t("selectUnit", "addProduct") || "Select unit"
-                      }
-                      width="100%"
-                    />
-                  </div>
-                </div>
-
-                {/* Link to manage categories */}
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <p className="text-sm text-gray-600">
-                    {t("Need to add a new category?", "addProduct")}{" "}
-                    <button
-                      type="button"
-                      onClick={() => navigate("/categories")}
-                      className="text-dental-blue hover:text-blue-600 font-medium"
-                    >
-                      {t("Manage categories here", "addProduct")}
-                    </button>
-                  </p>
                 </div>
               </div>
 
-              {/* Pricing & Stock Card */}
+              {/* Pricing Card */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="p-2 bg-green-50 rounded-lg">
@@ -386,29 +605,29 @@ const AddProduct = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
-                      {t("pricingStock", "addProduct")}
+                      {t("pricing", "addProduct") || "Pricing"}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {t("setPricingInventory", "addProduct")}
+                      {t("setProductPricing", "addProduct") ||
+                        "Set product pricing details"}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  {/* ✅ Cost Price - الجديد */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Cost Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("costPrice", "productDetails") || "Cost Price"} *
+                      {t("costPrice", "addProduct") || "Cost Price"} *
                     </label>
                     <div className="relative">
                       <NumberBox
                         placeholder="0.00"
-                        value={formData.costPrice || ""}
-                        onValueChange={(value) =>
-                          handleChange("costPrice", value)
-                        }
+                        value={formData.cost}
+                        onValueChange={(value) => handleChange("cost", value)}
                         format="$ #,##0.##"
                         width="100%"
+                        min={0}
                       />
                       <DollarSign
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -420,7 +639,7 @@ const AddProduct = () => {
                   {/* Selling Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("sellingPrice", "addProduct")} *
+                      {t("price", "products")} *
                     </label>
                     <div className="relative">
                       <NumberBox
@@ -429,6 +648,7 @@ const AddProduct = () => {
                         onValueChange={(value) => handleChange("price", value)}
                         format="$ #,##0.##"
                         width="100%"
+                        min={0}
                       />
                       <DollarSign
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -437,20 +657,21 @@ const AddProduct = () => {
                     </div>
                   </div>
 
-                  {/* ✅ Discount Price - بدل Discount Percentage */}
+                  {/* Discount Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("discountPrice", "addProduct") || "Discount Price"}
+                      {t("priceAfterDiscount", "products")}
                     </label>
                     <div className="relative">
                       <NumberBox
                         placeholder="0.00"
-                        value={formData.discountPrice || ""}
+                        value={formData.discount_price}
                         onValueChange={(value) =>
-                          handleChange("discountPrice", value)
+                          handleChange("discount_price", value)
                         }
                         format="$ #,##0.##"
                         width="100%"
+                        min={0}
                       />
                       <DollarSign
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -462,14 +683,14 @@ const AddProduct = () => {
                   {/* Tax Rate */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("taxRate", "products") || "Tax Rate"} *
+                      {t("taxRate", "products")}
                     </label>
                     <div className="relative">
                       <NumberBox
                         placeholder="0"
-                        value={formData.taxRate}
+                        value={formData.tax_rate}
                         onValueChange={(value) =>
-                          handleChange("taxRate", value)
+                          handleChange("tax_rate", value)
                         }
                         format="#0 %"
                         showSpinButtons={true}
@@ -480,24 +701,25 @@ const AddProduct = () => {
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Product Rating */}
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Product Rating */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("productRating", "addProduct") || "Product Rating"}
+                      {t("productRating", "addProduct") || "Product Rating"}{" "}
+                      (0.0 - 5.0)
                     </label>
                     <div className="relative">
                       <NumberBox
                         placeholder="0.0"
-                        value={formData.rate}
-                        onValueChange={(value) => handleChange("rate", value)}
+                        value={formData.product_rate}
+                        onValueChange={(value) =>
+                          handleChange("product_rate", value)
+                        }
+                        format="#0.0"
                         showSpinButtons={true}
                         min={0}
                         max={5}
                         step={0.1}
-                        format="#0.0"
                         width="100%"
                       />
                       <Star
@@ -505,127 +727,219 @@ const AddProduct = () => {
                         size={18}
                       />
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {t("enterRatingBetween", "addProduct") ||
-                        "Enter rating between 0.0 and 5.0"}
+                  </div>
+                </div>
+
+                {/* Pricing Summary */}
+                {(formData.cost ||
+                  formData.discount_price ||
+                  formData.tax_rate > 0) && (
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-medium text-blue-800 mb-3">
+                      {t("pricingSummary", "addProduct") || "Pricing Summary"}
+                    </h4>
+                    <div className="space-y-2">
+                      {formData.cost && formData.price && (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-700">
+                              {t("costPrice", "addProduct") || "Cost Price"}:
+                            </span>
+                            <span className="font-medium">
+                              ${parseFloat(formData.cost || 0).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-700">
+                              {t("sellingPrice", "addProduct") ||
+                                "Selling Price"}
+                              :
+                            </span>
+                            <span className="font-medium">
+                              ${parseFloat(formData.price || 0).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-700">
+                              {t("profitAmount", "addProduct") ||
+                                "Profit Amount"}
+                              :
+                            </span>
+                            <span className="font-medium text-green-600">
+                              ${calculateProfitAmount()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-700">
+                              {t("profitMargin", "addProduct") ||
+                                "Profit Margin"}
+                              :
+                            </span>
+                            <span className="font-medium text-green-600">
+                              {calculateProfitMargin()}%
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      {formData.discount_price &&
+                        formData.discount_price < formData.price && (
+                          <>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">
+                                {t("discountPrice", "addProduct") ||
+                                  "Discount Price"}
+                                :
+                              </span>
+                              <span className="font-medium text-blue-600">
+                                $
+                                {parseFloat(formData.discount_price).toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">
+                                {t("discountAmount", "addProduct") ||
+                                  "Discount Amount"}
+                                :
+                              </span>
+                              <span className="font-medium text-red-600">
+                                -${calculateDiscountAmount()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">
+                                {t("discountPercentage", "addProduct") ||
+                                  "Discount Percentage"}
+                                :
+                              </span>
+                              <span className="font-medium text-red-600">
+                                {calculateDiscountPercentage()}% OFF
+                              </span>
+                            </div>
+                          </>
+                        )}
+
+                      {formData.tax_rate > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-700">
+                            {t("tax", "addProduct") || "Tax"} (
+                            {(formData.tax_rate * 100).toFixed(1)}%):
+                          </span>
+                          <span className="font-medium text-orange-600">
+                            +${calculateTaxAmount()}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between text-sm pt-2 border-t border-blue-200">
+                        <span className="font-medium text-blue-800">
+                          {t("finalPrice", "addProduct") || "Final Price"}:
+                        </span>
+                        <span className="font-bold text-blue-900 text-lg">
+                          ${calculateFinalPrice()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Stock & Inventory Card */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="p-2 bg-yellow-50 rounded-lg">
+                    <Package className="text-yellow-500" size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {t("stockInventory", "addProduct") || "Stock & Inventory"}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {t("setStockDetails", "addProduct") ||
+                        "Set inventory and stock alert details"}
                     </p>
                   </div>
                 </div>
 
-                {/* Display Price Summary */}
-                {(formData.discountPrice || formData.taxRate > 0) &&
-                  formData.price && (
-                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h4 className="text-sm font-medium text-blue-800 mb-3">
-                        {t("priceSummary", "addProduct") || "Price Summary"}
-                      </h4>
-                      <div className="space-y-2">
-                        {/* Cost Price */}
-                        {formData.costPrice && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-700">
-                              {t("costPrice", "productDetails") || "Cost Price"}
-                              :
-                            </span>
-                            <span className="font-medium">
-                              ${parseFloat(formData.costPrice).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Stock Quantity */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t("stock", "products")} *
+                    </label>
+                    <NumberBox
+                      placeholder="0"
+                      value={formData.stock_quantity}
+                      onValueChange={(value) =>
+                        handleChange("stock_quantity", value)
+                      }
+                      showSpinButtons={true}
+                      min={0}
+                      width="100%"
+                    />
+                  </div>
 
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-700">
-                            {t("originalPrice", "addProduct") ||
-                              "Original Price"}
-                            :
-                          </span>
-                          <span className="font-medium">
-                            ${parseFloat(formData.price).toFixed(2)}
-                          </span>
-                        </div>
-
-                        {formData.discountPrice &&
-                          formData.discountPrice < formData.price && (
-                            <>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-700">
-                                  {t("discountPrice", "addProduct") ||
-                                    "Discount Price"}
-                                  :
-                                </span>
-                                <span className="font-medium text-green-600">
-                                  $
-                                  {parseFloat(formData.discountPrice).toFixed(
-                                    2
-                                  )}
-                                </span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-700">
-                                  {t("savings", "addProduct") || "You Save"}:
-                                </span>
-                                <span className="font-medium text-red-600">
-                                  -
-                                  {calculateSavingsAmount(
-                                    formData.price,
-                                    formData.discountPrice
-                                  )}
-                                </span>
-                              </div>
-                            </>
-                          )}
-
-                        {formData.taxRate > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-700">
-                              {t("taxRate", "products")} ({formData.taxRate}%):
-                            </span>
-                            <span className="font-medium text-blue-600">
-                              +
-                              {calculateTaxAmount(
-                                formData.price,
-                                formData.discountPrice,
-                                formData.taxRate
-                              )}
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="flex justify-between text-sm pt-2 border-t border-blue-200">
-                          <span className="font-medium text-blue-800">
-                            {t("finalPrice", "addProduct") || "Final Price"}:
-                          </span>
-                          <span className="font-bold text-blue-900 text-lg">
-                            {calculateFinalPrice(
-                              formData.price,
-                              formData.discountPrice,
-                              formData.taxRate
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                {/* Low Stock Alert */}
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t("lowStockAlert", "addProduct")}
-                  </label>
-                  <NumberBox
-                    placeholder="10"
-                    value={formData.lowStockAlert}
-                    onValueChange={(value) =>
-                      handleChange("lowStockAlert", value)
-                    }
-                    showSpinButtons={true}
-                    min={0}
-                    width="100%"
-                  />
-                  <p className="text-sm text-gray-500 mt-2">
-                    {t("getNotifiedWhenStock", "addProduct")}
-                  </p>
+                  {/* Low Stock Alert Threshold */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t("lowStockAlert", "addProduct") ||
+                        "Low Stock Alert Threshold"}{" "}
+                      *
+                    </label>
+                    <NumberBox
+                      placeholder="10"
+                      value={formData.low_stock_alert_threshold}
+                      onValueChange={(value) =>
+                        handleChange("low_stock_alert_threshold", value)
+                      }
+                      showSpinButtons={true}
+                      min={0}
+                      width="100%"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t("lowStockDescription", "addProduct") ||
+                        "Product will be marked as 'Low Stock' when quantity ≤ this threshold"}
+                    </p>
+                  </div>
                 </div>
+
+                {/* Stock Status Preview */}
+                {formData.stock_quantity !== "" && (
+                  <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-800 mb-2">
+                      {t("stockStatusPreview", "addProduct") ||
+                        "Stock Status Preview"}
+                      :
+                    </h4>
+                    <div className="flex items-center space-x-4">
+                      <div
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          parseInt(formData.stock_quantity) === 0
+                            ? "bg-red-100 text-red-800"
+                            : parseInt(formData.stock_quantity) <=
+                              parseInt(formData.low_stock_alert_threshold)
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
+                        {parseInt(formData.stock_quantity) === 0
+                          ? t("outOfStock", "products") || "Out of Stock"
+                          : parseInt(formData.stock_quantity) <=
+                            parseInt(formData.low_stock_alert_threshold)
+                          ? t("lowStock", "products") || "Low Stock"
+                          : t("inStock", "products") || "In Stock"}
+                      </div>
+                      <span className="text-sm text-gray-600">
+                        {t("current", "common") || "Current"}:{" "}
+                        {formData.stock_quantity}{" "}
+                        {t("units", "addProduct") || "units"} •{" "}
+                        {t("threshold", "addProduct") || "Threshold"}:{" "}
+                        {formData.low_stock_alert_threshold}{" "}
+                        {t("units", "addProduct") || "units"}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Description Card */}
@@ -636,10 +950,12 @@ const AddProduct = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
-                      {t("descriptionDetails", "addProduct")}
+                      {t("descriptionDetails", "addProduct") ||
+                        "Description & Details"}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {t("addProductDescription", "addProduct")}
+                      {t("addProductDescription", "addProduct") ||
+                        "Add product description and specifications"}
                     </p>
                   </div>
                 </div>
@@ -649,13 +965,17 @@ const AddProduct = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                       <Globe className="mr-2 text-blue-500" size={16} />
-                      {t("productDescription", "addProduct")} (English)
+                      {t("description", "products")} (
+                      {t("english", "common") || "English"})
                     </label>
                     <TextArea
-                      placeholder="Describe the product features, specifications, and benefits in English..."
-                      value={formData.description_en}
+                      placeholder={
+                        t("descriptionEnPlaceholder", "addProduct") ||
+                        "Describe the product features, specifications, and benefits in English..."
+                      }
+                      value={formData.description}
                       onValueChange={(value) =>
-                        handleChange("description_en", value)
+                        handleChange("description", value)
                       }
                       height={150}
                       width="100%"
@@ -666,13 +986,17 @@ const AddProduct = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                       <Flag className="mr-2 text-yellow-500" size={16} />
-                      {t("productDescription", "addProduct")} (Swedish)
+                      {t("description", "products")} (
+                      {t("swedish", "common") || "Swedish"})
                     </label>
                     <TextArea
-                      placeholder="Beskriv produktfunktioner, specifikationer och fördelar på svenska..."
-                      value={formData.description_sv}
+                      placeholder={
+                        t("descriptionSvPlaceholder", "addProduct") ||
+                        "Beskriv produktfunktioner, specifikationer och fördelar på svenska..."
+                      }
+                      value={formData.s_description}
                       onValueChange={(value) =>
-                        handleChange("description_sv", value)
+                        handleChange("s_description", value)
                       }
                       height={150}
                       width="100%"
@@ -688,15 +1012,27 @@ const AddProduct = () => {
                   onClick={() => navigate("/products")}
                   className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
                 >
-                  {t("cancel", "common")}
+                  {t("cancel", "common") || "Cancel"}
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || !formData.name_en.trim()}
+                  disabled={
+                    loading ||
+                    !formData.name.trim() ||
+                    !formData.price ||
+                    !formData.category ||
+                    !formData.sku.trim() ||
+                    !formData.cost
+                  }
                   className={`
                     px-6 py-2 rounded-lg font-medium transition flex items-center justify-center
                     ${
-                      loading || !formData.name_en.trim()
+                      loading ||
+                      !formData.name.trim() ||
+                      !formData.price ||
+                      !formData.category ||
+                      !formData.sku.trim() ||
+                      !formData.cost
                         ? "bg-gray-400 cursor-not-allowed text-white"
                         : "bg-dental-blue text-white hover:bg-blue-600"
                     }
@@ -705,12 +1041,12 @@ const AddProduct = () => {
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      {t("saving", "addProduct")}
+                      {t("saving", "addProduct") || "Saving..."}
                     </>
                   ) : (
                     <>
                       <Save size={20} className="mr-2" />
-                      {t("saveProduct", "addProduct")}
+                      {t("saveProduct", "addProduct") || "Save Product"}
                     </>
                   )}
                 </button>
@@ -728,55 +1064,70 @@ const AddProduct = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">
-                    {t("productImage", "addProduct")}
+                    {t("productImages", "addProduct") || "Product Images"}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    {t("uploadProductPhotos", "addProduct")}
+                    {t("uploadUpTo4Photos", "addProduct") ||
+                      "Upload up to 4 product photos"}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {images.length}/4 {t("images", "addProduct") || "images"}
                   </p>
                 </div>
               </div>
 
-              {/* Image Preview */}
+              {/* Image Grid */}
               <div className="mb-6">
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
-                  {imagePreview ? (
-                    <div className="space-y-4">
-                      <div className="relative mx-auto w-48 h-48">
+                <div className="grid grid-cols-2 gap-4">
+                  {images.map((image, index) => (
+                    <div
+                      key={image.id}
+                      className="relative group"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, index)}
+                    >
+                      <div className="aspect-square rounded-lg overflow-hidden border border-gray-200">
                         <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="w-full h-full object-cover rounded-lg"
+                          src={image.preview}
+                          alt={`${
+                            t("productPreview", "addProduct") ||
+                            "Product preview"
+                          } ${index + 1}`}
+                          className="w-full h-full object-cover"
                         />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImagePreview(null);
-                            setFormData((prev) => ({ ...prev, image: null }));
-                          }}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full"
-                        >
-                          ✕
-                        </button>
                       </div>
-                      <p className="text-sm text-gray-600">
-                        {t("imagePreview", "addProduct") || "Image preview"}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                        <Upload className="text-gray-400" size={24} />
-                      </div>
-                      <div>
-                        <p className="text-gray-600 mb-2">
-                          {t("dragDropClick", "addProduct")}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {t("supportsJpgPng", "addProduct")}
-                        </p>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(image.id)}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={14} />
+                      </button>
+                      <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                        {index + 1}
                       </div>
                     </div>
-                  )}
+                  ))}
+
+                  {/* Empty Slots */}
+                  {Array.from({ length: 4 - images.length }).map((_, index) => (
+                    <div
+                      key={`empty-${index}`}
+                      className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center"
+                    >
+                      <div className="text-center p-4">
+                        <Upload
+                          className="text-gray-400 mx-auto mb-2"
+                          size={24}
+                        />
+                        <p className="text-xs text-gray-500">
+                          {t("emptySlot", "addProduct") || "Empty Slot"}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -784,62 +1135,98 @@ const AddProduct = () => {
               <div className="relative">
                 <input
                   type="file"
-                  id="product-image"
+                  id="product-images"
                   accept="image/*"
                   onChange={handleImageChange}
                   className="hidden"
+                  multiple
+                  disabled={images.length >= 4}
                 />
                 <label
-                  htmlFor="product-image"
-                  className="block w-full py-3 px-4 bg-gray-50 border border-gray-300 rounded-lg text-center cursor-pointer hover:bg-gray-100 transition"
+                  htmlFor="product-images"
+                  className={`
+                    block w-full py-3 px-4 rounded-lg text-center cursor-pointer transition
+                    ${
+                      images.length >= 4
+                        ? "bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed"
+                        : "bg-gray-50 border border-gray-300 hover:bg-gray-100"
+                    }
+                  `}
                 >
                   <div className="flex items-center justify-center space-x-2">
                     <Upload size={18} />
                     <span className="font-medium">
-                      {t("chooseImage", "addProduct")}
+                      {t("chooseImages", "addProduct") || "Choose Images"}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      ({images.length}/4)
                     </span>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {t("imageFormats", "addProduct") ||
+                      "JPG, PNG up to 5MB each"}
+                  </p>
                 </label>
+              </div>
+
+              {/* Drag & Drop Hint */}
+              <div className="mt-4 text-center">
+                <p className="text-xs text-gray-500">
+                  {t("dragDropHint", "addProduct") ||
+                    "Drag images to reorder • First image is main product image"}
+                </p>
               </div>
             </div>
 
             {/* Quick Tips */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-blue-800 mb-4">
-                📝 {t("quickTips", "addProduct")}
+                📝 {t("quickTips", "addProduct") || "Quick Tips"}
               </h3>
               <ul className="space-y-3 text-sm text-blue-700">
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">1</span>
                   </div>
-                  <span>{t("useClearDescriptive", "addProduct")}</span>
+                  <span>
+                    {t("tipSku", "addProduct") ||
+                      "SKU is required and must be unique"}
+                  </span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">2</span>
                   </div>
-                  <span>{t("setRealisticStock", "addProduct")}</span>
+                  <span>
+                    {t("tipLowStock", "addProduct") ||
+                      "Low Stock Threshold: Product marked 'Low Stock' when quantity ≤ this value"}
+                  </span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">3</span>
                   </div>
-                  <span>{t("highQualityImages", "addProduct")}</span>
+                  <span>
+                    {t("tipImages", "addProduct") ||
+                      "Upload up to 4 images. First image is the main product image"}
+                  </span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">4</span>
                   </div>
-                  <span>{t("accuratePricing", "addProduct")}</span>
+                  <span>
+                    {t("tipTax", "addProduct") ||
+                      "Tax Rate: Enter 10 for 10% (will be stored as 0.1 internally)"}
+                  </span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">5</span>
                   </div>
                   <span>
-                    {t("setTaxRateProperly", "addProduct") ||
-                      "Set the correct tax rate for accurate pricing"}
+                    {t("tipDiscount", "addProduct") ||
+                      "Discount price must be lower than original price"}
                   </span>
                 </li>
                 <li className="flex items-start space-x-2">
@@ -847,8 +1234,8 @@ const AddProduct = () => {
                     <span className="text-blue-600">6</span>
                   </div>
                   <span>
-                    Fill both English and Swedish fields for better
-                    multi-language support
+                    {t("tipRequired", "addProduct") ||
+                      "All fields marked with * are required"}
                   </span>
                 </li>
               </ul>

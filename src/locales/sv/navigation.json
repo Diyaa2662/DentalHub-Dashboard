@@ -1,6 +1,8 @@
 {
+  "dentalhubAdmin": "DentalHub Admin",
   "dashboard": "Instrumentpanel",
   "products": "Produkter",
+  "categories": "Kategorier",
   "orders": "Beställningar",
   "customers": "Kunder",
   "invoices": "Fakturor",

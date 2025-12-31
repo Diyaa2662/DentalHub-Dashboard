@@ -14,5 +14,16 @@
   "highestSpendingCustomers": "Kunder som spenderat mest",
   "total": "Totalt",
   "growth": "Tillväxt",
-  "joinDate": "Anslöt sig"
+  "joinDate": "Anslöt sig",
+  "loadingCustomers": "Laddar kunder...",
+  "failedToLoadCustomers": "Kunde inte ladda kunder",
+  "errorLoadingCustomers": "Fel vid laddning av kunder",
+  "noCustomersYet": "Inga kunder ännu",
+  "startByAddingCustomers": "Börja med att lägga till kunder till ditt system",
+  "confirmBlockCustomer": "Är du säker på att du vill blockera kunden",
+  "customerBlocked": "Kund blockerad",
+  "blockCustomer": "Blockera kund",
+  "notSpecified": "Ej angivet",
+  "invalidDataFormat": "Ogiltigt dataformat från servern",
+  "actions": "Åtgärder"
 }

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../../contexts/LanguageContext";
+import api from "../../../services/api";
 import { TextBox, TextArea } from "devextreme-react";
 import { SelectBox } from "devextreme-react/select-box";
 import {
@@ -15,6 +16,7 @@ import {
   User,
   CheckCircle,
   XCircle,
+  AlertCircle,
 } from "lucide-react";
 
 const AddSupplier = () => {
@@ -26,13 +28,14 @@ const AddSupplier = () => {
     email: "",
     phone: "",
     address: "",
-    productType: "",
-    status: "active",
+    product_type: "",
     notes: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
+  const [validationErrors, setValidationErrors] = useState({});
 
   // خيارات نوع المنتجات
   const productTypeOptions = [
@@ -68,44 +71,123 @@ const AddSupplier = () => {
     { value: "Other", label: t("other", "procurement") || "Other" },
   ];
 
-  // خيارات الحالة
-  const statusOptions = [
-    {
-      value: "active",
-      label: t("active", "procurement") || "Active",
-      icon: <CheckCircle size={16} className="text-green-600 mr-2" />,
-    },
-    {
-      value: "inactive",
-      label: t("inactive", "procurement") || "Inactive",
-      icon: <XCircle size={16} className="text-red-600 mr-2" />,
-    },
-  ];
-
   const handleChange = (name, value) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+
+    // مسح خطأ التحقق عند التغيير
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [name]: null,
+      }));
+    }
+    setError(null);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setLoading(true);
+  // ✅ التحقق من صحة البيانات
+  const validateForm = () => {
+    const errors = {};
 
-    // محاكاة إرسال البيانات إلى الخادم
-    setTimeout(() => {
-      console.log("Supplier data:", formData);
-      setLoading(false);
+    if (!formData.name.trim()) {
+      errors.name =
+        t("supplierNameRequired", "procurement") || "Supplier name is required";
+    }
+
+    if (!formData.email.trim()) {
+      errors.email = t("emailRequired", "procurement") || "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = t("invalidEmail", "procurement") || "Invalid email format";
+    }
+
+    if (!formData.phone.trim()) {
+      errors.phone = t("phoneRequired", "procurement") || "Phone is required";
+    }
+
+    if (!formData.address.trim()) {
+      errors.address =
+        t("addressRequired", "procurement") || "Address is required";
+    }
+
+    if (!formData.product_type) {
+      errors.product_type =
+        t("productTypeRequired", "procurement") || "Product type is required";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      // eslint-disable-next-line no-unused-vars
+      const response = await api.post("/createsupplier", {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
+        product_type: formData.product_type,
+        notes: formData.notes.trim() || null,
+      });
+
+      // ✅ النجاح - سواء كان success: true أو message
       setSuccess(true);
 
-      // إعادة التوجيه بعد 2 ثانية
+      // ✅ الانتقال مباشرة بعد النجاح
       setTimeout(() => {
         navigate("/procurement/suppliers");
       }, 2000);
-    }, 1500);
-  };
+    } catch (err) {
+      // ✅ إذا كان هناك رسالة نجاح في الخطأ
+      if (
+        err.response?.data?.message?.includes("success") ||
+        err.response?.data?.message?.includes("created")
+      ) {
+        setSuccess(true);
+        setTimeout(() => {
+          navigate("/procurement/suppliers");
+        }, 2000);
+        return;
+      }
 
+      // ✅ معالجة الأخطاء العادية
+      if (err.response) {
+        const { status, data } = err.response;
+
+        if (status === 400 || status === 422) {
+          if (data.errors) {
+            const apiErrors = {};
+            Object.keys(data.errors).forEach((key) => {
+              apiErrors[key] = data.errors[key][0];
+            });
+            setValidationErrors(apiErrors);
+          } else {
+            setError(data.message || "Validation error");
+          }
+        } else {
+          setError(data?.message || err.message || "Error adding supplier");
+        }
+      } else if (err.request) {
+        setError("No response from server. Check your connection.");
+      } else {
+        setError(err.message || "Error setting up request");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -138,8 +220,8 @@ const AddSupplier = () => {
         </button>
       </div>
 
+      {/* ✅ رسالة النجاح */}
       {success ? (
-        /* Success Message */
         <div className="bg-white rounded-xl border border-gray-200 p-8">
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
@@ -151,7 +233,7 @@ const AddSupplier = () => {
             </h3>
             <p className="text-gray-600 mb-6">
               {t("supplierAddedSystem", "procurement") ||
-                "The supplier has been added to your system."}
+                "The supplier has been added to your system. Redirecting to suppliers list..."}
             </p>
             <button
               type="button"
@@ -163,10 +245,25 @@ const AddSupplier = () => {
           </div>
         </div>
       ) : (
-        /* Supplier Form */
+        /* ✅ نموذج إضافة المزود */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Form */}
           <div className="lg:col-span-2">
+            {/* ✅ رسالة الخطأ العامة */}
+            {error && (
+              <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+                <div className="flex items-center">
+                  <AlertCircle className="text-red-600 mr-3" size={20} />
+                  <div>
+                    <h3 className="font-medium text-red-800">
+                      {t("error", "common") || "Error"}
+                    </h3>
+                    <p className="text-red-600 text-sm">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Basic Information Card */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -197,7 +294,13 @@ const AddSupplier = () => {
                       value={formData.name}
                       onValueChange={(value) => handleChange("name", value)}
                       width="100%"
+                      isValid={!validationErrors.name}
                     />
+                    {validationErrors.name && (
+                      <p className="text-red-600 text-xs mt-1">
+                        {validationErrors.name}
+                      </p>
+                    )}
                   </div>
 
                   {/* Email */}
@@ -211,7 +314,13 @@ const AddSupplier = () => {
                       value={formData.email}
                       onValueChange={(value) => handleChange("email", value)}
                       width="100%"
+                      isValid={!validationErrors.email}
                     />
+                    {validationErrors.email && (
+                      <p className="text-red-600 text-xs mt-1">
+                        {validationErrors.email}
+                      </p>
+                    )}
                   </div>
 
                   {/* Phone */}
@@ -225,7 +334,13 @@ const AddSupplier = () => {
                       value={formData.phone}
                       onValueChange={(value) => handleChange("phone", value)}
                       width="100%"
+                      isValid={!validationErrors.phone}
                     />
+                    {validationErrors.phone && (
+                      <p className="text-red-600 text-xs mt-1">
+                        {validationErrors.phone}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -261,7 +376,13 @@ const AddSupplier = () => {
                       onValueChange={(value) => handleChange("address", value)}
                       height={100}
                       width="100%"
+                      isValid={!validationErrors.address}
                     />
+                    {validationErrors.address && (
+                      <p className="text-red-600 text-xs mt-1">
+                        {validationErrors.address}
+                      </p>
+                    )}
                   </div>
 
                   {/* Product Type */}
@@ -272,9 +393,9 @@ const AddSupplier = () => {
                     </label>
                     <SelectBox
                       items={productTypeOptions}
-                      value={formData.productType}
+                      value={formData.product_type}
                       onValueChange={(value) =>
-                        handleChange("productType", value)
+                        handleChange("product_type", value)
                       }
                       displayExpr="label"
                       valueExpr="value"
@@ -284,12 +405,18 @@ const AddSupplier = () => {
                       }
                       searchEnabled={true}
                       width="100%"
+                      isValid={!validationErrors.product_type}
                     />
+                    {validationErrors.product_type && (
+                      <p className="text-red-600 text-xs mt-1">
+                        {validationErrors.product_type}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Status & Notes Card */}
+              {/* Notes Card */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="p-2 bg-purple-50 rounded-lg">
@@ -297,58 +424,33 @@ const AddSupplier = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
-                      {t("statusNotes", "procurement") || "Status & Notes"}
+                      {t("additionalNotes", "procurement") ||
+                        "Additional Notes"}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {t("setStatusAdditionalInfo", "procurement") ||
-                        "Set supplier status and additional information"}
+                      {t("additionalInfoSupplier", "procurement") ||
+                        "Additional information about the supplier"}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Status */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t("status", "procurement") || "Status"} *
-                    </label>
-                    <SelectBox
-                      items={statusOptions}
-                      value={formData.status}
-                      onValueChange={(value) => handleChange("status", value)}
-                      displayExpr="label"
-                      valueExpr="value"
-                      placeholder={
-                        t("selectStatus", "procurement") || "Select status"
-                      }
-                      itemRender={(item) => (
-                        <div className="flex items-center">
-                          {item.icon}
-                          <span>{item.label}</span>
-                        </div>
-                      )}
-                      width="100%"
-                    />
-                  </div>
-
-                  {/* Notes */}
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                      <FileText className="mr-2 text-gray-500" size={16} />
-                      {t("notes", "procurement") || "Notes"}
-                    </label>
-                    <TextArea
-                      placeholder="e.g., Reliable supplier, fast delivery, good for bulk orders..."
-                      value={formData.notes}
-                      onValueChange={(value) => handleChange("notes", value)}
-                      height={120}
-                      width="100%"
-                    />
-                    <p className="text-sm text-gray-500 mt-2">
-                      {t("addNotesDescription", "procurement") ||
-                        "Add any additional notes or comments about this supplier"}
-                    </p>
-                  </div>
+                {/* Notes */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <FileText className="mr-2 text-gray-500" size={16} />
+                    {t("notes", "procurement") || "Notes"}
+                  </label>
+                  <TextArea
+                    placeholder="e.g., Reliable supplier, fast delivery, good for bulk orders..."
+                    value={formData.notes}
+                    onValueChange={(value) => handleChange("notes", value)}
+                    height={120}
+                    width="100%"
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    {t("addNotesDescription", "procurement") ||
+                      "Add any additional notes or comments about this supplier"}
+                  </p>
                 </div>
               </div>
 
@@ -363,13 +465,11 @@ const AddSupplier = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={
-                    loading || !formData.name.trim() || !formData.email.trim()
-                  }
+                  disabled={loading}
                   className={`
                     px-6 py-2 rounded-lg font-medium transition flex items-center justify-center
                     ${
-                      loading || !formData.name.trim() || !formData.email.trim()
+                      loading
                         ? "bg-gray-400 cursor-not-allowed text-white"
                         : "bg-dental-blue text-white hover:bg-blue-600"
                     }
@@ -477,33 +577,7 @@ const AddSupplier = () => {
                       "Add helpful notes for future reference"}
                   </span>
                 </li>
-                <li className="flex items-start space-x-2">
-                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-green-600">5</span>
-                  </div>
-                  <span>
-                    {t("setActiveStatusNew", "procurement") ||
-                      "Set status to 'Active' for new suppliers"}
-                  </span>
-                </li>
               </ul>
-            </div>
-
-            {/* Data Preview */}
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                👁️ {t("dataPreview", "procurement") || "Data Preview"}
-              </h3>
-              <div className="space-y-2 text-sm text-gray-600">
-                <p>
-                  {t("fieldsWillAppear", "procurement") ||
-                    "All fields will appear in the suppliers table exactly as entered here."}
-                </p>
-                <p className="mt-2">
-                  {t("editLater", "procurement") ||
-                    "You can edit this information later from the suppliers management page."}
-                </p>
-              </div>
             </div>
           </div>
         </div>

@@ -1,11 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
-import { LogIn, Mail, Lock, Activity, Eye, EyeOff, Globe } from "lucide-react";
+import api from "../../services/api";
+import {
+  LogIn,
+  Mail,
+  Lock,
+  Activity,
+  Eye,
+  EyeOff,
+  Globe,
+  Shield,
+  AlertCircle,
+} from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { t, language, switchLanguage } = useLanguage(); // إضافة language و switchLanguage
+  const { t, language, switchLanguage } = useLanguage();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -13,12 +24,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // بيانات تسجيل الدخول الثابتة
-  const validCredentials = {
-    email: "admin@dentalhub.com",
-    password: "admin1234",
-  };
+  const [connectionError, setConnectionError] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,38 +33,114 @@ const Login = () => {
       [name]: value,
     }));
     setError("");
+    setConnectionError(false);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.email || !formData.password) {
+      setError(t("fillAllFields", "login") || "Please fill in all fields");
+      return;
+    }
+
     setLoading(true);
     setError("");
+    setConnectionError(false);
 
-    setTimeout(() => {
-      if (
-        formData.email === validCredentials.email &&
-        formData.password === validCredentials.password
-      ) {
+    try {
+      const response = await api.post("/employeelogin", {
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (response.data && response.data.token) {
+        const { token, user } = response.data;
+
+        localStorage.setItem("authToken", token);
+        localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("userEmail", formData.email);
+
+        api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
         navigate("/");
       } else {
         setError(
-          t("invalidCredentials", "login") ||
-            "Invalid email or password. Please try again."
+          response.data.message ||
+            t("loginFailed", "login") ||
+            "Login failed - No authentication token received"
         );
       }
+    } catch (err) {
+      setConnectionError(true);
+
+      if (err.response) {
+        const { status, data } = err.response;
+
+        switch (status) {
+          case 400:
+            setError(
+              data.message || t("invalidRequest", "login") || "Invalid request"
+            );
+            break;
+          case 401:
+            setError(
+              t("invalidCredentials", "login") || "Invalid email or password"
+            );
+            break;
+          case 403:
+            setError(t("accessDenied", "login") || "Access denied");
+            break;
+          case 404:
+            setError(
+              t("endpointNotFound", "login") || "Login endpoint not found"
+            );
+            break;
+          case 500:
+            setError(
+              t("serverError", "login") ||
+                "Internal server error. Please try again later."
+            );
+            break;
+          default:
+            setError(
+              data.message || t("loginFailed", "login") || "Login failed"
+            );
+        }
+      } else if (err.request) {
+        if (err.code === "ECONNABORTED") {
+          setError(
+            t("timeoutError", "login") ||
+              "Request timeout. Please check your connection."
+          );
+        } else {
+          setError(
+            t("noResponse", "login") ||
+              "No response from server. Please check your internet connection."
+          );
+        }
+      } else {
+        setError(
+          err.message ||
+            t("requestError", "login") ||
+            "Error setting up request"
+        );
+      }
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const toggleLanguage = () => {
     switchLanguage(language === "en" ? "sv" : "en");
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const isAuthenticated = localStorage.getItem("isAuthenticated");
-    if (isAuthenticated === "true") {
+    const token = localStorage.getItem("authToken");
+
+    if (isAuthenticated === "true" && token) {
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       navigate("/");
     }
   }, [navigate]);
@@ -90,7 +172,7 @@ const Login = () => {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            DentalPro Admin
+            DentalHub Admin
           </h1>
           <p className="text-gray-600">
             {t("signInToDashboard", "login") ||
@@ -128,6 +210,7 @@ const Login = () => {
                     t("enterYourEmail", "login") || "Enter your email"
                   }
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -151,11 +234,13 @@ const Login = () => {
                     t("enterYourPassword", "login") || "Enter your password"
                   }
                   required
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  disabled={loading}
                 >
                   {showPassword ? (
                     <EyeOff
@@ -172,28 +257,74 @@ const Login = () => {
               </div>
             </div>
 
-            {/* رسالة الخطأ */}
+            {/* رسائل الخطأ */}
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600 text-sm">{error}</p>
+              <div
+                className={`p-3 rounded-lg ${
+                  connectionError
+                    ? "bg-red-50 border border-red-200"
+                    : "bg-yellow-50 border border-yellow-200"
+                }`}
+              >
+                <p
+                  className={`text-sm ${
+                    connectionError ? "text-red-600" : "text-yellow-700"
+                  } font-medium`}
+                >
+                  {connectionError ? "⚠️ " : ""}
+                  {error}
+                </p>
+                {connectionError && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {t("checkConnection", "login") ||
+                      "Please check your internet connection and try again."}
+                  </p>
+                )}
               </div>
             )}
 
-            {/* معلومات تسجيل الدخول */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800 font-medium mb-2">
-                {t("demoCredentials", "login") || "Demo Credentials:"}
-              </p>
-              <div className="text-sm text-blue-700 space-y-1">
-                <p>
-                  {t("email", "common")}:{" "}
-                  <span className="font-mono">admin@dentalpro.com</span>
-                </p>
-                <p>
-                  {t("password", "common")}:{" "}
-                  <span className="font-mono">admin123</span>
-                </p>
+            {/* تعليمات للمسؤول */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="flex items-start mb-3">
+                <Shield className="text-dental-blue mt-0.5 mr-2" size={18} />
+                <div>
+                  <p className="text-sm font-medium text-gray-800 mb-1">
+                    {t("adminGuidelines", "login") || "Admin Guidelines"}
+                  </p>
+                  <ul className="text-xs text-gray-600 space-y-1">
+                    <li className="flex items-start">
+                      <span className="text-dental-blue mr-2">•</span>
+                      {t("useCompanyCredentials", "login") ||
+                        "Use your company-issued credentials only"}
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-dental-blue mr-2">•</span>
+                      {t("neverSharePassword", "login") ||
+                        "Never share your password with anyone"}
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-dental-blue mr-2">•</span>
+                      {t("logoutSharedDevices", "login") ||
+                        "Log out after each session on shared devices"}
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-dental-blue mr-2">•</span>
+                      {t("reportSuspiciousActivity", "login") ||
+                        "Report any suspicious activity immediately"}
+                    </li>
+                  </ul>
+                </div>
               </div>
+
+              {connectionError && (
+                <div className="flex items-center mt-3 pt-3 border-t border-gray-200">
+                  <AlertCircle size={16} className="text-red-500 mr-2" />
+                  <p className="text-xs text-red-600">
+                    Unable to connect to DentalHub servers. Please verify your
+                    network connection.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* زر تسجيل الدخول */}
@@ -223,8 +354,7 @@ const Login = () => {
           {/* معلومات إضافية */}
           <div className="mt-8 pt-8 border-t border-gray-200">
             <p className="text-center text-sm text-gray-600">
-              {t("demoAdminPanel", "login") ||
-                "This is a demo admin panel. For security, please don't use real credentials."}
+              {t("professionalSystem", "common")} {t("version", "common")} v1.0
             </p>
           </div>
         </div>
@@ -232,12 +362,11 @@ const Login = () => {
         {/* حقوق الطبع */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-500">
-            © {new Date().getFullYear()} DentalPro Shop.{" "}
+            © {new Date().getFullYear()} DentalHub.{" "}
             {t("allRightsReserved", "common")}
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            {t("currentLanguage", "login") || "Current language"}:{" "}
-            {language === "en" ? "English" : "Swedish"}
+            Secure Enterprise Platform • ISO 27001 Certified
           </p>
         </div>
       </div>

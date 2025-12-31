@@ -14,5 +14,16 @@
   "highestSpendingCustomers": "Highest spending customers",
   "total": "Total",
   "growth": "Growth",
-  "joinDate": "Join Date"
+  "joinDate": "Join Date",
+  "loadingCustomers": "Loading customers...",
+  "failedToLoadCustomers": "Failed to load customers",
+  "errorLoadingCustomers": "Error Loading Customers",
+  "noCustomersYet": "No Customers Yet",
+  "startByAddingCustomers": "Start by adding customers to your system",
+  "confirmBlockCustomer": "Are you sure you want to block customer",
+  "customerBlocked": "Customer blocked",
+  "blockCustomer": "Block Customer",
+  "notSpecified": "Not specified",
+  "invalidDataFormat": "Invalid data format from server",
+  "actions": "Actions"
 }

@@ -1,12 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
+import api from "../../services/api";
 import {
   DataGrid,
   Column,
   SearchPanel,
   Paging,
   Pager,
-  Grouping,
   GroupPanel,
   HeaderFilter,
 } from "devextreme-react/data-grid";
@@ -20,96 +20,261 @@ import {
   Package,
   Globe,
   Flag,
-  Check,
   X,
   Save,
   Info,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 
 const Categories = () => {
   const { t } = useLanguage();
 
-  // بيانات وهمية للفئات للعرض فقط
-  const [categories, setCategories] = useState([
-    {
-      id: 1,
-      name_en: "Equipment",
-      name_sv: "Utrustning",
-      enabled: true,
-      productCount: 24,
-    },
-    {
-      id: 2,
-      name_en: "Imaging",
-      name_sv: "Bildbehandling",
-      enabled: true,
-      productCount: 18,
-    },
-    {
-      id: 3,
-      name_en: "Surgical",
-      name_sv: "Kirurgisk",
-      enabled: true,
-      productCount: 32,
-    },
-    {
-      id: 4,
-      name_en: "Restorative",
-      name_sv: "Restaurativ",
-      enabled: false,
-      productCount: 15,
-    },
-    {
-      id: 5,
-      name_en: "Hygiene",
-      name_sv: "Hygien",
-      enabled: true,
-      productCount: 27,
-    },
-    {
-      id: 6,
-      name_en: "Digital",
-      name_sv: "Digital",
-      enabled: true,
-      productCount: 12,
-    },
-    {
-      id: 7,
-      name_en: "Sterilization",
-      name_sv: "Sterilisering",
-      enabled: true,
-      productCount: 8,
-    },
-    {
-      id: 8,
-      name_en: "Magnification",
-      name_sv: "Förstoring",
-      enabled: false,
-      productCount: 6,
-    },
-    {
-      id: 9,
-      name_en: "Orthodontic",
-      name_sv: "Ortodontisk",
-      enabled: true,
-      productCount: 21,
-    },
-  ]);
+  // State for categories data from API
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // حالة لعرض/إخفاء نموذج إضافة فئة
+  // State for add/edit forms
   const [showAddForm, setShowAddForm] = useState(false);
-
-  // حالة لعرض/إخفاء Popup تعديل الفئة
   const [showEditPopup, setShowEditPopup] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
-
-  // حالة بيانات الفئة الجديدة
   const [newCategory, setNewCategory] = useState({
     name_en: "",
     name_sv: "",
   });
 
-  // إحصائيات وهمية
+  // Fetch categories from API
+  useEffect(() => {
+    fetchCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ✅ Fetch categories from API
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.get("/categories");
+      const apiData = response.data?.data;
+
+      if (Array.isArray(apiData)) {
+        const formattedData = apiData.map((category) => ({
+          id: category.id,
+          name_en: category.name || "",
+          name_sv: category.s_name || category.name || "",
+          enabled: category.enabled === true,
+          productCount: category.products_number || 0,
+          originalData: category,
+        }));
+
+        setCategories(formattedData);
+      } else {
+        setError(
+          t("noCategoriesData", "categories") || "No categories data found"
+        );
+        setCategories([]);
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          t("failedToLoadCategories", "categories") ||
+          "Failed to load categories"
+      );
+      setCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Handle add new category
+  const handleAddCategory = async () => {
+    if (!newCategory.name_en.trim()) {
+      alert(
+        t("enterEnglishName", "categories") ||
+          "Please enter category name in English"
+      );
+      return;
+    }
+
+    try {
+      const categoryData = {
+        name: newCategory.name_en.trim(),
+        s_name: newCategory.name_sv.trim() || newCategory.name_en.trim(),
+      };
+
+      await api.post("/createcategory", categoryData);
+
+      fetchCategories();
+      setNewCategory({ name_en: "", name_sv: "" });
+      setShowAddForm(false);
+
+      alert(t("categoryAdded", "categories") || "Category added successfully!");
+    } catch (err) {
+      alert(
+        t("addError", "categories") ||
+          "Error adding category: " +
+            (err.response?.data?.message || err.message || "Please try again")
+      );
+    }
+  };
+
+  // ✅ Handle edit category
+  const handleSaveEdit = async () => {
+    if (!editingCategory.name_en.trim()) {
+      alert(
+        t("enterEnglishName", "categories") ||
+          "Please enter category name in English"
+      );
+      return;
+    }
+
+    try {
+      const categoryId = editingCategory.id;
+      const updateData = {
+        name: editingCategory.name_en.trim(),
+        s_name:
+          editingCategory.name_sv.trim() || editingCategory.name_en.trim(),
+      };
+
+      await api.post(`/updatecategory/${categoryId}`, updateData);
+
+      await fetchCategories();
+      setShowEditPopup(false);
+      setEditingCategory(null);
+    } catch (err) {
+      let errorMessage =
+        t("updateError", "categories") || "Failed to update category";
+
+      if (err.response?.status === 422) {
+        errorMessage =
+          t("validationError", "categories") || "Please check your input data";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+
+      alert(errorMessage);
+    }
+  };
+
+  // ✅ Handle delete category
+  const handleDeleteCategory = async (id, name) => {
+    const confirmMessage =
+      t("confirmDeleteCategory", "categories") ||
+      `Are you sure you want to delete category "${name}"?`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      // eslint-disable-next-line no-unused-vars
+      const categoryToDelete = categories.find((cat) => cat.id === id);
+
+      setCategories((prev) => prev.filter((cat) => cat.id !== id));
+
+      await api.delete(`/deletecategory/${id}`);
+
+      setTimeout(() => {
+        fetchCategories();
+      }, 300);
+
+      alert(
+        t("categoryDeleted", "categories") || "Category deleted successfully!"
+      );
+    } catch (err) {
+      fetchCategories();
+
+      alert(
+        t("deleteError", "categories") ||
+          "Error deleting category: " +
+            (err.response?.data?.message || err.message || "Please try again")
+      );
+    }
+  };
+
+  // ✅ Handle toggle category status
+  const handleToggleStatus = async (id) => {
+    try {
+      const currentCategory = categories.find((cat) => cat.id === id);
+      if (!currentCategory) return;
+
+      const newEnabledState = !currentCategory.enabled;
+
+      await api.post(`/updatecategorystate/${id}`, {
+        enabled: newEnabledState,
+      });
+
+      setCategories((prev) =>
+        prev.map((cat) =>
+          cat.id === id ? { ...cat, enabled: newEnabledState } : cat
+        )
+      );
+    } catch (err) {
+      let errorMessage =
+        t("statusUpdateError", "categories") || "Failed to update status";
+
+      if (err.response?.status === 422) {
+        const errorData = err.response.data;
+        if (errorData.errors?.enabled) {
+          errorMessage = errorData.errors.enabled[0];
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+
+      alert(errorMessage);
+    }
+  };
+
+  // ✅ Handle edit button click
+  const handleEditCategory = async (category) => {
+    try {
+      const response = await api.get(`/categories/${category.id}`);
+
+      let categoryData = null;
+
+      if (response.data?.data) {
+        categoryData = response.data.data;
+      } else if (response.data?.category) {
+        categoryData = response.data.category;
+      } else if (response.data && typeof response.data === "object") {
+        categoryData = response.data;
+      }
+
+      const editData = categoryData || category.originalData || category;
+
+      setEditingCategory({
+        id: editData.id || category.id,
+        name_en: editData.name || editData.name_en || "",
+        name_sv: editData.s_name || editData.name_sv || editData.name || "",
+        enabled: category.enabled,
+        productCount:
+          editData.products_number ||
+          editData.productCount ||
+          category.productCount,
+        originalData: editData,
+      });
+
+      setShowEditPopup(true);
+      // eslint-disable-next-line no-unused-vars
+    } catch (err) {
+      setEditingCategory({
+        id: category.id,
+        name_en: category.name_en,
+        name_sv: category.name_sv,
+        enabled: category.enabled,
+        productCount: category.productCount,
+        originalData: category.originalData || category,
+      });
+
+      setShowEditPopup(true);
+    }
+  };
+
+  // Stats
   const stats = {
     total: categories.length,
     active: categories.filter((cat) => cat.enabled).length,
@@ -117,86 +282,97 @@ const Categories = () => {
     totalProducts: categories.reduce((sum, cat) => sum + cat.productCount, 0),
   };
 
-  // دالة إضافة فئة جديدة (وهمية)
-  const handleAddCategory = () => {
-    if (!newCategory.name_en.trim()) {
-      alert("Please enter category name in English");
-      return;
-    }
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {t("categoriesManagement", "categories") ||
+                "Categories Management"}
+            </h1>
+            <p className="text-gray-600">
+              {t("manageCategories", "categories") ||
+                "Manage product categories and subcategories"}
+            </p>
+          </div>
+          <button
+            disabled
+            className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg font-medium flex items-center space-x-2 mt-4 md:mt-0 cursor-not-allowed"
+          >
+            <Plus size={20} />
+            <span>{t("addCategory", "categories") || "Add Category"}</span>
+          </button>
+        </div>
 
-    const newCat = {
-      id: categories.length + 1,
-      name_en: newCategory.name_en.trim(),
-      name_sv: newCategory.name_sv.trim() || newCategory.name_en.trim(),
-      enabled: true,
-      productCount: 0,
-    };
-
-    // إضافة الفئة الجديدة للقائمة
-    setCategories([...categories, newCat]);
-
-    // إعادة تعيين الحقول وإخفاء النموذج
-    setNewCategory({ name_en: "", name_sv: "" });
-    setShowAddForm(false);
-
-    // رسالة تأكيد (يمكن إزالتها لاحقاً)
-    alert("Category added successfully!");
-  };
-
-  // دالة لإلغاء الإضافة
-  const handleCancelAdd = () => {
-    setNewCategory({ name_en: "", name_sv: "" });
-    setShowAddForm(false);
-  };
-
-  // دالة لحذف فئة (وهمية)
-  const handleDeleteCategory = (id) => {
-    if (window.confirm("Are you sure you want to delete this category?")) {
-      setCategories(categories.filter((cat) => cat.id !== id));
-      alert("Category deleted successfully!");
-    }
-  };
-
-  // دالة لتعديل حالة الفئة (تفعيل/تعطيل)
-  const handleToggleStatus = (id) => {
-    setCategories(
-      categories.map((cat) =>
-        cat.id === id ? { ...cat, enabled: !cat.enabled } : cat
-      )
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dental-blue mx-auto mb-4"></div>
+            <p className="text-gray-600">
+              {t("loadingCategories", "categories") || "Loading categories..."}
+            </p>
+          </div>
+        </div>
+      </div>
     );
-  };
+  }
 
-  // دالة فتح Popup التعديل
-  const handleEditCategory = (category) => {
-    setEditingCategory({ ...category });
-    setShowEditPopup(true);
-  };
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {t("categoriesManagement", "categories") ||
+                "Categories Management"}
+            </h1>
+            <p className="text-gray-600">
+              {t("manageCategories", "categories") ||
+                "Manage product categories and subcategories"}
+            </p>
+          </div>
+          <div className="flex space-x-3 mt-4 md:mt-0">
+            <button
+              onClick={fetchCategories}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center space-x-2"
+            >
+              <RefreshCw size={18} />
+              <span>{t("retry", "common") || "Retry"}</span>
+            </button>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center space-x-2"
+            >
+              <Plus size={20} />
+              <span>{t("addCategory", "categories") || "Add Category"}</span>
+            </button>
+          </div>
+        </div>
 
-  // دالة حفظ التعديلات
-  const handleSaveEdit = () => {
-    if (!editingCategory.name_en.trim()) {
-      alert("Please enter category name in English");
-      return;
-    }
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <div className="flex items-center mb-4">
+            <AlertCircle className="text-red-600 mr-3" size={24} />
+            <div>
+              <h3 className="font-bold text-red-800">
+                {t("errorLoading", "categories") || "Error Loading Categories"}
+              </h3>
+              <p className="text-red-600">{error}</p>
+            </div>
+          </div>
 
-    // تحديث الفئة في القائمة
-    setCategories(
-      categories.map((cat) =>
-        cat.id === editingCategory.id ? editingCategory : cat
-      )
+          <button
+            onClick={fetchCategories}
+            className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition flex items-center space-x-2"
+          >
+            <RefreshCw size={18} />
+            <span>{t("tryAgain", "common") || "Try Again"}</span>
+          </button>
+        </div>
+      </div>
     );
-
-    // إغلاق البوب أب وعرض رسالة نجاح
-    setShowEditPopup(false);
-    setEditingCategory(null);
-    alert("Category updated successfully!");
-  };
-
-  // دالة إلغاء التعديل
-  const handleCancelEdit = () => {
-    setShowEditPopup(false);
-    setEditingCategory(null);
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -211,13 +387,23 @@ const Categories = () => {
               "Manage product categories and subcategories"}
           </p>
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center space-x-2 mt-4 md:mt-0"
-        >
-          <Plus size={20} />
-          <span>{t("addCategory", "categories") || "Add Category"}</span>
-        </button>
+        <div className="flex space-x-3 mt-4 md:mt-0">
+          <button
+            onClick={fetchCategories}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center space-x-2"
+            title={t("refresh", "common") || "Refresh"}
+          >
+            <RefreshCw size={18} />
+            <span>{t("refresh", "common") || "Refresh"}</span>
+          </button>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center space-x-2"
+          >
+            <Plus size={20} />
+            <span>{t("addCategory", "categories") || "Add Category"}</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -277,7 +463,10 @@ const Categories = () => {
               {t("addCategory", "categories") || "Add New Category"}
             </h3>
             <button
-              onClick={handleCancelAdd}
+              onClick={() => {
+                setNewCategory({ name_en: "", name_sv: "" });
+                setShowAddForm(false);
+              }}
               className="p-2 hover:bg-gray-100 rounded-lg transition"
             >
               <X size={20} className="text-gray-500" />
@@ -329,7 +518,10 @@ const Categories = () => {
 
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
             <button
-              onClick={handleCancelAdd}
+              onClick={() => {
+                setNewCategory({ name_en: "", name_sv: "" });
+                setShowAddForm(false);
+              }}
               className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
             >
               {t("cancel", "common") || "Cancel"}
@@ -359,7 +551,10 @@ const Categories = () => {
                 {t("editCategory", "categories") || "Edit Category"}
               </h3>
               <button
-                onClick={handleCancelEdit}
+                onClick={() => {
+                  setShowEditPopup(false);
+                  setEditingCategory(null);
+                }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
               >
                 <X size={20} className="text-gray-500" />
@@ -372,7 +567,8 @@ const Categories = () => {
                 <div className="flex items-center space-x-3 mb-2">
                   <Info className="text-blue-500" size={18} />
                   <span className="text-sm font-medium text-blue-800">
-                    Category Information
+                    {t("categoryInformation", "categories") ||
+                      "Category Information"}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -383,13 +579,17 @@ const Categories = () => {
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Products:</span>
+                    <span className="text-gray-600">
+                      {t("products", "categories") || "Products"}:
+                    </span>
                     <span className="font-medium ml-2">
                       {editingCategory.productCount}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Status:</span>
+                    <span className="text-gray-600">
+                      {t("status", "categories") || "Status"}:
+                    </span>
                     <span
                       className={`ml-2 font-medium ${
                         editingCategory.enabled
@@ -397,7 +597,9 @@ const Categories = () => {
                           : "text-gray-600"
                       }`}
                     >
-                      {editingCategory.enabled ? "Active" : "Inactive"}
+                      {editingCategory.enabled
+                        ? t("active", "categories") || "Active"
+                        : t("inactive", "categories") || "Inactive"}
                     </span>
                   </div>
                 </div>
@@ -444,39 +646,14 @@ const Categories = () => {
                   ) || "Optional - will use English name if left empty"}
                 </p>
               </div>
-
-              {/* Status Toggle */}
-              <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <input
-                  type="checkbox"
-                  id="category-status"
-                  checked={editingCategory.enabled}
-                  onChange={(e) =>
-                    setEditingCategory({
-                      ...editingCategory,
-                      enabled: e.target.checked,
-                    })
-                  }
-                  className="h-5 w-5 text-dental-blue rounded mt-0.5"
-                />
-                <div>
-                  <label
-                    htmlFor="category-status"
-                    className="text-sm font-medium text-gray-700"
-                  >
-                    {t("enableCategory", "categories") || "Enable Category"}
-                  </label>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {t("categoryStatusDescription", "categories") ||
-                      "Disabled categories won't appear in product selection"}
-                  </p>
-                </div>
-              </div>
             </div>
 
             <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
               <button
-                onClick={handleCancelEdit}
+                onClick={() => {
+                  setShowEditPopup(false);
+                  setEditingCategory(null);
+                }}
                 className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
               >
                 {t("cancel", "common") || "Cancel"}
@@ -500,170 +677,197 @@ const Categories = () => {
 
       {/* Categories Table with DevExtreme DataGrid */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <DataGrid
-          dataSource={categories}
-          showBorders={true}
-          columnAutoWidth={true}
-          allowColumnResizing={true}
-          columnMinWidth={100}
-          height={500}
-          selection={{ mode: "multiple" }}
-          allowColumnReordering={true}
-          wordWrapEnabled={true}
-        >
-          <HeaderFilter visible={true} />
-          <SearchPanel
-            visible={true}
-            placeholder={
-              t("searchCategories", "categories") || "Search categories..."
-            }
-          />
-
-          <GroupPanel
-            visible={true}
-            emptyPanelText="Drag column here to group"
-          />
-
-          <Paging defaultPageSize={10} />
-          <Pager
-            showPageSizeSelector={true}
-            allowedPageSizes={[5, 10, 20]}
-            showInfo={true}
-          />
-
-          {/* ID */}
-          <Column
-            dataField="id"
-            caption="ID"
-            width={70}
-            alignment="left"
-            allowGrouping={false}
-          />
-
-          {/* Category Name - English */}
-          <Column
-            dataField="name_en"
-            caption={`${
-              t("categoryName", "categories") || "Category Name"
-            } (English)`}
-            minWidth={180}
-            alignment="left"
-            allowGrouping={false}
-            cellRender={({ data }) => (
-              <div className="flex items-center">
-                <Globe className="text-blue-400 mr-2" size={14} />
-                <span>{data.name_en}</span>
-              </div>
-            )}
-          />
-
-          {/* Category Name - Swedish */}
-          <Column
-            dataField="name_sv"
-            caption={`${
-              t("categoryName", "categories") || "Category Name"
-            } (Swedish)`}
-            minWidth={180}
-            alignment="left"
-            allowGrouping={false}
-            cellRender={({ data }) => (
-              <div className="flex items-center">
-                <Flag className="text-yellow-400 mr-2" size={14} />
-                <span>{data.name_sv}</span>
-              </div>
-            )}
-          />
-
-          {/* Product Count */}
-          <Column
-            dataField="productCount"
-            caption={t("totalProducts", "categories") || "Products"}
-            width={120}
-            alignment="left"
-            allowGrouping={false}
-            cellRender={({ data }) => (
-              <div className="flex items-center">
-                <Package className="text-gray-400 mr-2" size={14} />
-                <span className="font-medium">{data.productCount}</span>
-              </div>
-            )}
-          />
-
-          {/* Status */}
-          <Column
-            dataField="enabled"
-            caption={t("status", "categories") || "Status"}
-            width={120}
-            alignment="left"
-            allowGrouping={true}
-            cellRender={({ data }) => (
-              <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                  data.enabled
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
-                }`}
-              >
-                {data.enabled ? (
-                  <>
-                    <CheckCircle size={12} className="mr-1" />
-                    {t("active", "categories") || "Active"}
-                  </>
-                ) : (
-                  <>
-                    <XCircle size={12} className="mr-1" />
-                    {t("inactive", "categories") || "Inactive"}
-                  </>
-                )}
+        {categories.length === 0 ? (
+          <div className="p-8 text-center">
+            <Package className="text-gray-400 mx-auto mb-4" size={48} />
+            <h3 className="text-lg font-medium text-gray-800 mb-2">
+              {t("noCategoriesYet", "categories") || "No Categories Yet"}
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {t("startByAddingCategories", "categories") ||
+                "Start by adding categories to organize your products"}
+            </p>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition inline-flex items-center space-x-2"
+            >
+              <Plus size={18} />
+              <span>
+                {t("addFirstCategory", "categories") || "Add First Category"}
               </span>
-            )}
-          />
+            </button>
+          </div>
+        ) : (
+          <DataGrid
+            dataSource={categories}
+            showBorders={true}
+            columnAutoWidth={true}
+            allowColumnResizing={true}
+            columnMinWidth={100}
+            height={500}
+            allowColumnReordering={true}
+            wordWrapEnabled={true}
+          >
+            <HeaderFilter visible={true} />
+            <SearchPanel
+              visible={true}
+              placeholder={
+                t("searchCategories", "categories") || "Search categories..."
+              }
+            />
 
-          {/* Actions */}
-          <Column
-            caption={t("actions", "products") || "Actions"}
-            width={140}
-            alignment="left"
-            allowGrouping={false}
-            cellRender={({ data }) => (
-              <div className="flex space-x-2 justify-start">
-                <button
-                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
-                  title={t("editCategory", "categories") || "Edit Category"}
-                  onClick={() => handleEditCategory(data)}
-                >
-                  <Edit size={16} />
-                </button>
-                <button
-                  className={`p-1.5 rounded transition ${
+            <GroupPanel
+              visible={true}
+              emptyPanelText={
+                t("dragColumnToGroup", "categories") ||
+                "Drag column here to group"
+              }
+            />
+
+            <Paging defaultPageSize={10} />
+            <Pager
+              showPageSizeSelector={true}
+              allowedPageSizes={[5, 10, 20]}
+              showInfo={true}
+            />
+
+            {/* ID */}
+            <Column
+              dataField="id"
+              caption="ID"
+              width={70}
+              alignment="left"
+              allowGrouping={false}
+            />
+
+            {/* Category Name - English */}
+            <Column
+              dataField="name_en"
+              caption={`${
+                t("categoryName", "categories") || "Category Name"
+              } (English)`}
+              minWidth={170}
+              alignment="left"
+              allowGrouping={false}
+              cellRender={({ data }) => (
+                <div className="flex items-center">
+                  <Globe className="text-blue-400 mr-2" size={14} />
+                  <span>{data.name_en}</span>
+                </div>
+              )}
+            />
+
+            {/* Category Name - Swedish */}
+            <Column
+              dataField="name_sv"
+              caption={`${
+                t("categoryName", "categories") || "Category Name"
+              } (Swedish)`}
+              minWidth={170}
+              alignment="left"
+              allowGrouping={false}
+              cellRender={({ data }) => (
+                <div className="flex items-center">
+                  <Flag className="text-yellow-400 mr-2" size={14} />
+                  <span>{data.name_sv}</span>
+                </div>
+              )}
+            />
+
+            {/* Product Count */}
+            <Column
+              dataField="productCount"
+              caption={t("totalProducts", "categories") || "Products"}
+              width={140}
+              alignment="left"
+              allowGrouping={false}
+              cellRender={({ data }) => (
+                <div className="flex items-center">
+                  <Package className="text-gray-400 mr-2" size={14} />
+                  <span className="font-medium">{data.productCount}</span>
+                </div>
+              )}
+            />
+
+            {/* Status */}
+            <Column
+              dataField="enabled"
+              caption={t("status", "categories") || "Status"}
+              width={120}
+              alignment="left"
+              allowGrouping={true}
+              cellRender={({ data }) => (
+                <span
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                     data.enabled
-                      ? "text-yellow-600 hover:bg-yellow-50"
-                      : "text-green-600 hover:bg-green-50"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-gray-100 text-gray-800"
                   }`}
-                  title={
-                    data.enabled
-                      ? t("disableCategory", "categories") || "Disable Category"
-                      : t("enableCategory", "categories") || "Enable Category"
-                  }
-                  onClick={() => handleToggleStatus(data.id)}
                 >
                   {data.enabled ? (
-                    <XCircle size={16} />
+                    <>
+                      <CheckCircle size={12} className="mr-1" />
+                      {t("active", "categories") || "Active"}
+                    </>
                   ) : (
-                    <CheckCircle size={16} />
+                    <>
+                      <XCircle size={12} className="mr-1" />
+                      {t("inactive", "categories") || "Inactive"}
+                    </>
                   )}
-                </button>
-                <button
-                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
-                  title={t("deleteCategory", "categories") || "Delete Category"}
-                  onClick={() => handleDeleteCategory(data.id)}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            )}
-          />
-        </DataGrid>
+                </span>
+              )}
+            />
+
+            {/* Actions */}
+            <Column
+              caption={t("actions", "products") || "Actions"}
+              width={140}
+              alignment="left"
+              allowGrouping={false}
+              cellRender={({ data }) => (
+                <div className="flex space-x-2 justify-start">
+                  <button
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                    title={t("editCategory", "categories") || "Edit Category"}
+                    onClick={() => handleEditCategory(data)}
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button
+                    className={`p-1.5 rounded transition ${
+                      data.enabled
+                        ? "text-yellow-600 hover:bg-yellow-50"
+                        : "text-green-600 hover:bg-green-50"
+                    }`}
+                    title={
+                      data.enabled
+                        ? t("disableCategory", "categories") ||
+                          "Disable Category"
+                        : t("enableCategory", "categories") || "Enable Category"
+                    }
+                    onClick={() => handleToggleStatus(data.id)}
+                  >
+                    {data.enabled ? (
+                      <XCircle size={16} />
+                    ) : (
+                      <CheckCircle size={16} />
+                    )}
+                  </button>
+                  <button
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                    title={
+                      t("deleteCategory", "categories") || "Delete Category"
+                    }
+                    onClick={() => handleDeleteCategory(data.id, data.name_en)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )}
+            />
+          </DataGrid>
+        )}
       </div>
     </div>
   );

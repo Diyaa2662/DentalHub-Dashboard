@@ -1,27 +1,38 @@
 // ملف: src/services/api.js
 import axios from 'axios';
 
-// 🔧 الخطوة 1: ضع هنا رابط الـAPI الأساسي الخاص بالباك إند
-const BASE_URL = 'https://your-dental-api.com/v1'; // ⬅️ استبدل هذا الرابط
+const BASE_URL = 'https://dentist-production.up.railway.app/api'; 
 
-// 📦 إنشاء نسخة مخصصة من axios مع إعدادات افتراضية
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000, // 10 ثانية كحد أقصى للانتظار
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  timeout: 10000,
+  // ❌ أزل الـ headers الافتراضية هنا لأنها تسبب المشكلة
 });
 
-// 🔐 الخطوة 2: إعداد Bearer Token تلقائياً من localStorage
+// 🔐 إعداد Bearer Token تلقائياً من localStorage
+// في ملف api.js - النسخة المحسنة
 api.interceptors.request.use(
   (config) => {
-    // نحاول جلب التوكن من localStorage (افترض أنه مخزن باسم 'authToken')
+    // ✅ اجعل هذا الشرط أول شيء
+    // إذا كان FormData لا تلمس Content-Type
+    const isFormData = config.data instanceof FormData;
+    
+    if (!isFormData) {
+      // فقط لغير FormData أضف application/json
+      config.headers['Content-Type'] = 'application/json';
+    }
+    
+    // ✅ إضافة التوكن
     const token = localStorage.getItem('authToken');
     if (token) {
-      // إذا وجد التوكن، نضيفه تلقائياً لرأس الطلب
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // ✅ طباعة للتصحيح (يمكن حذفها لاحقاً)
+    // console.log(`Request to: ${config.url}`);
+    // console.log(`Is FormData: ${isFormData}`);
+    // console.log(`Content-Type: ${config.headers['Content-Type']}`);
+    
     return config;
   },
   (error) => {
@@ -29,30 +40,23 @@ api.interceptors.request.use(
   }
 );
 
-// ⚠️ الخطوة 3: التعامل مع الأخطاء الشائعة من الخادم
+// ⚠️ التعامل مع الأخطاء الشائعة من الخادم
 api.interceptors.response.use(
   (response) => {
-    // في حالة نجاح الطلب، نعيد الرد مباشرة
     return response;
   },
   (error) => {
-    // إذا فشل الطلب، نتحقق من نوع الخطأ
     if (error.response) {
       const { status } = error.response;
       
       if (status === 401) {
-        // خطأ "غير مصرح" - التوكن منتهي أو غير صالح
         console.error('انتهت جلسة العمل! يلزم إعادة تسجيل الدخول.');
-        // يمكن إضافة إعادة توجيه لصفحة تسجيل الدخول هنا
-        // window.location.href = '/login';
-        
       } else if (status === 403) {
-        // خطأ "ممنوع" - المستخدم ليس لديه الصلاحيات
         console.error('ليس لديك صلاحيات للقيام بهذا الإجراء.');
-        
       } else if (status === 404) {
-        // خطأ "غير موجود"
         console.error('الملف المطلوب غير موجود على الخادم.');
+      } else if (status === 422) {
+        console.error('Validation error:', error.response.data);
       }
     }
     

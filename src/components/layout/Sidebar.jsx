@@ -56,31 +56,6 @@ const Sidebar = () => {
       ],
     },
     {
-      id: "sales",
-      label: t("salesCustomers", "navigation"),
-      icon: <ShoppingCart size={20} />,
-      items: [
-        {
-          id: "orders",
-          label: t("orders", "navigation"),
-          icon: <ShoppingCart size={18} />,
-          path: "/orders",
-        },
-        {
-          id: "customers",
-          label: t("customers", "navigation"),
-          icon: <Users size={18} />,
-          path: "/customers",
-        },
-        {
-          id: "invoices",
-          label: t("invoices", "navigation"),
-          icon: <FileText size={18} />,
-          path: "/invoices",
-        },
-      ],
-    },
-    {
       id: "inventory",
       label: t("inventoryProducts", "navigation"),
       icon: <Package size={20} />,
@@ -102,6 +77,31 @@ const Sidebar = () => {
           label: t("inventoryManagement", "navigation"),
           icon: <Package size={18} />,
           path: "/inventory",
+        },
+      ],
+    },
+    {
+      id: "sales",
+      label: t("salesCustomers", "navigation"),
+      icon: <ShoppingCart size={20} />,
+      items: [
+        {
+          id: "orders",
+          label: t("orders", "navigation"),
+          icon: <ShoppingCart size={18} />,
+          path: "/orders",
+        },
+        {
+          id: "customers",
+          label: t("customers", "navigation"),
+          icon: <Users size={18} />,
+          path: "/customers",
+        },
+        {
+          id: "invoices",
+          label: t("invoices", "navigation"),
+          icon: <FileText size={18} />,
+          path: "/invoices",
         },
       ],
     },
@@ -165,8 +165,9 @@ const Sidebar = () => {
   ];
 
   const handleLogout = () => {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
     localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("userEmail");
     navigate("/login");
   };
 
