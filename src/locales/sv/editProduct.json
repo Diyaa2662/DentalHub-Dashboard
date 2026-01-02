@@ -58,5 +58,8 @@
   "deleteImage": "Radera bild",
   "restoreImage": "Återställ bild",
   "removeImage": "Ta bort bild",
-  "taxNote": "OBS: Skatt beräknas på rabatterat pris om tillgängligt"
+  "taxNote": "OBS: Skatt beräknas på rabatterat pris om tillgängligt",
+  "skuCanBeModified": "Kan ändras",
+  "skuOptionalPlaceholder": "Lämna tomt för att behålla nuvarande SKU",
+  "skuEditHint": "Lämna tomt för att behålla nuvarande SKU eller ange nytt unikt SKU"
 }

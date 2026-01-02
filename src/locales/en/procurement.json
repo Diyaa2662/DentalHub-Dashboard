@@ -258,5 +258,13 @@
   "apiRateLimit": "Too many requests. Please wait a moment.",
   "refreshPage": "Refresh page",
   "autoRefresh": "Auto-refresh in {{seconds}} seconds",
-  "lastUpdated": "Last updated: {{time}}"
+  "lastUpdated": "Last updated: {{time}}",
+  "supplierRequired": "Please select a supplier",
+  "loadingProducts": "Loading products...",
+  "noProductsFound": "No products found",
+  "selectedSupplier": "Selected Supplier",
+  "supplierId": "Supplier ID",
+  "check": "Check",
+  "creatingOrder": "Creating Order...",
+  "costPriceAuto": "Cost price from product"
 }

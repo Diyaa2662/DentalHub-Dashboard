@@ -76,5 +76,7 @@
   "swedish": "Svenska",
   "confirmDelete": "Är du säker på att du vill radera produkten \"{name}\"?",
   "deleteSuccess": "Produkten raderades framgångsrikt",
-  "deleteError": "Fel vid radering av produkt"
+  "deleteError": "Fel vid radering av produkt",
+  "alertStock": "Varning för lager",
+  "statusFromAPI": "Status från servern"
 }

@@ -36,7 +36,7 @@ const AddProduct = () => {
   const [formData, setFormData] = useState({
     name: "",
     s_name: "",
-    sku: "",
+    sku: "", // الآن يمكن أن يكون فارغاً
     category: "",
     price: "",
     cost: "",
@@ -147,16 +147,7 @@ const AddProduct = () => {
     setImages(newImages);
   };
 
-  const generateSKU = () => {
-    const prefix = "SKU";
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const randomNum = Math.floor(100 + Math.random() * 900);
-    const sku = `${prefix}-${year}${month}${day}${randomNum}`;
-    setFormData((prev) => ({ ...prev, sku }));
-  };
+  // ✅ إزالة دالة generateSKU تماماً
 
   const calculateProfitMargin = () => {
     if (!formData.cost || !formData.price) return 0;
@@ -220,7 +211,7 @@ const AddProduct = () => {
       finalPrice = parseFloat(formData.discount_price);
     }
 
-    const taxRate = parseFloat(formData.tax_rate || 0);
+    const taxRate = parseFloat(formData.tax_rate || 0) / 100;
 
     if (taxRate > 0) {
       finalPrice = finalPrice * (1 + taxRate);
@@ -238,7 +229,7 @@ const AddProduct = () => {
       priceBeforeTax = parseFloat(formData.discount_price);
     }
 
-    const taxRate = parseFloat(formData.tax_rate || 0);
+    const taxRate = parseFloat(formData.tax_rate || 0) / 100;
     return (priceBeforeTax * taxRate).toFixed(2);
   };
 
@@ -267,10 +258,7 @@ const AddProduct = () => {
       return;
     }
 
-    if (!formData.sku.trim()) {
-      alert(t("skuRequiredAlert", "addProduct") || "Please enter SKU");
-      return;
-    }
+    // ✅ إزالة التحقق من SKU - الآن أصبح اختياري
 
     setLoading(true);
     setError(null);
@@ -290,7 +278,12 @@ const AddProduct = () => {
         formDataToSend.append("s_description", formData.s_description.trim());
       }
 
-      formDataToSend.append("sku", formData.sku.trim());
+      // ✅ إرسال SKU فقط إذا كان له قيمة
+      if (formData.sku && formData.sku.trim()) {
+        formDataToSend.append("sku", formData.sku.trim());
+      }
+      // إذا كان فارغاً، لن نرسل حقل SKU وسيولده الباكند تلقائياً
+
       formDataToSend.append("category", formData.category);
       formDataToSend.append("price", parseFloat(formData.price).toFixed(2));
       formDataToSend.append(
@@ -304,7 +297,7 @@ const AddProduct = () => {
 
       formDataToSend.append(
         "tax_rate",
-        (parseFloat(formData.tax_rate || 0) * 100).toFixed(2)
+        parseFloat(formData.tax_rate || 0).toFixed(2)
       );
 
       if (formData.discount_price && formData.discount_price < formData.price) {
@@ -529,19 +522,16 @@ const AddProduct = () => {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-medium text-gray-700">
-                        SKU *
+                        SKU {/* ✅ إزالة النجمة */}
                       </label>
-                      <button
-                        type="button"
-                        onClick={generateSKU}
-                        className="text-sm text-dental-blue hover:text-blue-600"
-                      >
-                        {t("generateSku", "addProduct") || "Generate SKU"}
-                      </button>
+                      {/* ✅ إزالة زر Generate SKU */}
                     </div>
                     <div className="relative">
                       <TextBox
-                        placeholder="SKU-202412001"
+                        placeholder={
+                          t("skuOptionalPlaceholder", "addProduct") ||
+                          "SKU-202412001 (Leave empty for auto-generation)"
+                        }
                         value={formData.sku}
                         onValueChange={(value) => handleChange("sku", value)}
                         width="100%"
@@ -551,6 +541,10 @@ const AddProduct = () => {
                         size={18}
                       />
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t("skuOptionalHint", "addProduct") ||
+                        "Optional - leave empty to generate automatically"}
+                    </p>
                   </div>
 
                   {/* Category */}
@@ -692,14 +686,18 @@ const AddProduct = () => {
                         onValueChange={(value) =>
                           handleChange("tax_rate", value)
                         }
-                        format="#0 %"
+                        format="#0.00" // ✅ تغيير من "#0 %" إلى "#0.00"
                         showSpinButtons={true}
                         min={0}
                         max={100}
-                        step={0.1}
+                        step={0.01} // ✅ تغيير الخطوة إلى 0.01
                         width="100%"
                       />
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t("taxRateExample", "addProduct") ||
+                        "Enter 10 for 10% tax"}
+                    </p>
                   </div>
 
                   {/* Product Rating */}
@@ -823,7 +821,8 @@ const AddProduct = () => {
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-700">
                             {t("tax", "addProduct") || "Tax"} (
-                            {(formData.tax_rate * 100).toFixed(1)}%):
+                            {parseFloat(formData.tax_rate || 0).toFixed(1)}%):{" "}
+                            {/* ✅ تصحيح */}
                           </span>
                           <span className="font-medium text-orange-600">
                             +${calculateTaxAmount()}
@@ -1021,22 +1020,20 @@ const AddProduct = () => {
                     !formData.name.trim() ||
                     !formData.price ||
                     !formData.category ||
-                    !formData.sku.trim() ||
-                    !formData.cost
+                    parseFloat(formData.cost || 0) < 0
                   }
                   className={`
-                    px-6 py-2 rounded-lg font-medium transition flex items-center justify-center
-                    ${
-                      loading ||
-                      !formData.name.trim() ||
-                      !formData.price ||
-                      !formData.category ||
-                      !formData.sku.trim() ||
-                      !formData.cost
-                        ? "bg-gray-400 cursor-not-allowed text-white"
-                        : "bg-dental-blue text-white hover:bg-blue-600"
-                    }
-                  `}
+      px-6 py-2 rounded-lg font-medium transition flex items-center justify-center
+      ${
+        loading ||
+        !formData.name.trim() ||
+        !formData.price ||
+        !formData.category ||
+        parseFloat(formData.cost || 0) < 0
+          ? "bg-gray-400 cursor-not-allowed text-white"
+          : "bg-dental-blue text-white hover:bg-blue-600"
+      }
+    `}
                 >
                   {loading ? (
                     <>
@@ -1217,7 +1214,7 @@ const AddProduct = () => {
                   </div>
                   <span>
                     {t("tipTax", "addProduct") ||
-                      "Tax Rate: Enter 10 for 10% (will be stored as 0.1 internally)"}
+                      "Tax Rate: Enter 10 for 10% (will be stored as 10 internally)"}
                   </span>
                 </li>
                 <li className="flex items-start space-x-2">

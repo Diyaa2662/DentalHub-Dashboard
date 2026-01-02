@@ -117,5 +117,7 @@
   "createProductFailed": "Det gick inte att skapa produkten",
   "createProductError": "Fel vid skapande av produkt",
   "validationError": "Valideringsfel:",
-  "productPreview": "Produktförhandsvisning"
+  "productPreview": "Produktförhandsvisning",
+  "skuOptionalPlaceholder": "SKU-2026Jan1",
+  "skuOptionalHint": "Frivilligt - lämna tomt för att generera automatiskt"
 }

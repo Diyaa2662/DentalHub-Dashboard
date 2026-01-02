@@ -58,5 +58,8 @@
   "deleteImage": "Delete image",
   "restoreImage": "Restore image",
   "removeImage": "Remove image",
-  "taxNote": "Note: Tax is calculated on discounted price if available"
+  "taxNote": "Note: Tax is calculated on discounted price if available",
+  "skuCanBeModified": "Can be modified",
+  "skuOptionalPlaceholder": "Leave empty to keep current SKU",
+  "skuEditHint": "Leave empty to keep current SKU or enter new unique SKU"
 }

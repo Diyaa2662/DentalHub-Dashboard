@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../../contexts/LanguageContext";
+import api from "../../../services/api";
 import {
   ArrowLeft,
   Save,
@@ -13,6 +14,7 @@ import {
   ShoppingCart,
   ChevronDown,
   Percent,
+  Globe,
 } from "lucide-react";
 
 const AddPurchaseOrder = () => {
@@ -20,14 +22,12 @@ const AddPurchaseOrder = () => {
   const { t } = useLanguage();
   const [showProductSuggestions, setShowProductSuggestions] = useState({});
 
-  // حالة النموذج الرئيسي
+  // حالة النموذج الرئيسي - التعديل حسب المطلوب
   const [formData, setFormData] = useState({
-    supplierName: "",
-    supplierEmail: "",
-    supplierPhone: "",
+    supplier_id: "",
+    currency: "USD",
+    payment_method: "Bank Transfer",
     notes: "",
-    paymentMethod: "credit_card",
-    paymentTerms: "Net 30",
   });
 
   // حالة عناصر الطلب (مع taxRate)
@@ -35,49 +35,76 @@ const AddPurchaseOrder = () => {
     {
       id: 1,
       product: "",
+      product_id: "",
       quantity: 1,
       unitPrice: 0,
-      taxRate: 15, // إرجاع taxRate
+      taxRate: 15,
     },
   ]);
 
-  // قائمة الموردين
-  const [suppliers] = useState([
-    {
-      id: 1,
-      name: "Dental Equipment Co.",
-      email: "contact@dentalequip.com",
-      phone: "+1-555-123-4567",
-    },
-    {
-      id: 2,
-      name: "MediDental Supplies",
-      email: "sales@medidental.com",
-      phone: "+1-555-987-6543",
-    },
-    {
-      id: 3,
-      name: "DentalTech Solutions",
-      email: "info@dentaltech.com",
-      phone: "+1-555-456-7890",
-    },
-    {
-      id: 4,
-      name: "Oral Care Distributors",
-      email: "orders@oralcare.com",
-      phone: "+1-555-321-0987",
-    },
-  ]);
+  // قائمة الموردين - ستجلب من API
+  const [suppliers, setSuppliers] = useState([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(true);
 
-  // قائمة المنتجات
-  const [products] = useState([
-    { id: 1, name: "Advanced Dental Chair", price: 4500, stock: 12 },
-    { id: 2, name: "Dental X-Ray Unit", price: 3200, stock: 8 },
-    { id: 3, name: "Sterilization Equipment", price: 950, stock: 15 },
-    { id: 4, name: "Dental Handpiece", price: 350, stock: 25 },
-    { id: 5, name: "Dental Composite", price: 85, stock: 50 },
-    { id: 6, name: "Dental Anesthesia Kit", price: 120, stock: 30 },
-  ]);
+  // قائمة المنتجات - ستجلب من API
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // جلب الموردين من API
+  useEffect(() => {
+    fetchSuppliers();
+    fetchProducts();
+  }, []);
+
+  const fetchSuppliers = async () => {
+    try {
+      setLoadingSuppliers(true);
+      const response = await api.get("/suppliers");
+      const apiData = response.data?.data;
+
+      if (Array.isArray(apiData)) {
+        setSuppliers(apiData);
+      } else {
+        console.error("Invalid suppliers data format:", apiData);
+        setSuppliers([]);
+      }
+    } catch (err) {
+      console.error("Error fetching suppliers:", err);
+      setSuppliers([]);
+    } finally {
+      setLoadingSuppliers(false);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const response = await api.get("/products");
+
+      const apiData = response.data?.data;
+
+      if (Array.isArray(apiData)) {
+        // ✅ معالجة البيانات: تحويل cost إلى رقم وتخزين البيانات المطلوبة فقط
+        const processedProducts = apiData.map((product) => ({
+          id: product.id,
+          name: product.name || "",
+          cost: parseFloat(product.cost) || 0, // ✅ تحويل string إلى number
+          stock_quantity: parseInt(product.stock_quantity) || 0,
+          sku: product.sku || "",
+        }));
+
+        setProducts(processedProducts);
+      } else {
+        console.error("Invalid products data format:", apiData);
+        setProducts([]);
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
 
   // معالجة تغيير النموذج الرئيسي
   const handleFormChange = (e) => {
@@ -139,6 +166,7 @@ const AddPurchaseOrder = () => {
       {
         id: newId,
         product: "",
+        product_id: "",
         quantity: 1,
         unitPrice: 0,
         taxRate: 15, // القيمة الافتراضية
@@ -165,9 +193,7 @@ const AddPurchaseOrder = () => {
   const selectSupplier = (supplier) => {
     setFormData({
       ...formData,
-      supplierName: supplier.name,
-      supplierEmail: supplier.email,
-      supplierPhone: supplier.phone,
+      supplier_id: supplier.id, // ✅ تخزين الـID فقط
     });
   };
 
@@ -178,8 +204,9 @@ const AddPurchaseOrder = () => {
         if (item.id === itemId) {
           const updatedItem = {
             ...item,
-            product: product.name,
-            unitPrice: product.price,
+            product: product.name, // عرض الاسم فقط
+            product_id: product.id, // ✅ تخزين الـID
+            unitPrice: product.cost || 0, // ✅ استخدام cost price كمصدر صحيح
           };
 
           // إعادة الحساب
@@ -226,23 +253,21 @@ const AddPurchaseOrder = () => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: formData.currency || "USD",
     }).format(amount);
   };
 
   // تقديم النموذج
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // التحقق من البيانات المطلوبة
-    if (!formData.supplierName) {
-      alert(
-        t("supplierNameRequired", "procurement") || "Supplier name is required"
-      );
+    if (!formData.supplier_id) {
+      alert(t("supplierRequired", "procurement") || "Please select a supplier");
       return;
     }
 
-    if (orderItems.some((item) => !item.product || item.unitPrice <= 0)) {
+    if (orderItems.some((item) => !item.product_id || item.unitPrice <= 0)) {
       alert(
         t("validItemsRequired", "procurement") ||
           "Please add valid items with prices"
@@ -250,35 +275,53 @@ const AddPurchaseOrder = () => {
       return;
     }
 
-    // إنشاء طلب الشراء
-    const newPurchaseOrder = {
-      ...formData,
-      items: orderItems.map((item) => ({
-        ...item,
-        currentStock: products.find((p) => p.name === item.product)?.stock || 0,
-        image: `https://images.unsplash.com/photo-${Math.floor(
-          Math.random() * 1000
-        )}?w=400&auto=format&fit=crop`,
+    // ✅ إعداد البيانات حسب الـAPI المطلوب
+    const requestData = {
+      supplier_id: parseInt(formData.supplier_id),
+      currency: formData.currency,
+      payment_method: formData.payment_method,
+      notes: formData.notes,
+      products: orderItems.map((item) => ({
+        id: parseInt(item.product_id),
+        quantity: parseInt(item.quantity),
+        tax_rate: parseFloat(item.taxRate) || 0,
       })),
-      ...totals,
-      poNumber: `PO-${new Date().getFullYear()}-${Math.floor(
-        // eslint-disable-next-line react-hooks/purity
-        Math.random() * 1000
-      )
-        .toString()
-        .padStart(3, "0")}`,
-      orderStatus: "pending",
-      paymentStatus: "pending",
     };
 
-    console.log("New Purchase Order:", newPurchaseOrder);
+    try {
+      setLoadingProducts(true);
+      const response = await api.post("/createsupplierorder", requestData);
 
-    // عرض رسالة نجاح والانتقال
-    alert(
-      t("purchaseOrderCreated", "procurement") ||
-        "Purchase Order created successfully!"
-    );
-    navigate("/procurement/purchase-orders");
+      if (response.status === 200 || response.status === 201) {
+        alert(
+          t("purchaseOrderCreated", "procurement") ||
+            "Purchase Order created successfully!"
+        );
+        navigate("/procurement/purchase-orders");
+      } else {
+        alert(
+          t("createOrderError", "procurement") ||
+            "Error creating purchase order"
+        );
+      }
+    } catch (err) {
+      console.error("Error creating order:", err);
+      alert(
+        err.response?.data?.message ||
+          err.message ||
+          t("createOrderError", "procurement") ||
+          "Error creating purchase order"
+      );
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  // ✅ الحصول على اسم المورد المحدد
+  const getSelectedSupplierName = () => {
+    if (!formData.supplier_id) return "";
+    const supplier = suppliers.find((s) => s.id == formData.supplier_id);
+    return supplier ? supplier.name : "";
   };
 
   return (
@@ -356,7 +399,6 @@ const AddPurchaseOrder = () => {
                       )}
                     </div>
 
-                    {/* ✅ إرجاع الحقول الأربعة: المنتج، الكمية، سعر الوحدة، نسبة الضريبة */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       {/* Product Selection */}
                       <div className="relative">
@@ -394,39 +436,57 @@ const AddPurchaseOrder = () => {
                           </div>
                         </div>
 
-                        {/* Product Suggestions - تظهر فقط إذا كانت الحالة true */}
+                        {/* Product Suggestions */}
                         {showProductSuggestions[item.id] && item.product && (
                           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                            {products
-                              .filter((p) =>
-                                p.name
-                                  .toLowerCase()
-                                  .includes(item.product.toLowerCase())
-                              )
-                              .map((product) => (
-                                <div
-                                  key={product.id}
-                                  onClick={() =>
-                                    selectProduct(item.id, product)
-                                  }
-                                  className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                >
-                                  <div className="flex justify-between items-center">
-                                    <span className="font-medium">
-                                      {product.name}
-                                    </span>
-                                    <span className="text-blue-600 font-bold">
-                                      {formatCurrency(product.price)}
-                                    </span>
+                            {loadingProducts ? (
+                              <div className="px-4 py-3 text-center text-gray-500">
+                                {t("loadingProducts", "procurement") ||
+                                  "Loading products..."}
+                              </div>
+                            ) : products.length === 0 ? (
+                              <div className="px-4 py-3 text-center text-gray-500">
+                                {t("noProductsFound", "procurement") ||
+                                  "No products found"}
+                              </div>
+                            ) : (
+                              products
+                                .filter((p) =>
+                                  p.name
+                                    .toLowerCase()
+                                    .includes(item.product.toLowerCase())
+                                )
+                                .map((product) => (
+                                  <div
+                                    key={product.id}
+                                    onClick={() =>
+                                      selectProduct(item.id, product)
+                                    }
+                                    className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                  >
+                                    <div className="flex justify-between items-center">
+                                      <span className="font-medium">
+                                        {product.name}
+                                      </span>
+                                      <span className="text-blue-600 font-bold">
+                                        {formatCurrency(product.cost || 0)}{" "}
+                                        {/* ✅ عرض cost */}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm text-gray-500 mt-1">
+                                      <span>
+                                        {t("stock", "procurement") || "Stock"}:{" "}
+                                        {product.stock_quantity || 0}
+                                      </span>
+                                      {product.sku && (
+                                        <span className="ml-2">
+                                          SKU: {product.sku}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="text-sm text-gray-500 mt-1">
-                                    <span>
-                                      {t("stock", "procurement") || "Stock"}:{" "}
-                                      {product.stock}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
+                                ))
+                            )}
                           </div>
                         )}
                       </div>
@@ -452,7 +512,7 @@ const AddPurchaseOrder = () => {
                         />
                       </div>
 
-                      {/* Unit Price */}
+                      {/* Unit Price - Display Only */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           {t("unitPrice", "procurement") || "Unit Price"} *
@@ -466,20 +526,20 @@ const AddPurchaseOrder = () => {
                             min="0"
                             step="0.01"
                             value={item.unitPrice}
-                            onChange={(e) =>
-                              handleItemChange(
-                                item.id,
-                                "unitPrice",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            required
+                            readOnly
+                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
                           />
+                          <div className="absolute right-3 top-2.5 text-gray-500 text-xs">
+                            (Auto)
+                          </div>
                         </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {t("costPriceAuto", "procurement") ||
+                            "Cost price from product"}
+                        </p>
                       </div>
 
-                      {/* ✅ Tax Rate - إرجاعه */}
+                      {/* Tax Rate */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           {t("taxRate", "procurement") || "Tax Rate"} %
@@ -600,86 +660,93 @@ const AddPurchaseOrder = () => {
               <div className="space-y-4">
                 {/* Supplier Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t("selectSupplier", "procurement") || "Select Supplier"}
-                  </label>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                    {suppliers.map((supplier) => (
-                      <div
-                        key={supplier.id}
-                        onClick={() => selectSupplier(supplier)}
-                        className={`p-3 border rounded-lg cursor-pointer transition ${
-                          formData.supplierName === supplier.name
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:bg-gray-50"
-                        }`}
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      {t("selectSupplier", "procurement") || "Select Supplier"}{" "}
+                      *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/procurement/suppliers/add")}
+                      className="text-sm text-dental-blue hover:text-blue-600 hover:underline flex items-center"
+                    >
+                      <Plus size={14} className="mr-1" />
+                      {t("addSupplier", "procurement") || "Add Supplier"}
+                    </button>
+                  </div>
+
+                  {loadingSuppliers ? (
+                    <div className="text-center py-4 text-gray-500">
+                      {t("loadingSuppliers", "procurement") ||
+                        "Loading suppliers..."}
+                    </div>
+                  ) : suppliers.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                      {t("noSuppliersFound", "procurement") ||
+                        "No suppliers found"}
+                      <button
+                        type="button"
+                        onClick={() => navigate("/procurement/suppliers/add")}
+                        className="block mx-auto mt-2 px-4 py-2 bg-dental-blue text-white rounded-lg hover:bg-blue-600 transition"
                       >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium text-gray-800">
-                              {supplier.name}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {supplier.email}
-                            </p>
+                        {t("addFirstSupplier", "procurement") ||
+                          "Add First Supplier"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                      {suppliers.map((supplier) => (
+                        <div
+                          key={supplier.id}
+                          onClick={() => selectSupplier(supplier)}
+                          className={`p-3 border rounded-lg cursor-pointer transition ${
+                            formData.supplier_id == supplier.id
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-200 hover:bg-gray-50"
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-gray-800">
+                                {supplier.name}
+                              </p>
+                              {supplier.email && (
+                                <p className="text-sm text-gray-600">
+                                  {supplier.email}
+                                </p>
+                              )}
+                              {supplier.phone && (
+                                <p className="text-sm text-gray-600">
+                                  {supplier.phone}
+                                </p>
+                              )}
+                            </div>
+                            {formData.supplier_id == supplier.id && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            )}
                           </div>
-                          {formData.supplierName === supplier.name && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          )}
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* Manual Supplier Input */}
-                <div className="pt-4 border-t border-gray-200">
-                  <h4 className="font-medium text-gray-800 mb-3">
-                    {t("orEnterManually", "procurement") || "Or Enter Manually"}
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t("supplierName", "procurement") || "Supplier Name"} *
-                      </label>
-                      <input
-                        type="text"
-                        name="supplierName"
-                        value={formData.supplierName}
-                        onChange={handleFormChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t("email", "procurement") || "Email"}
-                        </label>
-                        <input
-                          type="email"
-                          name="supplierEmail"
-                          value={formData.supplierEmail}
-                          onChange={handleFormChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t("phone", "procurement") || "Phone"}
-                        </label>
-                        <input
-                          type="tel"
-                          name="supplierPhone"
-                          value={formData.supplierPhone}
-                          onChange={handleFormChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                    </div>
+                {/* Selected Supplier Info */}
+                {formData.supplier_id && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-medium text-blue-800 mb-2">
+                      {t("selectedSupplier", "procurement") ||
+                        "Selected Supplier"}
+                    </h4>
+                    <p className="text-sm text-gray-800">
+                      {getSelectedSupplierName()}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {t("supplierId", "procurement") || "Supplier ID"}:{" "}
+                      {formData.supplier_id}
+                    </p>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -706,44 +773,54 @@ const AddPurchaseOrder = () => {
                     {t("paymentMethod", "procurement") || "Payment Method"} *
                   </label>
                   <select
-                    name="paymentMethod"
-                    value={formData.paymentMethod}
+                    name="payment_method"
+                    value={formData.payment_method}
                     onChange={handleFormChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   >
-                    <option value="credit_card">
-                      {t("creditCard", "procurement") || "Credit Card"}
-                    </option>
-                    <option value="bank_transfer">
+                    <option value="Bank Transfer">
                       {t("bankTransfer", "procurement") || "Bank Transfer"}
                     </option>
-                    <option value="cash">
+                    <option value="Credit Card">
+                      {t("creditCard", "procurement") || "Credit Card"}
+                    </option>
+                    <option value="Cash">
                       {t("cash", "procurement") || "Cash"}
+                    </option>
+                    <option value="Check">
+                      {t("check", "procurement") || "Check"}
                     </option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("paymentTerms", "procurement") || "Payment Terms"} *
+                    {t("currency", "procurement") || "Currency"} *
                   </label>
-                  <select
-                    name="paymentTerms"
-                    value={formData.paymentTerms}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  >
-                    <option value="Net 15">Net 15</option>
-                    <option value="Net 30">Net 30</option>
-                    <option value="Net 60">Net 60</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      name="currency"
+                      value={formData.currency}
+                      onChange={handleFormChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="SEK">SEK (kr)</option>
+                      <option value="GBP">GBP (£)</option>
+                    </select>
+                    <Globe
+                      className="absolute right-3 top-2.5 text-gray-400"
+                      size={18}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* ✅ Order Summary - فقط Total Amount كما طلبت */}
+            {/* Order Summary */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center space-x-3 mb-6">
                 <div className="p-2 bg-green-50 rounded-lg">
@@ -760,7 +837,6 @@ const AddPurchaseOrder = () => {
               </div>
 
               <div className="space-y-3">
-                {/* ✅ فقط Total Amount كما طلبت */}
                 <div className="flex justify-between pt-3 border-t border-gray-200">
                   <span className="text-lg font-bold text-gray-800">
                     {t("totalAmount", "procurement") || "Total Amount"}
@@ -773,13 +849,29 @@ const AddPurchaseOrder = () => {
 
               <button
                 type="submit"
-                className="w-full mt-6 py-3 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center justify-center space-x-2"
+                disabled={loadingProducts}
+                className={`w-full mt-6 py-3 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
+                  loadingProducts
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-dental-blue text-white hover:bg-blue-600"
+                }`}
               >
-                <Save size={20} />
-                <span>
-                  {t("createPurchaseOrder", "procurement") ||
-                    "Create Purchase Order"}
-                </span>
+                {loadingProducts ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    <span>
+                      {t("creatingOrder", "procurement") || "Creating Order..."}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={20} />
+                    <span>
+                      {t("createPurchaseOrder", "procurement") ||
+                        "Create Purchase Order"}
+                    </span>
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -45,22 +45,24 @@ const Products = () => {
       setLoading(true);
       setError(null);
 
-      const response = await api.get("/products", {
-        params: {
-          dashboard: 1,
-        },
-      });
+      const response = await api.get("/products");
 
       const apiData = response.data?.data;
 
       if (Array.isArray(apiData)) {
         const formattedData = apiData.map((product) => {
-          let stockStatus = t("inStock", "products");
-          if (product.status === "outofstock") {
+          // ✅ تحويل الحالة لأحرف صغيرة وإزالة الشرطات/مسافات
+          const normalizedStatus = (product.status || "")
+            .toLowerCase()
+            .replace(/[_\s]/g, "");
+
+          let stockStatus = t("inStock", "products"); // القيمة الافتراضية
+
+          if (normalizedStatus === "outofstock") {
             stockStatus = t("outOfStock", "products");
-          } else if (product.status === "lowstock") {
+          } else if (normalizedStatus === "lowstock") {
             stockStatus = t("lowStock", "products");
-          } else if (product.status === "instock") {
+          } else if (normalizedStatus === "instock") {
             stockStatus = t("inStock", "products");
           }
 

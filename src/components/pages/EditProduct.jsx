@@ -23,6 +23,7 @@ import {
   Trash2,
   RotateCcw,
   X,
+  Info,
 } from "lucide-react";
 
 const EditProduct = () => {
@@ -41,7 +42,7 @@ const EditProduct = () => {
   const [formData, setFormData] = useState({
     name: "",
     s_name: "",
-    sku: "",
+    sku: "", // الآن يمكن تعديله
     category: "",
     cost: "",
     price: "",
@@ -51,7 +52,7 @@ const EditProduct = () => {
     description: "",
     s_description: "",
     product_rate: 0,
-    stock_alert: 10,
+    low_stock_alert_threshold: 10,
   });
 
   // State للصور
@@ -64,6 +65,7 @@ const EditProduct = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [skuError, setSkuError] = useState(null); // ✅ خطأ خاص بالـSKU
 
   // Fetch product data and categories
   useEffect(() => {
@@ -76,6 +78,7 @@ const EditProduct = () => {
     try {
       setLoading(true);
       setError(null);
+      setSkuError(null);
 
       const productResponse = await api.get(`/products/${id}`);
       const apiData = productResponse.data?.data;
@@ -92,7 +95,7 @@ const EditProduct = () => {
         const preparedData = {
           name: apiData.name || "",
           s_name: apiData.s_name || "",
-          sku: apiData.sku || "",
+          sku: apiData.sku || "", // جلب SKU
           category: apiData.category || "",
           cost: parseFloat(apiData.cost) || 0,
           price: parseFloat(apiData.price) || 0,
@@ -102,7 +105,8 @@ const EditProduct = () => {
           description: apiData.description || "",
           s_description: apiData.s_description || "",
           product_rate: parseFloat(apiData.product_rate) || 0,
-          stock_alert: parseInt(apiData.stock_alert) || 10,
+          low_stock_alert_threshold:
+            parseInt(apiData.low_stock_alert_threshold) || 10,
         };
 
         setOriginalData(preparedData);
@@ -171,6 +175,11 @@ const EditProduct = () => {
       ...prev,
       [name]: value,
     }));
+
+    // ✅ مسح خطأ SKU عند تعديل الحقل
+    if (name === "sku") {
+      setSkuError(null);
+    }
   };
 
   // معالجة الصور الجديدة
@@ -299,6 +308,7 @@ const EditProduct = () => {
       setFormData(originalData);
       setNewImages([]);
       setImagesToDelete([]);
+      setSkuError(null); // ✅ مسح خطأ SKU
     }
   };
 
@@ -322,6 +332,7 @@ const EditProduct = () => {
 
     setUpdating(true);
     setError(null);
+    setSkuError(null); // ✅ مسح أي أخطاء سابقة
 
     try {
       // 1. تحديث بيانات المنتج الأساسية
@@ -337,6 +348,14 @@ const EditProduct = () => {
 
       if (formData.s_description.trim()) {
         formDataToSend.append("s_description", formData.s_description.trim());
+      }
+
+      // ✅ إرسال SKU المعدل (يمكن أن يكون فارغاً)
+      if (formData.sku && formData.sku.trim()) {
+        formDataToSend.append("sku", formData.sku.trim());
+      } else {
+        // إذا كان فارغاً، لن نرسل SKU وسيبقى كما هو في السيرفر
+        // لا نرسل حقل SKU إطلاقاً
       }
 
       formDataToSend.append("category", formData.category);
@@ -365,8 +384,8 @@ const EditProduct = () => {
       }
 
       formDataToSend.append(
-        "stock_alert",
-        parseInt(formData.stock_alert) || 10
+        "low_stock_alert_threshold",
+        parseInt(formData.low_stock_alert_threshold) || 10
       );
 
       formDataToSend.append(
@@ -428,12 +447,33 @@ const EditProduct = () => {
           Object.entries(errors).forEach(([field, messages]) => {
             if (Array.isArray(messages)) {
               errorMessage += `${field}: ${messages.join(", ")}\n`;
+
+              // ✅ التحقق من خطأ SKU المكرر
+              if (
+                field.toLowerCase().includes("sku") ||
+                messages.some((msg) => msg.toLowerCase().includes("sku"))
+              ) {
+                setSkuError(messages.join(", "));
+              }
             } else {
               errorMessage += `${field}: ${messages}\n`;
+
+              // ✅ التحقق من خطأ SKU المكرر
+              if (
+                field.toLowerCase().includes("sku") ||
+                messages.toLowerCase().includes("sku")
+              ) {
+                setSkuError(messages);
+              }
             }
           });
         } else if (err.response.data.message) {
           errorMessage = err.response.data.message;
+
+          // ✅ التحقق من خطأ SKU المكرر في الرسالة العامة
+          if (errorMessage.toLowerCase().includes("sku")) {
+            setSkuError(errorMessage);
+          }
         }
 
         setError(errorMessage);
@@ -684,22 +724,40 @@ const EditProduct = () => {
                       <label className="block text-sm font-medium text-gray-700">
                         SKU
                       </label>
+                      <div className="flex items-center text-xs text-gray-500">
+                        <Info size={12} className="mr-1" />
+                        {t("skuCanBeModified", "editProduct") ||
+                          "Can be modified"}
+                      </div>
                     </div>
                     <div className="relative">
                       <TextBox
+                        placeholder={
+                          t("skuOptionalPlaceholder", "editProduct") ||
+                          "Leave empty to keep current SKU"
+                        }
                         value={formData.sku}
-                        readOnly
+                        onValueChange={(value) => handleChange("sku", value)}
                         width="100%"
-                        className="bg-gray-50"
+                        // ✅ إزالة readOnly
                       />
                       <Hash
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                         size={18}
                       />
                     </div>
+
+                    {/* ✅ عرض خطأ SKU المكرر */}
+                    {skuError && (
+                      <div className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+                        <AlertCircle size={12} className="inline mr-1" />
+                        {skuError}
+                      </div>
+                    )}
+
                     <p className="text-xs text-gray-500 mt-1">
-                      {t("skuCannotBeChanged", "editProduct") ||
-                        "SKU cannot be changed"}
+                      {t("skuEditHint", "editProduct") ||
+                        "Leave empty to keep current SKU or enter new unique SKU"}
                     </p>
                   </div>
 
@@ -1043,9 +1101,10 @@ const EditProduct = () => {
                     </label>
                     <NumberBox
                       placeholder="10"
-                      value={formData.stock_alert}
-                      onValueChange={(value) =>
-                        handleChange("stock_alert", value)
+                      value={formData.low_stock_alert_threshold} // ✅ تغيير هنا
+                      onValueChange={
+                        (value) =>
+                          handleChange("low_stock_alert_threshold", value) // ✅ تغيير هنا
                       }
                       showSpinButtons={true}
                       min={0}
@@ -1072,7 +1131,7 @@ const EditProduct = () => {
                           parseInt(formData.stock_quantity) === 0
                             ? "bg-red-100 text-red-800"
                             : parseInt(formData.stock_quantity) <=
-                              parseInt(formData.stock_alert)
+                              parseInt(formData.low_stock_alert_threshold) // ✅ تغيير هنا
                             ? "bg-yellow-100 text-yellow-800"
                             : "bg-green-100 text-green-800"
                         }`}
@@ -1080,7 +1139,7 @@ const EditProduct = () => {
                         {parseInt(formData.stock_quantity) === 0
                           ? t("outOfStock", "products") || "Out of Stock"
                           : parseInt(formData.stock_quantity) <=
-                            parseInt(formData.stock_alert)
+                            parseInt(formData.low_stock_alert_threshold) // ✅ تغيير هنا
                           ? t("lowStock", "products") || "Low Stock"
                           : t("inStock", "products") || "In Stock"}
                       </div>
@@ -1089,7 +1148,8 @@ const EditProduct = () => {
                         {formData.stock_quantity}{" "}
                         {t("units", "addProduct") || "units"} •{" "}
                         {t("threshold", "addProduct") || "Threshold"}:{" "}
-                        {formData.stock_alert}{" "}
+                        {formData.low_stock_alert_threshold}{" "}
+                        {/* ✅ تغيير هنا */}
                         {t("units", "addProduct") || "units"}
                       </span>
                     </div>
@@ -1176,7 +1236,7 @@ const EditProduct = () => {
                     !formData.name.trim() ||
                     !formData.price ||
                     !formData.category ||
-                    !formData.cost ||
+                    parseFloat(formData.cost || 0) < 0 ||
                     !hasChanges
                   }
                   className={`
@@ -1186,7 +1246,7 @@ const EditProduct = () => {
                       !formData.name.trim() ||
                       !formData.price ||
                       !formData.category ||
-                      !formData.cost ||
+                      parseFloat(formData.cost || 0) < 0 ||
                       !hasChanges
                         ? "bg-gray-400 cursor-not-allowed text-white"
                         : "bg-dental-blue text-white hover:bg-blue-600"

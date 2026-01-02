@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../../contexts/LanguageContext";
+import api from "../../../services/api";
 import {
   DataGrid,
   Column,
@@ -27,67 +28,104 @@ import {
   CreditCard,
   Wallet,
   Building,
-} from "lucide-react";
+  RefreshCw,
+  Hash,
+} from "lucide-react"; // ✅ أضفنا Hash لأيقونة ID
 
 const PurchaseOrders = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
 
-  // بيانات وهمية لطلبات الشراء مع التعديلات
-  const purchaseOrdersData = [
-    {
-      id: 1,
-      poNumber: "PO-2024-001",
-      supplier: "Dental Equipment Co.",
-      orderDate: "2024-01-15",
-      totalAmount: 4500.0,
-      itemsOrdered: 3,
-      status: "confirmed",
-      paymentMethod: "Credit Card", // ✅ عمود جديد
-    },
-    {
-      id: 2,
-      poNumber: "PO-2024-002",
-      supplier: "MediDent Supplies",
-      orderDate: "2024-01-18",
-      totalAmount: 3200.5,
-      itemsOrdered: 5,
-      status: "pending",
-      paymentMethod: "Bank Transfer", // ✅ عمود جديد
-    },
-    {
-      id: 3,
-      poNumber: "PO-2024-003",
-      supplier: "Oral Care Experts",
-      orderDate: "2024-01-20",
-      totalAmount: 1850.75,
-      itemsOrdered: 2,
-      status: "shipped",
-      paymentMethod: "Cash", // ✅ عمود جديد
-    },
-    {
-      id: 4,
-      poNumber: "PO-2024-004",
-      supplier: "Dental Tools Ltd",
-      orderDate: "2024-01-22",
-      totalAmount: 6200.0,
-      itemsOrdered: 8,
-      status: "delivered",
-      paymentMethod: "Credit Card", // ✅ عمود جديد
-    },
-    {
-      id: 5,
-      poNumber: "PO-2024-005",
-      supplier: "Clinic Essentials",
-      orderDate: "2024-01-25",
-      totalAmount: 2800.0,
-      itemsOrdered: 4,
-      status: "cancelled",
-      paymentMethod: "Bank Transfer", // ✅ عمود جديد
-    },
-  ];
+  const [purchaseOrdersData, setPurchaseOrdersData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState({
+    totalOrders: 0,
+    totalAmount: 0,
+    pendingOrders: 0,
+    deliveredOrders: 0,
+  });
 
-  // تنسيق المبلغ
+  useEffect(() => {
+    fetchPurchaseOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchPurchaseOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.get("/supplierorders");
+
+      const apiData = response.data?.data || [];
+
+      // eslint-disable-next-line no-unused-vars
+      const formattedData = apiData.map((order, index) => ({
+        id: order.id,
+        poNumber: order.supplier_order_number || `PO-${order.id}`,
+        supplier: order.supplier || "Unknown Supplier",
+        orderDate: order.order_date || order.created_at?.split("T")[0] || "N/A",
+        totalAmount: parseFloat(order.total_amount) || 0,
+        itemsOrdered: order.number_of_items || 0,
+        status: mapApiStatus(order.status || "pending"),
+        paymentMethod: order.payment_method || "Unknown",
+        originalData: order,
+      }));
+
+      setPurchaseOrdersData(formattedData);
+      calculateStats(formattedData);
+    } catch (err) {
+      console.error("Error fetching purchase orders:", err);
+      setError(
+        t("fetchPurchaseOrdersError", "procurement") ||
+          "Failed to load purchase orders"
+      );
+      setPurchaseOrdersData([]);
+      setStats({
+        totalOrders: 0,
+        totalAmount: 0,
+        pendingOrders: 0,
+        deliveredOrders: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mapApiStatus = (apiStatus) => {
+    const statusMap = {
+      pending: "pending",
+      confirmed: "confirmed",
+      shipped: "shipped",
+      delivered: "delivered",
+      cancelled: "cancelled",
+    };
+
+    return statusMap[apiStatus.toLowerCase()] || "pending";
+  };
+
+  const calculateStats = (data) => {
+    const totalOrders = data.length;
+    const totalAmount = data.reduce(
+      (sum, order) => sum + (order.totalAmount || 0),
+      0
+    );
+    const pendingOrders = data.filter(
+      (order) => order.status === "pending"
+    ).length;
+    const deliveredOrders = data.filter(
+      (order) => order.status === "delivered"
+    ).length;
+
+    setStats({
+      totalOrders,
+      totalAmount,
+      pendingOrders,
+      deliveredOrders,
+    });
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -95,7 +133,6 @@ const PurchaseOrders = () => {
     }).format(amount);
   };
 
-  // الحصول على أيقونة الحالة
   const getStatusIcon = (status) => {
     switch (status) {
       case "confirmed":
@@ -113,7 +150,6 @@ const PurchaseOrders = () => {
     }
   };
 
-  // الحصول على لون الحالة
   const getStatusColor = (status) => {
     switch (status) {
       case "confirmed":
@@ -131,7 +167,6 @@ const PurchaseOrders = () => {
     }
   };
 
-  // الحصول على نص الحالة
   const getStatusText = (status) => {
     switch (status) {
       case "confirmed":
@@ -149,8 +184,9 @@ const PurchaseOrders = () => {
     }
   };
 
-  // الحصول على أيقونة طريقة الدفع
   const getPaymentMethodIcon = (method) => {
+    if (!method) return <CreditCard size={16} className="text-gray-600" />;
+
     switch (method.toLowerCase()) {
       case "credit card":
         return <CreditCard size={16} className="text-blue-600" />;
@@ -163,7 +199,18 @@ const PurchaseOrders = () => {
     }
   };
 
-  // عرض خلية الحالة
+  // ✅ خلية عرض ID
+  const idCellRender = (data) => {
+    return (
+      <div className="flex items-center space-x-2">
+        <Hash size={14} className="text-gray-400" />
+        <span className="font-mono font-medium text-gray-700">
+          {data.data.id}
+        </span>
+      </div>
+    );
+  };
+
   const statusCellRender = (data) => {
     return (
       <div className="flex items-center space-x-2">
@@ -179,19 +226,17 @@ const PurchaseOrders = () => {
     );
   };
 
-  // ✅ عرض خلية طريقة الدفع الجديدة
   const paymentMethodCellRender = (data) => {
     return (
       <div className="flex items-center space-x-2">
         {getPaymentMethodIcon(data.data.paymentMethod)}
         <span className="text-sm font-medium text-gray-700">
-          {data.data.paymentMethod}
+          {data.data.paymentMethod || "N/A"}
         </span>
       </div>
     );
   };
 
-  // عرض خلية المبلغ
   const amountCellRender = (data) => {
     return (
       <div className="font-medium text-gray-900">
@@ -200,7 +245,6 @@ const PurchaseOrders = () => {
     );
   };
 
-  // ✅ دالة معالجة أزرار Actions معدلة
   const actionCellRender = (data) => {
     return (
       <div className="flex items-center space-x-3">
@@ -225,23 +269,7 @@ const PurchaseOrders = () => {
         <button
           className="text-red-600 hover:text-red-800 transition"
           title={t("delete", "common") || "Delete"}
-          onClick={() => {
-            if (
-              window.confirm(
-                `${
-                  t("confirmDeletePurchaseOrder", "procurement") ||
-                  "Delete purchase order"
-                } #${data.data.poNumber}?`
-              )
-            ) {
-              alert(
-                `${
-                  t("purchaseOrderDeleted", "procurement") ||
-                  "Purchase order deleted"
-                }: ${data.data.poNumber}`
-              );
-            }
-          }}
+          onClick={() => handleDeleteOrder(data.data.id, data.data.poNumber)}
         >
           <Trash2 size={18} />
         </button>
@@ -249,14 +277,108 @@ const PurchaseOrders = () => {
     );
   };
 
-  // ✅ دالة لإضافة طلب شراء جديد
+  const handleDeleteOrder = async (id, poNumber) => {
+    if (
+      window.confirm(
+        `${
+          t("confirmDeletePurchaseOrder", "procurement") ||
+          "Delete purchase order"
+        } #${poNumber}?`
+      )
+    ) {
+      try {
+        await api.delete(`/supplierorders/${id}`);
+        setPurchaseOrdersData((prev) =>
+          prev.filter((order) => order.id !== id)
+        );
+        calculateStats(purchaseOrdersData.filter((order) => order.id !== id));
+
+        alert(
+          `${
+            t("purchaseOrderDeleted", "procurement") ||
+            "Purchase order deleted successfully"
+          }: ${poNumber}`
+        );
+      } catch (err) {
+        console.error("Error deleting order:", err);
+        alert(
+          err.response?.data?.message ||
+            t("deleteOrderError", "procurement") ||
+            "Failed to delete purchase order"
+        );
+      }
+    }
+  };
+
   const handleAddPurchaseOrder = () => {
     navigate("/procurement/purchase-orders/add");
   };
 
+  const handleRefresh = () => {
+    fetchPurchaseOrders();
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {t("purchaseOrdersManagement", "procurement") ||
+                "Purchase Orders Management"}
+            </h1>
+          </div>
+        </div>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dental-blue mx-auto"></div>
+            <p className="mt-4 text-gray-600">
+              {t("loadingPurchaseOrders", "procurement") ||
+                "Loading purchase orders..."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {t("purchaseOrdersManagement", "procurement") ||
+                "Purchase Orders Management"}
+            </h1>
+          </div>
+          <button
+            onClick={handleRefresh}
+            className="mt-4 md:mt-0 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2"
+          >
+            <RefreshCw size={18} />
+            <span>{t("retry", "common") || "Retry"}</span>
+          </button>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <AlertCircle className="text-red-500 mx-auto mb-4" size={48} />
+          <h3 className="text-lg font-semibold text-red-800 mb-2">
+            {t("errorLoadingData", "common") || "Error Loading Data"}
+          </h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+          >
+            {t("tryAgain", "common") || "Try Again"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
@@ -270,6 +392,16 @@ const PurchaseOrders = () => {
         </div>
         <div className="flex space-x-3 mt-4 md:mt-0">
           <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center space-x-2"
+            title={t("refresh", "common") || "Refresh"}
+          >
+            <RefreshCw size={20} />
+            <span className="hidden md:inline">
+              {t("refresh", "common") || "Refresh"}
+            </span>
+          </button>
+          <button
             onClick={handleAddPurchaseOrder}
             className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center space-x-2"
           >
@@ -279,7 +411,6 @@ const PurchaseOrders = () => {
         </div>
       </div>
 
-      {/* بطاقات الإحصائيات */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between">
@@ -288,7 +419,7 @@ const PurchaseOrders = () => {
                 {t("totalOrders", "procurement") || "Total Orders"}
               </p>
               <p className="text-2xl font-bold text-gray-800">
-                {purchaseOrdersData.length}
+                {stats.totalOrders}
               </p>
             </div>
             <div className="p-2 bg-blue-50 rounded-lg">
@@ -304,12 +435,7 @@ const PurchaseOrders = () => {
                 {t("totalAmount", "procurement") || "Total Amount"}
               </p>
               <p className="text-2xl font-bold text-gray-800">
-                {formatCurrency(
-                  purchaseOrdersData.reduce(
-                    (sum, order) => sum + order.totalAmount,
-                    0
-                  )
-                )}
+                {formatCurrency(stats.totalAmount)}
               </p>
             </div>
             <div className="p-2 bg-green-50 rounded-lg">
@@ -325,10 +451,7 @@ const PurchaseOrders = () => {
                 {t("pending", "procurement") || "Pending"}
               </p>
               <p className="text-2xl font-bold text-gray-800">
-                {
-                  purchaseOrdersData.filter((o) => o.status === "pending")
-                    .length
-                }
+                {stats.pendingOrders}
               </p>
             </div>
             <div className="p-2 bg-yellow-50 rounded-lg">
@@ -344,10 +467,7 @@ const PurchaseOrders = () => {
                 {t("delivered", "procurement") || "Delivered"}
               </p>
               <p className="text-2xl font-bold text-gray-800">
-                {
-                  purchaseOrdersData.filter((o) => o.status === "delivered")
-                    .length
-                }
+                {stats.deliveredOrders}
               </p>
             </div>
             <div className="p-2 bg-green-50 rounded-lg">
@@ -357,110 +477,138 @@ const PurchaseOrders = () => {
         </div>
       </div>
 
-      {/* Purchase Orders Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-        <DataGrid
-          dataSource={purchaseOrdersData}
-          showBorders={true}
-          columnAutoWidth={true}
-          height={500}
-          allowColumnResizing={true}
-          allowColumnReordering={true}
-          columnResizingMode="widget"
-        >
-          <HeaderFilter visible={true} />
-          <SearchPanel
-            visible={true}
-            placeholder={
-              t("searchPurchaseOrders", "procurement") ||
-              "Search purchase orders..."
-            }
-          />
-          <GroupPanel
-            visible={true}
-            emptyPanelText={
-              t("dragColumnHereToGroup", "products") ||
-              "Drag a column header here to group by that column"
-            }
-            allowColumnDragging={true}
-          />
-          <Paging defaultPageSize={10} />
-          <Pager
-            showPageSizeSelector={true}
-            allowedPageSizes={[5, 10, 20]}
-            showInfo={true}
-          />
+        {purchaseOrdersData.length === 0 ? (
+          <div className="text-center py-10">
+            <FileText className="text-gray-400 mx-auto mb-4" size={48} />
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+              {t("noPurchaseOrders", "procurement") || "No Purchase Orders"}
+            </h3>
+            <p className="text-gray-500 mb-4">
+              {t("noPurchaseOrdersDescription", "procurement") ||
+                "You haven't created any purchase orders yet"}
+            </p>
+            <button
+              onClick={handleAddPurchaseOrder}
+              className="px-4 py-2 bg-dental-blue text-white rounded-lg hover:bg-blue-600 transition"
+            >
+              {t("createFirstPurchaseOrder", "procurement") ||
+                "Create First Purchase Order"}
+            </button>
+          </div>
+        ) : (
+          <DataGrid
+            dataSource={purchaseOrdersData}
+            showBorders={true}
+            columnAutoWidth={true}
+            height={500}
+            allowColumnResizing={true}
+            allowColumnReordering={true}
+            columnResizingMode="widget"
+          >
+            <HeaderFilter visible={true} />
+            <SearchPanel
+              visible={true}
+              placeholder={
+                t("searchPurchaseOrders", "procurement") ||
+                "Search purchase orders..."
+              }
+            />
+            <GroupPanel
+              visible={true}
+              emptyPanelText={
+                t("dragColumnHereToGroup", "products") ||
+                "Drag a column header here to group by that column"
+              }
+              allowColumnDragging={true}
+            />
+            <Paging defaultPageSize={10} />
+            <Pager
+              showPageSizeSelector={true}
+              allowedPageSizes={[5, 10, 20]}
+              showInfo={true}
+            />
 
-          <Column
-            dataField="poNumber"
-            caption={t("purchaseOrderNumber", "procurement") || "PO Number"}
-            width={"auto"}
-            alignment="left"
-            allowGrouping={false}
-          />
+            {/* ✅ عمود ID الجديد - كأول عمود */}
+            <Column
+              dataField="id"
+              caption={t("id", "products") || "ID"}
+              width={80}
+              alignment="center"
+              allowGrouping={false}
+              allowSorting={true}
+              cellRender={idCellRender}
+            />
 
-          <Column
-            dataField="supplier"
-            caption={t("supplier", "procurement") || "Supplier"}
-            width={"auto"}
-            alignment="left"
-            allowGrouping={true}
-          />
+            <Column
+              dataField="poNumber"
+              caption={t("purchaseOrderNumber", "procurement") || "PO Number"}
+              width={"auto"}
+              alignment="left"
+              allowGrouping={false}
+            />
 
-          <Column
-            dataField="totalAmount"
-            caption={t("totalAmount", "procurement") || "Amount"}
-            width={"auto"}
-            alignment="left"
-            cellRender={amountCellRender}
-            allowGrouping={false}
-          />
+            <Column
+              dataField="supplier"
+              caption={t("supplier", "procurement") || "Supplier"}
+              width={"auto"}
+              alignment="left"
+              allowGrouping={true}
+            />
 
-          <Column
-            dataField="itemsOrdered"
-            caption={t("itemsOrdered", "procurement") || "Items"}
-            width={"auto"}
-            alignment="left"
-            allowGrouping={false}
-          />
+            <Column
+              dataField="totalAmount"
+              caption={t("totalAmount", "procurement") || "Amount"}
+              width={"auto"}
+              alignment="left"
+              cellRender={amountCellRender}
+              allowGrouping={false}
+            />
 
-          <Column
-            dataField="status"
-            caption={t("poStatus", "procurement") || "Status"}
-            width={"auto"}
-            alignment="left"
-            cellRender={statusCellRender}
-            allowGrouping={true}
-          />
+            <Column
+              dataField="itemsOrdered"
+              caption={t("itemsOrdered", "procurement") || "Items"}
+              width={"auto"}
+              alignment="left"
+              allowGrouping={false}
+            />
 
-          {/* ✅ عمود طريقة الدفع الجديد */}
-          <Column
-            dataField="paymentMethod"
-            caption={t("paymentMethod", "procurement") || "Payment Method"}
-            width={"auto"}
-            alignment="left"
-            cellRender={paymentMethodCellRender}
-            allowGrouping={true}
-          />
+            <Column
+              dataField="status"
+              caption={t("poStatus", "procurement") || "Status"}
+              width={"auto"}
+              alignment="left"
+              cellRender={statusCellRender}
+              allowGrouping={true}
+            />
 
-          <Column
-            dataField="orderDate"
-            caption={t("orderDate", "procurement") || "Order Date"}
-            width={"auto"}
-            alignment="left"
-            allowGrouping={true}
-          />
+            <Column
+              dataField="paymentMethod"
+              caption={t("paymentMethod", "procurement") || "Payment Method"}
+              width={"auto"}
+              alignment="left"
+              cellRender={paymentMethodCellRender}
+              allowGrouping={true}
+            />
 
-          <Column
-            caption={t("actions", "procurement") || "Actions"}
-            width={"auto"}
-            alignment="left"
-            cellRender={actionCellRender}
-          />
-        </DataGrid>
+            <Column
+              dataField="orderDate"
+              caption={t("orderDate", "procurement") || "Order Date"}
+              width={"auto"}
+              alignment="left"
+              allowGrouping={true}
+            />
+
+            <Column
+              caption={t("actions", "procurement") || "Actions"}
+              width={120}
+              alignment="center"
+              cellRender={actionCellRender}
+            />
+          </DataGrid>
+        )}
       </div>
 
-      {/* زر إنشاء طلب شراء جديد */}
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center justify-between">
           <div>

@@ -76,5 +76,7 @@
   "swedish": "Swedish",
   "confirmDelete": "Are you sure you want to delete product \"{name}\"?",
   "deleteSuccess": "Product deleted successfully",
-  "deleteError": "Error deleting product"
+  "deleteError": "Error deleting product",
+  "alertStock": "Alert Stock",
+  "statusFromAPI": "Status from server"
 }

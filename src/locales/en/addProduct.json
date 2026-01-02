@@ -117,5 +117,7 @@
   "createProductFailed": "Failed to create product",
   "createProductError": "Error creating product",
   "validationError": "Validation error:",
-  "productPreview": "Product preview"
+  "productPreview": "Product preview",
+  "skuOptionalPlaceholder": "SKU-2026Jan1",
+  "skuOptionalHint": "Optional - leave empty to generate automatically"
 }

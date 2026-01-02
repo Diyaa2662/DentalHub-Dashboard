@@ -45,7 +45,7 @@ const ProductDetails = () => {
 
       const response = await api.get(`/products/${id}`);
       const apiData = response.data?.data;
-
+      console.log("Fetched Product Details:", apiData);
       if (apiData) {
         // معالجة الصور لإنشاء روابط كاملة
         const processedImages =
@@ -78,7 +78,8 @@ const ProductDetails = () => {
           s_description: apiData.s_description || "",
           sku: apiData.sku || "",
           price: price,
-          stock_alert: parseInt(apiData.stock_alert) || 10,
+          low_stock_alert_threshold:
+            parseInt(apiData.low_stock_alert_threshold) || 10, // تغيير الاسم هنا
           cost: parseFloat(apiData.cost) || 0,
           stock_quantity: parseInt(apiData.stock_quantity) || 0,
           category: apiData.category || "",
@@ -86,7 +87,7 @@ const ProductDetails = () => {
           discount_price: discountPrice,
           images: processedImages,
           product_rate: parseFloat(apiData.product_rate) || 0,
-          status: apiData.status || "instock",
+          status: apiData.status || "instock", // استخدم الحالة من الـAPI
           created_at: apiData.created_at || "",
 
           // حقول محسوبة
@@ -137,28 +138,52 @@ const ProductDetails = () => {
     return product.description;
   };
 
-  // حالة المخزون
+  // حالة المخزون بناءً على status من الـAPI
   const getStockStatus = () => {
-    if (!product) return { text: "", color: "", bg: "" };
+    if (!product || !product.status) return { text: "", color: "", bg: "" };
 
-    if (product.stock_quantity === 0) {
-      return {
-        text: t("outOfStock", "products"),
-        color: "text-red-600",
-        bg: "bg-red-100",
-      };
-    } else if (product.stock_quantity <= product.stock_alert) {
-      return {
-        text: t("lowStock", "products"),
-        color: "text-yellow-600",
-        bg: "bg-yellow-100",
-      };
-    } else {
-      return {
-        text: t("inStock", "products"),
-        color: "text-green-600",
-        bg: "bg-green-100",
-      };
+    const status = product.status.toLowerCase();
+
+    switch (status) {
+      case "instock":
+      case "in_stock":
+      case "in stock":
+        return {
+          text: t("inStock", "products") || "In Stock",
+          color: "text-green-600",
+          bg: "bg-green-100",
+        };
+      case "outofstock":
+      case "out_of_stock":
+      case "out of stock":
+        return {
+          text: t("outOfStock", "products") || "Out of Stock",
+          color: "text-red-600",
+          bg: "bg-red-100",
+        };
+      case "lowstock":
+      case "low_stock":
+      case "low stock":
+        return {
+          text: t("lowStock", "products") || "Low Stock",
+          color: "text-yellow-600",
+          bg: "bg-yellow-100",
+        };
+      case "alertstock":
+      case "alert_stock":
+      case "alert stock":
+        return {
+          text: t("alertStock", "products") || "Alert Stock",
+          color: "text-orange-600",
+          bg: "bg-orange-100",
+        };
+      default:
+        // إذا كانت القيمة غير معروفة، نعرضها كما هي
+        return {
+          text: status,
+          color: "text-blue-600",
+          bg: "bg-blue-100",
+        };
     }
   };
 
@@ -468,7 +493,8 @@ const ProductDetails = () => {
                     {t("lowStockAlert", "productDetails") || "Low Stock Alert"}
                   </p>
                   <p className="font-medium text-gray-800">
-                    {product.stock_alert} {t("units", "products") || "units"}
+                    {product.low_stock_alert_threshold}{" "}
+                    {t("units", "products") || "units"} {/* تغيير هنا */}
                   </p>
                 </div>
               </div>
@@ -738,6 +764,9 @@ const ProductDetails = () => {
                 >
                   {stockStatus.text}
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {t("statusFromAPI", "products") || "Status from server"}
+                </p>
               </div>
 
               <div className="p-3 bg-gray-50 rounded-lg">

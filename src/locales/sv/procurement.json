@@ -258,5 +258,13 @@
   "apiRateLimit": "För många förfrågningar. Vänta ett ögonblick.",
   "refreshPage": "Uppdatera sida",
   "autoRefresh": "Auto-uppdatering om {{seconds}} sekunder",
-  "lastUpdated": "Senast uppdaterad: {{time}}"
+  "lastUpdated": "Senast uppdaterad: {{time}}",
+  "supplierRequired": "Vänligen välj leverantör",
+  "loadingProducts": "Laddar produkter...",
+  "noProductsFound": "Inga produkter hittades",
+  "selectedSupplier": "Vald leverantör",
+  "supplierId": "Leverantörs-ID",
+  "check": "Check",
+  "creatingOrder": "Skapar order...",
+  "costPriceAuto": "Inköpspris från produkt"
 }
