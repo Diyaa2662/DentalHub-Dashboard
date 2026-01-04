@@ -15,14 +15,16 @@ import {
   ChevronDown,
   Percent,
   Globe,
-} from "lucide-react";
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react"; // ✅ أضفنا CheckCircle و AlertCircle
 
 const AddPurchaseOrder = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [showProductSuggestions, setShowProductSuggestions] = useState({});
 
-  // حالة النموذج الرئيسي - التعديل حسب المطلوب
+  // حالة النموذج الرئيسي
   const [formData, setFormData] = useState({
     supplier_id: "",
     currency: "USD",
@@ -30,7 +32,7 @@ const AddPurchaseOrder = () => {
     notes: "",
   });
 
-  // حالة عناصر الطلب (مع taxRate)
+  // حالة عناصر الطلب
   const [orderItems, setOrderItems] = useState([
     {
       id: 1,
@@ -42,15 +44,21 @@ const AddPurchaseOrder = () => {
     },
   ]);
 
-  // قائمة الموردين - ستجلب من API
+  // قائمة الموردين
   const [suppliers, setSuppliers] = useState([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
 
-  // قائمة المنتجات - ستجلب من API
+  // قائمة المنتجات
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
-  // جلب الموردين من API
+  // ✅ حالة جديدة لرسالة النجاح والخطأ
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
+  const [validationErrors, setValidationErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  // جلب الموردين والمنتجات من API
   useEffect(() => {
     fetchSuppliers();
     fetchProducts();
@@ -84,11 +92,10 @@ const AddPurchaseOrder = () => {
       const apiData = response.data?.data;
 
       if (Array.isArray(apiData)) {
-        // ✅ معالجة البيانات: تحويل cost إلى رقم وتخزين البيانات المطلوبة فقط
         const processedProducts = apiData.map((product) => ({
           id: product.id,
           name: product.name || "",
-          cost: parseFloat(product.cost) || 0, // ✅ تحويل string إلى number
+          cost: parseFloat(product.cost) || 0,
           stock_quantity: parseInt(product.stock_quantity) || 0,
           sku: product.sku || "",
         }));
@@ -106,23 +113,47 @@ const AddPurchaseOrder = () => {
     }
   };
 
-  // معالجة تغيير النموذج الرئيسي
+  // ✅ دالة التحقق من صحة النموذج
+  const validateForm = () => {
+    const errors = {};
+
+    if (!formData.supplier_id) {
+      errors.supplier_id =
+        t("supplierRequired", "procurement") || "Please select a supplier";
+    }
+
+    if (orderItems.some((item) => !item.product_id || item.unitPrice <= 0)) {
+      errors.orderItems =
+        t("validItemsRequired", "procurement") ||
+        "Please add valid items with prices";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
       [name]: value,
     });
+
+    // ✅ مسح أخطاء التحقق عند التغيير
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [name]: null,
+      }));
+    }
   };
 
-  // معالجة تغيير عنصر الطلب (مع taxRate)
   const handleItemChange = (id, field, value) => {
     setOrderItems(
       orderItems.map((item) => {
         if (item.id === id) {
           const updatedItem = { ...item, [field]: value };
 
-          // حساب Subtotal و Tax
           if (
             field === "quantity" ||
             field === "unitPrice" ||
@@ -140,22 +171,27 @@ const AddPurchaseOrder = () => {
       })
     );
 
-    // ✅ إذا كان التغيير في حقل المنتج، افتح القائمة
     if (field === "product" && value) {
       setShowProductSuggestions((prev) => ({
         ...prev,
         [id]: true,
       }));
     } else if (field === "product" && !value) {
-      // ✅ إذا تم مسح المنتج، أغلق القائمة
       setShowProductSuggestions((prev) => ({
         ...prev,
         [id]: false,
       }));
     }
+
+    // ✅ مسح أخطاء العناصر عند التغيير
+    if (validationErrors.orderItems) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        orderItems: null,
+      }));
+    }
   };
 
-  // إضافة عنصر جديد للطلب
   const addOrderItem = () => {
     const newId =
       orderItems.length > 0
@@ -169,47 +205,50 @@ const AddPurchaseOrder = () => {
         product_id: "",
         quantity: 1,
         unitPrice: 0,
-        taxRate: 15, // القيمة الافتراضية
+        taxRate: 15,
         subTotal: 0,
         taxAmount: 0,
       },
     ]);
 
-    // ✅ إغلاق القائمة للعنصر الجديد
     setShowProductSuggestions((prev) => ({
       ...prev,
       [newId]: false,
     }));
   };
 
-  // حذف عنصر من الطلب
   const removeOrderItem = (id) => {
     if (orderItems.length > 1) {
       setOrderItems(orderItems.filter((item) => item.id !== id));
     }
   };
 
-  // اختيار مورد من القائمة
   const selectSupplier = (supplier) => {
     setFormData({
       ...formData,
-      supplier_id: supplier.id, // ✅ تخزين الـID فقط
+      supplier_id: supplier.id,
     });
+
+    // ✅ مسح خطأ المورد عند الاختيار
+    if (validationErrors.supplier_id) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        supplier_id: null,
+      }));
+    }
   };
 
-  // ✅ دالة اختيار منتج مع إغلاق القائمة
   const selectProduct = (itemId, product) => {
     setOrderItems(
       orderItems.map((item) => {
         if (item.id === itemId) {
           const updatedItem = {
             ...item,
-            product: product.name, // عرض الاسم فقط
-            product_id: product.id, // ✅ تخزين الـID
-            unitPrice: product.cost || 0, // ✅ استخدام cost price كمصدر صحيح
+            product: product.name,
+            product_id: product.id,
+            unitPrice: product.cost || 0,
           };
 
-          // إعادة الحساب
           const subtotal = updatedItem.quantity * updatedItem.unitPrice;
           const taxAmount = subtotal * (updatedItem.taxRate / 100);
           updatedItem.subTotal = subtotal;
@@ -221,14 +260,12 @@ const AddPurchaseOrder = () => {
       })
     );
 
-    // ✅ إغلاق قائمة المنتجات لهذا العنصر
     setShowProductSuggestions((prev) => ({
       ...prev,
       [itemId]: false,
     }));
   };
 
-  // حساب الإجماليات
   const calculateTotals = () => {
     const subtotal = orderItems.reduce(
       (sum, item) => sum + (item.subTotal || 0),
@@ -249,7 +286,6 @@ const AddPurchaseOrder = () => {
 
   const totals = calculateTotals();
 
-  // تنسيق المبلغ
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -257,25 +293,19 @@ const AddPurchaseOrder = () => {
     }).format(amount);
   };
 
-  // تقديم النموذج
+  // ✅ تقديم النموذج المعدل
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // التحقق من البيانات المطلوبة
-    if (!formData.supplier_id) {
-      alert(t("supplierRequired", "procurement") || "Please select a supplier");
+    // التحقق من صحة النموذج
+    if (!validateForm()) {
       return;
     }
 
-    if (orderItems.some((item) => !item.product_id || item.unitPrice <= 0)) {
-      alert(
-        t("validItemsRequired", "procurement") ||
-          "Please add valid items with prices"
-      );
-      return;
-    }
+    setSubmitting(true);
+    setError(null);
+    setSuccess(false);
 
-    // ✅ إعداد البيانات حسب الـAPI المطلوب
     const requestData = {
       supplier_id: parseInt(formData.supplier_id),
       currency: formData.currency,
@@ -289,40 +319,123 @@ const AddPurchaseOrder = () => {
     };
 
     try {
-      setLoadingProducts(true);
       const response = await api.post("/createsupplierorder", requestData);
 
       if (response.status === 200 || response.status === 201) {
-        alert(
-          t("purchaseOrderCreated", "procurement") ||
-            "Purchase Order created successfully!"
-        );
-        navigate("/procurement/purchase-orders");
+        // ✅ النجاح
+        setSuccess(true);
+
+        // ✅ الانتقال بعد 2 ثانية
+        setTimeout(() => {
+          navigate("/procurement/purchase-orders");
+        }, 2000);
       } else {
-        alert(
+        setError(
           t("createOrderError", "procurement") ||
             "Error creating purchase order"
         );
       }
     } catch (err) {
       console.error("Error creating order:", err);
-      alert(
+
+      // ✅ إذا كان هناك رسالة نجاح في الخطأ
+      if (
+        err.response?.data?.message?.includes("success") ||
+        err.response?.data?.message?.includes("created")
+      ) {
+        setSuccess(true);
+        setTimeout(() => {
+          navigate("/procurement/purchase-orders");
+        }, 2000);
+        return;
+      }
+
+      // ✅ معالجة الأخطاء العادية
+      setError(
         err.response?.data?.message ||
           err.message ||
           t("createOrderError", "procurement") ||
           "Error creating purchase order"
       );
     } finally {
-      setLoadingProducts(false);
+      setSubmitting(false);
     }
   };
 
-  // ✅ الحصول على اسم المورد المحدد
   const getSelectedSupplierName = () => {
     if (!formData.supplier_id) return "";
     const supplier = suppliers.find((s) => s.id == formData.supplier_id);
     return supplier ? supplier.name : "";
   };
+
+  // ✅ عرض رسالة النجاح
+  if (success) {
+    return (
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate("/procurement/purchase-orders")}
+            className="p-2 hover:bg-gray-100 rounded-lg transition"
+          >
+            <ArrowLeft size={24} className="text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {t("addPurchaseOrder", "procurement") || "Add New Purchase Order"}
+            </h1>
+            <p className="text-gray-600">
+              {t("createNewPurchaseOrder", "procurement") ||
+                "Create a new purchase order for dental supplies"}
+            </p>
+          </div>
+        </div>
+
+        {/* ✅ رسالة النجاح */}
+        <div className="bg-white rounded-xl border border-gray-200 p-8">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
+              <CheckCircle className="text-green-600" size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">
+              {t("purchaseOrderCreated", "procurement") ||
+                "Purchase Order Created Successfully!"}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {t("purchaseOrderAddedSystem", "procurement") ||
+                "The purchase order has been created successfully. Redirecting to purchase orders list..."}
+            </p>
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>{t("supplier", "procurement") || "Supplier"}:</strong>{" "}
+                  {getSelectedSupplierName()}
+                </p>
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>
+                    {t("totalAmount", "procurement") || "Total Amount"}:
+                  </strong>{" "}
+                  {formatCurrency(totals.totalAmount)}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>{t("itemsCount", "procurement") || "Items"}:</strong>{" "}
+                  {orderItems.length}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate("/procurement/purchase-orders")}
+                className="px-6 py-3 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition"
+              >
+                {t("goBackPurchaseOrders", "procurement") ||
+                  "Go Back to Purchase Orders"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -346,6 +459,48 @@ const AddPurchaseOrder = () => {
           </div>
         </div>
       </div>
+
+      {/* ✅ رسالة الخطأ العامة */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-center">
+            <AlertCircle className="text-red-600 mr-3" size={20} />
+            <div>
+              <h3 className="font-medium text-red-800">
+                {t("error", "common") || "Error"}
+              </h3>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ رسائل التحقق */}
+      {validationErrors.supplier_id && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+          <div className="flex items-center">
+            <AlertCircle className="text-yellow-600 mr-3" size={20} />
+            <div>
+              <p className="text-yellow-700 text-sm">
+                {validationErrors.supplier_id}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {validationErrors.orderItems && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+          <div className="flex items-center">
+            <AlertCircle className="text-yellow-600 mr-3" size={20} />
+            <div>
+              <p className="text-yellow-700 text-sm">
+                {validationErrors.orderItems}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -469,8 +624,7 @@ const AddPurchaseOrder = () => {
                                         {product.name}
                                       </span>
                                       <span className="text-blue-600 font-bold">
-                                        {formatCurrency(product.cost || 0)}{" "}
-                                        {/* ✅ عرض cost */}
+                                        {formatCurrency(product.cost || 0)}
                                       </span>
                                     </div>
                                     <div className="text-sm text-gray-500 mt-1">
@@ -849,14 +1003,14 @@ const AddPurchaseOrder = () => {
 
               <button
                 type="submit"
-                disabled={loadingProducts}
+                disabled={submitting}
                 className={`w-full mt-6 py-3 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
-                  loadingProducts
+                  submitting
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-dental-blue text-white hover:bg-blue-600"
                 }`}
               >
-                {loadingProducts ? (
+                {submitting ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                     <span>

@@ -110,8 +110,6 @@ const Categories = () => {
       fetchCategories();
       setNewCategory({ name_en: "", name_sv: "" });
       setShowAddForm(false);
-
-      alert(t("categoryAdded", "categories") || "Category added successfully!");
     } catch (err) {
       alert(
         t("addError", "categories") ||
@@ -178,10 +176,6 @@ const Categories = () => {
       setTimeout(() => {
         fetchCategories();
       }, 300);
-
-      alert(
-        t("categoryDeleted", "categories") || "Category deleted successfully!"
-      );
     } catch (err) {
       fetchCategories();
 

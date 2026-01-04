@@ -23,7 +23,8 @@ import {
   FileText,
   AlertCircle,
   RefreshCw,
-} from "lucide-react";
+  Hash,
+} from "lucide-react"; // ✅ أضفنا Hash
 
 const Suppliers = () => {
   const navigate = useNavigate();
@@ -33,18 +34,23 @@ const Suppliers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ✅ كروت الإحصائيات (بيانات وهمية ثابتة - نمطية)
-  const statsData = {
-    totalSuppliers: "145",
-    activeSuppliers: "128",
-    inactiveSuppliers: "17",
-  };
+  // ✅ حالة الإحصائيات - سيتم حسابها من البيانات الفعلية
+  const [stats, setStats] = useState({
+    totalSuppliers: 0,
+  });
 
   // ✅ جلب بيانات المزودين من API
   useEffect(() => {
     fetchSuppliers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ✅ دالة لحساب الإحصائيات من البيانات
+  const calculateStats = (data) => {
+    setStats({
+      totalSuppliers: data.length,
+    });
+  };
 
   const fetchSuppliers = async () => {
     try {
@@ -59,12 +65,15 @@ const Suppliers = () => {
         Array.isArray(response.data.data)
       ) {
         setSuppliersData(response.data.data);
+        // ✅ حساب الإحصائيات من البيانات الفعلية
+        calculateStats(response.data.data);
       } else {
         setError(
           t("invalidDataFormat", "procurement") ||
             "Invalid data format from server"
         );
         setSuppliersData([]);
+        setStats({ totalSuppliers: 0 });
       }
     } catch (err) {
       setError(
@@ -75,6 +84,7 @@ const Suppliers = () => {
       );
 
       setSuppliersData([]);
+      setStats({ totalSuppliers: 0 });
     } finally {
       setLoading(false);
     }
@@ -83,6 +93,18 @@ const Suppliers = () => {
   // ✅ دالة لإعادة تحميل البيانات
   const handleRefresh = () => {
     fetchSuppliers();
+  };
+
+  // ✅ خلية عرض ID
+  const idCellRender = (data) => {
+    return (
+      <div className="flex items-center space-x-2">
+        <Hash size={14} className="text-gray-400" />
+        <span className="font-mono font-medium text-gray-700">
+          {data.data.id}
+        </span>
+      </div>
+    );
   };
 
   // عرض خلية نوع المنتجات
@@ -124,6 +146,11 @@ const Suppliers = () => {
       const supplierToDelete = suppliersData.find((s) => s.id === id);
       setSuppliersData((prev) => prev.filter((supplier) => supplier.id !== id));
 
+      // ✅ تحديث الإحصائيات بعد الحذف المحلي
+      setStats((prev) => ({
+        totalSuppliers: prev.totalSuppliers - 1,
+      }));
+
       // ✅ 2. إرسال طلب الحذف إلى API
       await api.delete(`/deletesupplier/${id}`);
 
@@ -136,10 +163,8 @@ const Suppliers = () => {
             refreshResponse.data.data &&
             Array.isArray(refreshResponse.data.data)
           ) {
-            // تحديث فقط إذا كان هناك فرق
-            if (refreshResponse.data.data.length !== suppliersData.length) {
-              setSuppliersData(refreshResponse.data.data);
-            }
+            setSuppliersData(refreshResponse.data.data);
+            calculateStats(refreshResponse.data.data);
           }
           // eslint-disable-next-line no-unused-vars
         } catch (refreshErr) {
@@ -155,6 +180,10 @@ const Suppliers = () => {
       if (supplierToDelete) {
         // eslint-disable-next-line no-undef
         setSuppliersData((prev) => [...prev, supplierToDelete]);
+        // ✅ استعادة الإحصائيات
+        setStats((prev) => ({
+          totalSuppliers: prev.totalSuppliers + 1,
+        }));
       }
 
       alert(
@@ -187,8 +216,8 @@ const Suppliers = () => {
           </div>
         </div>
 
-        {/* كروت الإحصائيات الوهمية (تظهر حتى أثناء التحميل) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* ✅ كرت إحصائية واحد فقط أثناء التحميل */}
+        <div className="grid grid-cols-1 gap-4">
           <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -196,44 +225,11 @@ const Suppliers = () => {
                   {t("totalSuppliers", "procurement") || "Total Suppliers"}
                 </p>
                 <p className="text-2xl font-bold text-gray-800">
-                  {statsData.totalSuppliers}
+                  <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
                 </p>
               </div>
               <div className="p-2 bg-blue-50 rounded-lg">
                 <Building className="text-blue-600" size={24} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">
-                  {t("activeSuppliers", "procurement") || "Active Suppliers"}
-                </p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {statsData.activeSuppliers}
-                </p>
-              </div>
-              <div className="p-2 bg-green-50 rounded-lg">
-                <CheckCircle className="text-green-600" size={24} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">
-                  {t("inactiveSuppliers", "procurement") ||
-                    "Inactive Suppliers"}
-                </p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {statsData.inactiveSuppliers}
-                </p>
-              </div>
-              <div className="p-2 bg-red-50 rounded-lg">
-                <XCircle className="text-red-600" size={24} />
               </div>
             </div>
           </div>
@@ -268,8 +264,8 @@ const Suppliers = () => {
           </div>
         </div>
 
-        {/* كروت الإحصائيات الوهمية (تظهر حتى عند الخطأ) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* ✅ كرت إحصائية واحد فقط عند الخطأ */}
+        <div className="grid grid-cols-1 gap-4">
           <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -277,44 +273,11 @@ const Suppliers = () => {
                   {t("totalSuppliers", "procurement") || "Total Suppliers"}
                 </p>
                 <p className="text-2xl font-bold text-gray-800">
-                  {statsData.totalSuppliers}
+                  {stats.totalSuppliers}
                 </p>
               </div>
               <div className="p-2 bg-blue-50 rounded-lg">
                 <Building className="text-blue-600" size={24} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">
-                  {t("activeSuppliers", "procurement") || "Active Suppliers"}
-                </p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {statsData.activeSuppliers}
-                </p>
-              </div>
-              <div className="p-2 bg-green-50 rounded-lg">
-                <CheckCircle className="text-green-600" size={24} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">
-                  {t("inactiveSuppliers", "procurement") ||
-                    "Inactive Suppliers"}
-                </p>
-                <p className="text-2xl font-bold text-gray-800">
-                  {statsData.inactiveSuppliers}
-                </p>
-              </div>
-              <div className="p-2 bg-red-50 rounded-lg">
-                <XCircle className="text-red-600" size={24} />
               </div>
             </div>
           </div>
@@ -386,8 +349,8 @@ const Suppliers = () => {
         </div>
       </div>
 
-      {/* ✅ كروت الإحصائيات الوهمية (ثابتة) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* ✅ كرت الإحصائيات الواحد فقط - بيانات حقيقية */}
+      <div className="grid grid-cols-1 gap-4">
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -395,43 +358,11 @@ const Suppliers = () => {
                 {t("totalSuppliers", "procurement") || "Total Suppliers"}
               </p>
               <p className="text-2xl font-bold text-gray-800">
-                {statsData.totalSuppliers}
+                {stats.totalSuppliers}
               </p>
             </div>
             <div className="p-2 bg-blue-50 rounded-lg">
               <Building className="text-blue-600" size={24} />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">
-                {t("activeSuppliers", "procurement") || "Active Suppliers"}
-              </p>
-              <p className="text-2xl font-bold text-gray-800">
-                {statsData.activeSuppliers}
-              </p>
-            </div>
-            <div className="p-2 bg-green-50 rounded-lg">
-              <CheckCircle className="text-green-600" size={24} />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">
-                {t("inactiveSuppliers", "procurement") || "Inactive Suppliers"}
-              </p>
-              <p className="text-2xl font-bold text-gray-800">
-                {statsData.inactiveSuppliers}
-              </p>
-            </div>
-            <div className="p-2 bg-red-50 rounded-lg">
-              <XCircle className="text-red-600" size={24} />
             </div>
           </div>
         </div>
@@ -502,6 +433,17 @@ const Suppliers = () => {
               showPageSizeSelector={true}
               allowedPageSizes={[5, 10, 20]}
               showInfo={true}
+            />
+
+            {/* ✅ عمود ID الجديد - كأول عمود */}
+            <Column
+              dataField="id"
+              caption={t("id", "common") || "ID"}
+              width={80}
+              alignment="center"
+              allowGrouping={false}
+              allowSorting={true}
+              cellRender={idCellRender}
             />
 
             <Column
