@@ -40,11 +40,11 @@ function App() {
       <Router>
         <Routes>
           {/* مسار تسجيل الدخول */}
-          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Login />} />
 
           {/* المسارات المحمية */}
           <Route
-            path="/"
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <MainLayout>

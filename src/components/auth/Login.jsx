@@ -63,7 +63,7 @@ const Login = () => {
 
         api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-        navigate("/");
+        navigate("/dashboard");
       } else {
         setError(
           response.data.message ||

@@ -51,7 +51,7 @@ const Sidebar = () => {
           id: "dashboard",
           label: t("dashboard", "navigation"),
           icon: <LayoutDashboard size={20} />,
-          path: "/",
+          path: "/dashboard",
         },
       ],
     },
