@@ -21,12 +21,12 @@ import ProductDetails from "./components/pages/ProductDetails";
 import OrderDetails from "./components/pages/OrderDetails";
 import Inventory from "./components/pages/Inventory";
 import Suppliers from "./components/pages/procurement/Suppliers";
-import AddSupplier from "./components/pages/procurement/AddSupplier"; // ✅ الجديد
-import EditSupplier from "./components/pages/procurement/EditSupplier"; // ✅ الجديد
+import AddSupplier from "./components/pages/procurement/AddSupplier";
+import EditSupplier from "./components/pages/procurement/EditSupplier";
 import PurchaseOrders from "./components/pages/procurement/PurchaseOrders";
-import PurchaseOrderDetails from "./components/pages/procurement/PurchaseOrderDetails"; // ✅ الجديد
-import AddPurchaseOrder from "./components/pages/procurement/AddPurchaseOrder"; // ✅ الجديد
-import EditPurchaseOrder from "./components/pages/procurement/EditPurchaseOrder"; // ✅ الجديد
+import PurchaseOrderDetails from "./components/pages/procurement/PurchaseOrderDetails";
+import AddPurchaseOrder from "./components/pages/procurement/AddPurchaseOrder";
+import EditPurchaseOrder from "./components/pages/procurement/EditPurchaseOrder";
 import SupplierInvoices from "./components/pages/procurement/SupplierInvoices";
 import Employees from "./components/pages/Employees";
 import EditProduct from "./components/pages/EditProduct";
@@ -39,269 +39,99 @@ function App() {
     <LanguageProvider>
       <Router>
         <Routes>
-          {/* مسار تسجيل الدخول */}
+          {/* مسار تسجيل الدخول (غير محمي) */}
           <Route path="/login" element={<Login />} />
 
-          {/* المسارات المحمية */}
+          {/* ============================================ */}
+          {/* جميع المسارات المحمية داخل MainLayout */}
+          {/* ============================================ */}
           <Route
-            path="/"
             element={
               <ProtectedRoute>
-                <MainLayout>
-                  <Dashboard />
-                </MainLayout>
+                <MainLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            {/* Dashboard */}
+            <Route path="/" element={<Dashboard />} />
+            <Route index element={<Dashboard />} />
 
-          <Route
-            path="/products"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Products />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Products */}
+            <Route path="/products" element={<Products />} />
+            <Route path="/products/add" element={<AddProduct />} />
+            <Route path="/products/edit/:id" element={<EditProduct />} />
+            <Route path="/products/view/:id" element={<ProductDetails />} />
 
-          <Route
-            path="/categories"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Categories />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Categories */}
+            <Route path="/categories" element={<Categories />} />
 
-          <Route
-            path="/products/add"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <AddProduct />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Orders */}
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/orders/view/:id" element={<OrderDetails />} />
 
-          <Route
-            path="/products/edit/:id"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <EditProduct />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Customers */}
+            <Route path="/customers" element={<Customers />} />
 
-          <Route
-            path="/orders"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Orders />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Inventory */}
+            <Route path="/inventory" element={<Inventory />} />
 
-          <Route
-            path="/customers"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Customers />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Employees */}
+            <Route path="/employees" element={<Employees />} />
 
-          <Route
-            path="/analytics"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Analytics />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Analytics */}
+            <Route path="/analytics" element={<Analytics />} />
 
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Settings />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Invoices */}
+            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/invoices/:id" element={<InvoiceDetails />} />
 
-          <Route
-            path="/invoices"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Invoices />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Settings */}
+            <Route path="/settings" element={<Settings />} />
 
-          <Route
-            path="/invoices/:id"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <InvoiceDetails />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* ============================================ */}
+            {/* Procurement Routes */}
+            {/* ============================================ */}
 
-          <Route
-            path="/products/view/:id"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <ProductDetails />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Suppliers */}
+            <Route path="/procurement/suppliers" element={<Suppliers />} />
+            <Route
+              path="/procurement/suppliers/add"
+              element={<AddSupplier />}
+            />
+            <Route
+              path="/procurement/suppliers/edit/:id"
+              element={<EditSupplier />}
+            />
 
-          <Route
-            path="/orders/view/:id"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <OrderDetails />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Purchase Orders */}
+            <Route
+              path="/procurement/purchase-orders"
+              element={<PurchaseOrders />}
+            />
+            <Route
+              path="/procurement/purchase-orders/add"
+              element={<AddPurchaseOrder />}
+            />
+            <Route
+              path="/procurement/purchase-orders/edit/:id"
+              element={<EditPurchaseOrder />}
+            />
+            <Route
+              path="/procurement/purchase-orders/view/:id"
+              element={<PurchaseOrderDetails />}
+            />
 
-          <Route
-            path="/inventory"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Inventory />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Supplier Invoices */}
+            <Route
+              path="/procurement/supplier-invoices"
+              element={<SupplierInvoices />}
+            />
+          </Route>
+          {/* ============================================ */}
+          {/* نهاية المسارات المحمية */}
+          {/* ============================================ */}
 
-          <Route
-            path="/procurement/suppliers"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Suppliers />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ✅ مسار إضافة مزود جديد */}
-          <Route
-            path="/procurement/suppliers/add"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <AddSupplier />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/procurement/suppliers/edit/:id"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <EditSupplier />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/employees"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Employees />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/procurement/purchase-orders"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <PurchaseOrders />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ✅ مسار عرض تفاصيل طلب الشراء */}
-          <Route
-            path="/procurement/purchase-orders/view/:id"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <PurchaseOrderDetails />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ✅ مسار إضافة طلب شراء جديد */}
-          <Route
-            path="/procurement/purchase-orders/add"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <AddPurchaseOrder />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ✅ مسار تحرير طلب شراء */}
-          <Route
-            path="/procurement/purchase-orders/edit/:id"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <EditPurchaseOrder />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* المسار الجديد لفواتير الموردين */}
-          <Route
-            path="/procurement/supplier-invoices"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <SupplierInvoices />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* إعادة التوجيه إلى الداشبورد للمسارات غير المعروفة */}
+          {/* إعادة التوجيه للمسارات غير المعروفة */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
