@@ -45,7 +45,7 @@ const ProductDetails = () => {
 
       const response = await api.get(`/products/${id}`);
       const apiData = response.data?.data;
-      console.log("Fetched Product Details:", apiData);
+
       if (apiData) {
         // معالجة الصور لإنشاء روابط كاملة
         const processedImages =
@@ -53,7 +53,7 @@ const ProductDetails = () => {
             ...img,
             fullUrl: img.url.startsWith("http")
               ? img.url
-              : `https://dentist-production.up.railway.app${img.url}`,
+              : `https://nethy-production.up.railway.app${img.url}`,
           })) || [];
 
         // الحصول على قيم الخصم وتحويلها لأرقام
@@ -544,7 +544,7 @@ const ProductDetails = () => {
               {product.hasDiscount && product.discount_price !== null && (
                 <div className="text-center p-4 bg-red-50 rounded-lg">
                   <p className="text-sm font-medium text-gray-600 mb-1">
-                    {t("priceAfterDiscount", "products") || "Discount Price"}
+                    {t("priceAfterDiscount", "products") || "Offer Price"}
                   </p>
                   <p className="text-2xl font-bold text-red-600">
                     ${parseFloat(product.discount_price).toFixed(2)}

@@ -20,6 +20,8 @@ import {
   Globe,
   Flag,
   X,
+  PlusCircle,
+  Loader2,
 } from "lucide-react";
 
 const AddProduct = () => {
@@ -31,6 +33,12 @@ const AddProduct = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
+
+  // State للـ Popup
+  const [showCategoryPopup, setShowCategoryPopup] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryNameSv, setNewCategoryNameSv] = useState("");
+  const [addingCategory, setAddingCategory] = useState(false);
 
   // البيانات الرئيسية للمنتج
   const [formData, setFormData] = useState({
@@ -84,6 +92,67 @@ const AddProduct = () => {
     name: getCategoryDisplayName(cat),
     value: cat.name || cat.name_en,
   }));
+
+  // دالة إضافة فئة جديدة
+  const handleAddNewCategory = async () => {
+    if (!newCategoryName.trim()) {
+      alert(
+        t("categoryNameRequired", "addProduct") ||
+          "Please enter category name in English"
+      );
+      return;
+    }
+
+    setAddingCategory(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("name", newCategoryName.trim());
+
+      if (newCategoryNameSv.trim()) {
+        formData.append("s_name", newCategoryNameSv.trim());
+      }
+
+      const response = await api.post("/createcategory", formData);
+
+      if (
+        response.data?.success ||
+        response.status === 200 ||
+        response.status === 201
+      ) {
+        // إغلاق الـ popup وإعادة تعيين الحقول
+        setShowCategoryPopup(false);
+        setNewCategoryName("");
+        setNewCategoryNameSv("");
+
+        // إعادة تحميل الفئات
+        await fetchCategories();
+
+        // تعيين الفئة المضافة تلقائياً
+        const addedCategoryName = newCategoryName.trim();
+        setFormData((prev) => ({
+          ...prev,
+          category: addedCategoryName,
+        }));
+
+        alert(
+          t("categoryAddedSuccess", "addProduct") ||
+            "Category added successfully!"
+        );
+      } else {
+        throw new Error(response.data?.message || "Failed to add category");
+      }
+    } catch (err) {
+      console.error("Error adding category:", err);
+      alert(
+        t("categoryAddError", "addProduct") ||
+          "Error adding category: " +
+            (err.response?.data?.message || err.message)
+      );
+    } finally {
+      setAddingCategory(false);
+    }
+  };
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({
@@ -381,6 +450,142 @@ const AddProduct = () => {
 
   return (
     <div className="space-y-6">
+      {/* Category Popup Modal */}
+      {showCategoryPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-in slide-in-from-bottom duration-300">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-50 rounded-lg">
+                    <PlusCircle className="text-green-600" size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">
+                      {t("addNewCategory", "addProduct") || "Add New Category"}
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {t("addCategoryDescription", "addProduct") ||
+                        "Add a new category to organize your products"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCategoryPopup(false);
+                    setNewCategoryName("");
+                    setNewCategoryNameSv("");
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <X size={20} className="text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Form */}
+            <div className="p-6 space-y-4">
+              {/* English Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t("categoryName", "addProduct") || "Category Name"} *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder={
+                      t("categoryNamePlaceholder", "addProduct") ||
+                      "e.g., Dental Equipment"
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dental-blue focus:border-transparent"
+                    autoFocus
+                  />
+                  <Globe
+                    className="absolute right-3 top-3.5 text-gray-400"
+                    size={18}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {t("englishRequired", "addProduct") ||
+                    "English name is required"}
+                </p>
+              </div>
+
+              {/* Swedish Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t("categoryNameSwedish", "addProduct") ||
+                    "Swedish Name (Optional)"}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={newCategoryNameSv}
+                    onChange={(e) => setNewCategoryNameSv(e.target.value)}
+                    placeholder={
+                      t("categoryNameSvPlaceholder", "addProduct") ||
+                      "e.g., Tandläkarutrustning"
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dental-blue focus:border-transparent"
+                  />
+                  <Flag
+                    className="absolute right-3 top-3.5 text-gray-400"
+                    size={18}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {t("swedishOptional", "addProduct") ||
+                    "Swedish name is optional"}
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowCategoryPopup(false);
+                    setNewCategoryName("");
+                    setNewCategoryNameSv("");
+                  }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition font-medium"
+                  disabled={addingCategory}
+                >
+                  {t("cancel", "common") || "Cancel"}
+                </button>
+                <button
+                  onClick={handleAddNewCategory}
+                  disabled={!newCategoryName.trim() || addingCategory}
+                  className={`px-6 py-2 rounded-lg font-medium transition flex items-center space-x-2 ${
+                    !newCategoryName.trim() || addingCategory
+                      ? "bg-gray-300 cursor-not-allowed text-gray-500"
+                      : "bg-dental-blue text-white hover:bg-blue-600"
+                  }`}
+                >
+                  {addingCategory ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      <span>{t("adding", "addProduct") || "Adding..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <PlusCircle size={18} />
+                      <span>
+                        {t("addCategory", "addProduct") || "Add Category"}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -524,7 +729,6 @@ const AddProduct = () => {
                       <label className="block text-sm font-medium text-gray-700">
                         SKU {/* ✅ إزالة النجمة */}
                       </label>
-                      {/* ✅ إزالة زر Generate SKU */}
                     </div>
                     <div className="relative">
                       <TextBox
@@ -580,7 +784,7 @@ const AddProduct = () => {
                         "Can't find your category?"}{" "}
                       <button
                         type="button"
-                        onClick={() => navigate("/categories")}
+                        onClick={() => setShowCategoryPopup(true)}
                         className="text-dental-blue hover:underline font-medium"
                       >
                         {t("addNewCategory", "addProduct") ||
@@ -915,7 +1119,7 @@ const AddProduct = () => {
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           parseInt(formData.stock_quantity) === 0
                             ? "bg-red-100 text-red-800"
-                            : parseInt(formData.stock_quantity) <=
+                            : parseInt(formData.stock_quantity) <
                               parseInt(formData.low_stock_alert_threshold)
                             ? "bg-yellow-100 text-yellow-800"
                             : "bg-green-100 text-green-800"
@@ -923,7 +1127,7 @@ const AddProduct = () => {
                       >
                         {parseInt(formData.stock_quantity) === 0
                           ? t("outOfStock", "products") || "Out of Stock"
-                          : parseInt(formData.stock_quantity) <=
+                          : parseInt(formData.stock_quantity) <
                             parseInt(formData.low_stock_alert_threshold)
                           ? t("lowStock", "products") || "Low Stock"
                           : t("inStock", "products") || "In Stock"}

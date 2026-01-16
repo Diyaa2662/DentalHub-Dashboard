@@ -119,5 +119,18 @@
   "validationError": "Validation error:",
   "productPreview": "Product preview",
   "skuOptionalPlaceholder": "SKU-2026Jan1",
-  "skuOptionalHint": "Optional - leave empty to generate automatically"
+  "skuOptionalHint": "Optional - leave empty to generate automatically",
+  "taxRateExample": "Enter 10 for 10% tax",
+  "addCategoryDescription": "Add a new category to organize your products",
+  "categoryName": "Category Name",
+  "categoryNamePlaceholder": "e.g., Dental Equipment",
+  "englishRequired": "English name is required",
+  "categoryNameSwedish": "Swedish Name (Optional)",
+  "categoryNameSvPlaceholder": "e.g., Tandläkarutrustning",
+  "swedishOptional": "Swedish name is optional",
+  "adding": "Adding...",
+  "addCategory": "Add Category",
+  "categoryAddedSuccess": "Category added successfully!",
+  "categoryAddError": "Error adding category",
+  "categoryNameRequired": "Please enter category name in English"
 }

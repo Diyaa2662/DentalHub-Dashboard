@@ -25,20 +25,36 @@ import {
   Tag,
   RefreshCw,
   Hash,
+  Filter,
 } from "lucide-react";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { t, currentLanguage } = useLanguage();
+
+  // State للفلاتر
+  const [activeFilter, setActiveFilter] = useState("all"); // all, lowStock, outOfStock
+  const [stats, setStats] = useState({
+    total: 0,
+    lowStock: 0,
+    outOfStock: 0,
+  });
 
   // Fetch products from API
   useEffect(() => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Update filtered products when filter changes
+  useEffect(() => {
+    applyFilter();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFilter, products]);
 
   const fetchProducts = async () => {
     try {
@@ -51,17 +67,20 @@ const Products = () => {
 
       if (Array.isArray(apiData)) {
         const formattedData = apiData.map((product) => {
-          // ✅ تحويل الحالة لأحرف صغيرة وإزالة الشرطات/مسافات
           const normalizedStatus = (product.status || "")
             .toLowerCase()
             .replace(/[_\s]/g, "");
 
-          let stockStatus = t("inStock", "products"); // القيمة الافتراضية
+          let stockStatus = t("inStock", "products");
+          let isLowStock = false;
+          let isOutOfStock = false;
 
           if (normalizedStatus === "outofstock") {
             stockStatus = t("outOfStock", "products");
+            isOutOfStock = true;
           } else if (normalizedStatus === "lowstock") {
             stockStatus = t("lowStock", "products");
+            isLowStock = true;
           } else if (normalizedStatus === "instock") {
             stockStatus = t("inStock", "products");
           }
@@ -89,16 +108,21 @@ const Products = () => {
             originalData: product,
             hasDiscount: hasDiscount,
             discountPercentage: discountPercentage,
+            isLowStock: isLowStock,
+            isOutOfStock: isOutOfStock,
+            normalizedStatus: normalizedStatus,
           };
         });
 
         setProducts(formattedData);
+        calculateStats(formattedData);
       } else {
         setError(
           t("noProductsData", "products") ||
             "No products data found or invalid data format"
         );
         setProducts([]);
+        setFilteredProducts([]);
       }
     } catch (err) {
       setError(
@@ -108,9 +132,49 @@ const Products = () => {
           "Failed to load products"
       );
       setProducts([]);
+      setFilteredProducts([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateStats = (productsList) => {
+    const total = productsList.length;
+    const lowStock = productsList.filter(
+      (product) => product.isLowStock
+    ).length;
+    const outOfStock = productsList.filter(
+      (product) => product.isOutOfStock
+    ).length;
+
+    setStats({
+      total,
+      lowStock,
+      outOfStock,
+    });
+  };
+
+  const applyFilter = () => {
+    let filtered = [...products];
+
+    switch (activeFilter) {
+      case "lowStock":
+        filtered = products.filter((product) => product.isLowStock);
+        break;
+      case "outOfStock":
+        filtered = products.filter((product) => product.isOutOfStock);
+        break;
+      case "all":
+      default:
+        filtered = products;
+        break;
+    }
+
+    setFilteredProducts(filtered);
+  };
+
+  const handleFilterClick = (filterType) => {
+    setActiveFilter(filterType);
   };
 
   const handleDelete = async (id, name) => {
@@ -122,7 +186,9 @@ const Products = () => {
     ) {
       try {
         await api.delete(`/deleteproduct/${id}`);
-        setProducts((prev) => prev.filter((product) => product.id !== id));
+        const updatedProducts = products.filter((product) => product.id !== id);
+        setProducts(updatedProducts);
+        calculateStats(updatedProducts);
         alert(
           t("productDeletedSuccess", "products", { name }) ||
             `Product "${name}" deleted successfully!`
@@ -149,6 +215,58 @@ const Products = () => {
 
   const hasDiscount = (product) => {
     return product.hasDiscount || false;
+  };
+
+  const getFilterButtonClass = (filterType) => {
+    const baseClass =
+      "p-4 rounded-lg border transition-all duration-200 cursor-pointer ";
+
+    if (activeFilter === filterType) {
+      switch (filterType) {
+        case "all":
+          return baseClass + "bg-blue-50 border-blue-200 shadow-sm";
+        case "lowStock":
+          return baseClass + "bg-yellow-50 border-yellow-200 shadow-sm";
+        case "outOfStock":
+          return baseClass + "bg-red-50 border-red-200 shadow-sm";
+        default:
+          return baseClass + "bg-gray-50 border-gray-200";
+      }
+    }
+
+    return baseClass + "bg-white border-gray-200 hover:bg-gray-50";
+  };
+
+  const getFilterTextClass = (filterType) => {
+    if (activeFilter === filterType) {
+      switch (filterType) {
+        case "all":
+          return "text-blue-700";
+        case "lowStock":
+          return "text-yellow-700";
+        case "outOfStock":
+          return "text-red-700";
+        default:
+          return "text-gray-800";
+      }
+    }
+    return "text-gray-600";
+  };
+
+  const getFilterCountClass = (filterType) => {
+    if (activeFilter === filterType) {
+      switch (filterType) {
+        case "all":
+          return "text-blue-800";
+        case "lowStock":
+          return "text-yellow-800";
+        case "outOfStock":
+          return "text-red-800";
+        default:
+          return "text-gray-800";
+      }
+    }
+    return "text-gray-800";
   };
 
   if (loading) {
@@ -271,61 +389,211 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <p className="text-sm text-gray-600">
-            {t("totalProducts", "products") || "Total Products"}
-          </p>
-          <p className="text-2xl font-bold text-gray-800">145</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
+      {/* Filter Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Total Products Filter */}
+        <div
+          className={getFilterButtonClass("all")}
+          onClick={() => handleFilterClick("all")}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">
-                {t("inStock", "products") || "In Stock"}
+              <div className="flex items-center space-x-2 mb-1">
+                <Filter size={16} className={getFilterTextClass("all")} />
+                <p
+                  className={`text-sm font-medium ${getFilterTextClass("all")}`}
+                >
+                  {t("totalProducts", "products") || "Total Products"}
+                </p>
+              </div>
+              <p className={`text-2xl font-bold ${getFilterCountClass("all")}`}>
+                {stats.total}
               </p>
-              <p className="text-2xl font-bold text-green-600">112</p>
             </div>
-            <CheckCircle className="text-green-500" size={20} />
+            <div
+              className={`p-2 rounded-lg ${
+                activeFilter === "all" ? "bg-blue-100" : "bg-gray-100"
+              }`}
+            >
+              <Package size={20} className={getFilterTextClass("all")} />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              {activeFilter === "all"
+                ? t("showingAllProducts", "products")
+                : t("clickToShowAll", "products", { count: stats.total })}
+            </p>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
+
+        {/* Low Stock Filter */}
+        <div
+          className={getFilterButtonClass("lowStock")}
+          onClick={() => handleFilterClick("lowStock")}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">
-                {t("lowStock", "products") || "Low Stock"}
+              <div className="flex items-center space-x-2 mb-1">
+                <AlertCircle
+                  size={16}
+                  className={getFilterTextClass("lowStock")}
+                />
+                <p
+                  className={`text-sm font-medium ${getFilterTextClass(
+                    "lowStock"
+                  )}`}
+                >
+                  {t("lowStock", "products") || "Low Stock"}
+                </p>
+              </div>
+              <p
+                className={`text-2xl font-bold ${getFilterCountClass(
+                  "lowStock"
+                )}`}
+              >
+                {stats.lowStock}
               </p>
-              <p className="text-2xl font-bold text-yellow-600">18</p>
             </div>
-            <AlertCircle className="text-yellow-500" size={20} />
+            <div
+              className={`p-2 rounded-lg ${
+                activeFilter === "lowStock" ? "bg-yellow-100" : "bg-gray-100"
+              }`}
+            >
+              <AlertCircle
+                size={20}
+                className={getFilterTextClass("lowStock")}
+              />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              {activeFilter === "lowStock"
+                ? t("showingLowStockProducts", "products", {
+                    count: stats.lowStock,
+                  })
+                : t("clickToFilterLowStock", "products", {
+                    count: stats.lowStock,
+                  })}
+            </p>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
+
+        {/* Out of Stock Filter */}
+        <div
+          className={getFilterButtonClass("outOfStock")}
+          onClick={() => handleFilterClick("outOfStock")}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">
-                {t("outOfStock", "products") || "Out of Stock"}
+              <div className="flex items-center space-x-2 mb-1">
+                <XCircle
+                  size={16}
+                  className={getFilterTextClass("outOfStock")}
+                />
+                <p
+                  className={`text-sm font-medium ${getFilterTextClass(
+                    "outOfStock"
+                  )}`}
+                >
+                  {t("outOfStock", "products") || "Out of Stock"}
+                </p>
+              </div>
+              <p
+                className={`text-2xl font-bold ${getFilterCountClass(
+                  "outOfStock"
+                )}`}
+              >
+                {stats.outOfStock}
               </p>
-              <p className="text-2xl font-bold text-red-600">15</p>
             </div>
-            <XCircle className="text-red-500" size={20} />
+            <div
+              className={`p-2 rounded-lg ${
+                activeFilter === "outOfStock" ? "bg-red-100" : "bg-gray-100"
+              }`}
+            >
+              <XCircle size={20} className={getFilterTextClass("outOfStock")} />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              {activeFilter === "outOfStock"
+                ? t("showingOutOfStockProducts", "products", {
+                    count: stats.outOfStock,
+                  })
+                : t("clickToFilterOutOfStock", "products", {
+                    count: stats.outOfStock,
+                  })}
+            </p>
           </div>
         </div>
       </div>
 
+      {/* Active Filter Indicator */}
+      {activeFilter !== "all" && (
+        <div
+          className={`p-3 rounded-lg ${
+            activeFilter === "lowStock"
+              ? "bg-yellow-50 border border-yellow-200"
+              : "bg-red-50 border border-red-200"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              {activeFilter === "lowStock" ? (
+                <>
+                  <AlertCircle className="text-yellow-600" size={18} />
+                  <span className="font-medium text-yellow-800">
+                    {t("filteredBy", "products")}: {t("lowStock", "products")}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="text-red-600" size={18} />
+                  <span className="font-medium text-red-800">
+                    {t("filteredBy", "products")}: {t("outOfStock", "products")}
+                  </span>
+                </>
+              )}
+            </div>
+            <button
+              onClick={() => handleFilterClick("all")}
+              className="text-sm text-gray-600 hover:text-gray-800 underline"
+            >
+              {t("clearFilter", "products")}
+            </button>
+          </div>
+          <p className="text-sm text-gray-600 mt-1 ml-7">
+            {activeFilter === "lowStock"
+              ? `${stats.lowStock} ${t("lowStockProducts", "products")}`
+              : `${stats.outOfStock} ${t("outOfStockProducts", "products")}`}
+          </p>
+        </div>
+      )}
+
       {/* Products Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {products.length === 0 ? (
+        {filteredProducts.length === 0 ? (
           <div className="p-8 text-center">
             <Package className="text-gray-400 mx-auto mb-4" size={48} />
             <h3 className="text-lg font-medium text-gray-800 mb-2">
-              {t("noProductsYet", "products") || "No Products Yet"}
+              {activeFilter === "all"
+                ? t("noProductsYet", "products")
+                : t("noFilteredProducts", "products")}
             </h3>
             <p className="text-gray-600 mb-4">
-              {t("startByAddingProducts", "products") ||
-                "Start by adding products to your inventory"}
+              {activeFilter === "all"
+                ? t("startByAddingProducts", "products")
+                : t("tryDifferentFilter", "products")}
             </p>
+            {activeFilter !== "all" && (
+              <button
+                onClick={() => handleFilterClick("all")}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition mr-2"
+              >
+                {t("showAllProducts", "products")}
+              </button>
+            )}
             <button
               onClick={() => navigate("/products/add")}
               className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition inline-flex items-center space-x-2"
@@ -337,243 +605,281 @@ const Products = () => {
             </button>
           </div>
         ) : (
-          <DataGrid
-            dataSource={products}
-            showBorders={true}
-            columnAutoWidth={true}
-            allowColumnResizing={true}
-            columnMinWidth={50}
-            height={500}
-            allowColumnReordering={true}
-          >
-            <HeaderFilter visible={true} />
-            <SearchPanel
-              visible={true}
-              placeholder={
-                t("searchProducts", "products") || "Search products..."
-              }
-            />
-            <GroupPanel
-              visible={true}
-              emptyPanelText={
-                t("dragColumnHereToGroup", "products") ||
-                "Drag a column header here to group by that column"
-              }
-              allowColumnDragging={true}
-            />
-            <Paging defaultPageSize={10} />
-            <Pager
-              showPageSizeSelector={true}
-              allowedPageSizes={[5, 10, 20]}
-              showInfo={true}
-              infoText={
-                t("pageInfoText", "products") || "Page {0} of {1} ({2} items)"
-              }
-            />
-
-            <Column
-              dataField="id"
-              caption={t("id", "products") || "ID"}
-              width="auto"
-              alignment="left"
-              allowGrouping={false}
-            />
-
-            <Column
-              dataField="sku"
-              caption="SKU"
-              width="auto"
-              alignment="left"
-              allowGrouping={false}
-              cellRender={({ data }) => (
-                <div className="flex items-center">
-                  <Hash size={14} className="text-gray-400 mr-2" />
-                  <span className="font-mono text-sm">{data.sku}</span>
+          <>
+            {/* Table Header with Count */}
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Package size={18} className="text-gray-500" />
+                  <span className="font-medium text-gray-700">
+                    {activeFilter === "all"
+                      ? t("allProducts", "products")
+                      : activeFilter === "lowStock"
+                      ? t("lowStockProducts", "products")
+                      : t("outOfStockProducts", "products")}
+                  </span>
+                  <span className="bg-gray-200 text-gray-700 text-xs font-medium px-2 py-1 rounded-full">
+                    {filteredProducts.length} {t("items", "products")}
+                  </span>
                 </div>
-              )}
-            />
+                <div className="text-sm text-gray-500">
+                  {activeFilter === "all" &&
+                    `${stats.total} ${t("total", "products")}`}
+                  {activeFilter === "lowStock" &&
+                    `${stats.lowStock} ${t(
+                      "lowStock",
+                      "products"
+                    )?.toLowerCase()}`}
+                  {activeFilter === "outOfStock" &&
+                    `${stats.outOfStock} ${t(
+                      "outOfStock",
+                      "products"
+                    )?.toLowerCase()}`}
+                </div>
+              </div>
+            </div>
 
-            <Column
-              dataField="name"
-              caption={t("productName", "products") || "Product Name"}
-              width="auto"
-              alignment="left"
-              allowGrouping={false}
-              cellRender={({ data }) => {
-                const displayName = getProductNameByLanguage(data);
-                const isSwedish =
-                  currentLanguage === "sv" && data.s_name && data.s_name.trim();
+            <DataGrid
+              dataSource={filteredProducts}
+              showBorders={true}
+              columnAutoWidth={true}
+              allowColumnResizing={true}
+              columnMinWidth={50}
+              height={500}
+              allowColumnReordering={true}
+            >
+              <HeaderFilter visible={true} />
+              <SearchPanel
+                visible={true}
+                placeholder={
+                  t("searchProducts", "products") || "Search products..."
+                }
+              />
+              <GroupPanel
+                visible={true}
+                emptyPanelText={
+                  t("dragColumnHereToGroup", "products") ||
+                  "Drag a column header here to group by that column"
+                }
+                allowColumnDragging={true}
+              />
+              <Paging defaultPageSize={10} />
+              <Pager
+                showPageSizeSelector={true}
+                allowedPageSizes={[5, 10, 20]}
+                showInfo={true}
+                infoText={
+                  t("pageInfoText", "products") || "Page {0} of {1} ({2} items)"
+                }
+              />
 
-                return (
-                  <div className="flex flex-col">
-                    <div className="font-medium text-gray-800">
-                      {displayName}
-                    </div>
-                    {isSwedish && data.name !== data.s_name && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        {t("english", "common") || "English"}: {data.name}
-                      </div>
-                    )}
+              {/* ... نفس الأعمدة السابقة تماماً بدون تغيير ... */}
+              <Column
+                dataField="id"
+                caption={t("id", "products") || "ID"}
+                width="auto"
+                alignment="left"
+                allowGrouping={false}
+              />
+
+              <Column
+                dataField="sku"
+                caption="SKU"
+                width="auto"
+                alignment="left"
+                allowGrouping={false}
+                cellRender={({ data }) => (
+                  <div className="flex items-center">
+                    <Hash size={14} className="text-gray-400 mr-2" />
+                    <span className="font-mono text-sm">{data.sku}</span>
                   </div>
-                );
-              }}
-            />
+                )}
+              />
 
-            <Column
-              dataField="category"
-              caption={t("category", "products") || "Category"}
-              width="auto"
-              alignment="left"
-              allowGrouping={true}
-              cellRender={({ data }) => (
-                <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm font-medium capitalize">
-                  {data.category}
-                </span>
-              )}
-            />
+              <Column
+                dataField="name"
+                caption={t("productName", "products") || "Product Name"}
+                width="auto"
+                alignment="left"
+                allowGrouping={false}
+                cellRender={({ data }) => {
+                  const displayName = getProductNameByLanguage(data);
+                  const isSwedish =
+                    currentLanguage === "sv" &&
+                    data.s_name &&
+                    data.s_name.trim();
 
-            <Column
-              dataField="price"
-              caption={t("price", "products") || "Price"}
-              width="auto"
-              alignment="left"
-              allowGrouping={false}
-            />
-
-            <Column
-              dataField="priceAfterDiscount"
-              caption={t("priceAfterDiscount", "products") || "Discount Price"}
-              width="auto"
-              alignment="left"
-              allowGrouping={false}
-              cellRender={({ data }) => {
-                const hasDisc = hasDiscount(data);
-                return (
-                  <div className="flex flex-col">
-                    <div className="flex items-center">
-                      <span
-                        className={`font-semibold ${
-                          hasDisc ? "text-green-600" : "text-gray-800"
-                        }`}
-                      >
-                        {data.priceAfterDiscount}
-                      </span>
-                      {hasDisc && (
-                        <Tag className="text-red-500 ml-2" size={12} />
+                  return (
+                    <div className="flex flex-col">
+                      <div className="font-medium text-gray-800">
+                        {displayName}
+                      </div>
+                      {isSwedish && data.name !== data.s_name && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {t("english", "common") || "English"}: {data.name}
+                        </div>
                       )}
                     </div>
-                    {hasDisc && data.discountPercentage > 0 && (
-                      <div className="text-xs text-red-600 font-medium mt-1">
-                        {data.discountPercentage}%{" "}
-                        {t("off", "products") || "OFF"}
+                  );
+                }}
+              />
+
+              <Column
+                dataField="category"
+                caption={t("category", "products") || "Category"}
+                width="auto"
+                alignment="left"
+                allowGrouping={true}
+                cellRender={({ data }) => (
+                  <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm font-medium capitalize">
+                    {data.category}
+                  </span>
+                )}
+              />
+
+              <Column
+                dataField="price"
+                caption={t("price", "products") || "Price"}
+                width="auto"
+                alignment="left"
+                allowGrouping={false}
+              />
+
+              <Column
+                dataField="priceAfterDiscount"
+                caption={t("priceAfterDiscount", "products") || "Offer Price"}
+                width="auto"
+                alignment="left"
+                allowGrouping={false}
+                cellRender={({ data }) => {
+                  const hasDisc = hasDiscount(data);
+                  return (
+                    <div className="flex flex-col">
+                      <div className="flex items-center">
+                        <span
+                          className={`font-semibold ${
+                            hasDisc ? "text-green-600" : "text-gray-800"
+                          }`}
+                        >
+                          {data.priceAfterDiscount}
+                        </span>
+                        {hasDisc && (
+                          <Tag className="text-red-500 ml-2" size={12} />
+                        )}
                       </div>
-                    )}
+                      {hasDisc && data.discountPercentage > 0 && (
+                        <div className="text-xs text-red-600 font-medium mt-1">
+                          {data.discountPercentage}%{" "}
+                          {t("off", "products") || "OFF"}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }}
+              />
+
+              <Column
+                dataField="stock"
+                caption={t("stock", "products") || "Stock"}
+                width="auto"
+                alignment="left"
+                allowGrouping={false}
+              />
+
+              <Column
+                dataField="taxRate"
+                caption={t("taxRate", "products") || "Tax Rate"}
+                width="auto"
+                alignment="left"
+                allowGrouping={true}
+                cellRender={({ data }) => (
+                  <div className="flex items-center">
+                    <span
+                      className={`font-medium ${
+                        data.taxRate === "20%"
+                          ? "text-red-600"
+                          : data.taxRate === "15%"
+                          ? "text-orange-600"
+                          : "text-green-600"
+                      }`}
+                    >
+                      {data.taxRate}
+                    </span>
                   </div>
-                );
-              }}
-            />
+                )}
+              />
 
-            <Column
-              dataField="stock"
-              caption={t("stock", "products") || "Stock"}
-              width="auto"
-              alignment="left"
-              allowGrouping={false}
-            />
+              <Column
+                dataField="status"
+                caption={t("status", "common") || "Status"}
+                width="auto"
+                alignment="left"
+                allowGrouping={true}
+                cellRender={({ data }) => {
+                  let statusConfig = {
+                    [t("inStock", "products") || "In Stock"]: {
+                      color: "bg-green-100 text-green-800",
+                      icon: <CheckCircle size={12} className="mr-1" />,
+                    },
+                    [t("lowStock", "products") || "Low Stock"]: {
+                      color: "bg-yellow-100 text-yellow-800",
+                      icon: <AlertCircle size={12} className="mr-1" />,
+                    },
+                    [t("outOfStock", "products") || "Out of Stock"]: {
+                      color: "bg-red-100 text-red-800",
+                      icon: <XCircle size={12} className="mr-1" />,
+                    },
+                  };
 
-            <Column
-              dataField="taxRate"
-              caption={t("taxRate", "products") || "Tax Rate"}
-              width="auto"
-              alignment="left"
-              allowGrouping={true}
-              cellRender={({ data }) => (
-                <div className="flex items-center">
-                  <span
-                    className={`font-medium ${
-                      data.taxRate === "20%"
-                        ? "text-red-600"
-                        : data.taxRate === "15%"
-                        ? "text-orange-600"
-                        : "text-green-600"
-                    }`}
-                  >
-                    {data.taxRate}
-                  </span>
-                </div>
-              )}
-            />
+                  const config = statusConfig[data.status] || {
+                    color: "bg-gray-100 text-gray-800",
+                  };
 
-            <Column
-              dataField="status"
-              caption={t("status", "common") || "Status"}
-              width="auto"
-              alignment="left"
-              allowGrouping={true}
-              cellRender={({ data }) => {
-                let statusConfig = {
-                  [t("inStock", "products") || "In Stock"]: {
-                    color: "bg-green-100 text-green-800",
-                    icon: <CheckCircle size={12} className="mr-1" />,
-                  },
-                  [t("lowStock", "products") || "Low Stock"]: {
-                    color: "bg-yellow-100 text-yellow-800",
-                    icon: <AlertCircle size={12} className="mr-1" />,
-                  },
-                  [t("outOfStock", "products") || "Out of Stock"]: {
-                    color: "bg-red-100 text-red-800",
-                    icon: <XCircle size={12} className="mr-1" />,
-                  },
-                };
+                  return (
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center ${config.color}`}
+                    >
+                      {config.icon}
+                      {data.status}
+                    </span>
+                  );
+                }}
+              />
 
-                const config = statusConfig[data.status] || {
-                  color: "bg-gray-100 text-gray-800",
-                };
-
-                return (
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center ${config.color}`}
-                  >
-                    {config.icon}
-                    {data.status}
-                  </span>
-                );
-              }}
-            />
-
-            <Column
-              caption={t("actions", "products") || "Actions"}
-              width="auto"
-              alignment="left"
-              cellRender={({ data }) => (
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => navigate(`/products/view/${data.id}`)}
-                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
-                    title={t("view", "common") || "View"}
-                  >
-                    <Eye size={16} />
-                  </button>
-                  <button
-                    onClick={() => navigate(`/products/edit/${data.id}`)}
-                    className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
-                    title={t("edit", "common") || "Edit"}
-                  >
-                    <Edit size={16} />
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleDelete(data.id, getProductNameByLanguage(data))
-                    }
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
-                    title={t("delete", "common") || "Delete"}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              )}
-            />
-          </DataGrid>
+              <Column
+                caption={t("actions", "products") || "Actions"}
+                width="auto"
+                alignment="left"
+                cellRender={({ data }) => (
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => navigate(`/products/view/${data.id}`)}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                      title={t("view", "common") || "View"}
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      onClick={() => navigate(`/products/edit/${data.id}`)}
+                      className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
+                      title={t("edit", "common") || "Edit"}
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleDelete(data.id, getProductNameByLanguage(data))
+                      }
+                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                      title={t("delete", "common") || "Delete"}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                )}
+              />
+            </DataGrid>
+          </>
         )}
       </div>
 

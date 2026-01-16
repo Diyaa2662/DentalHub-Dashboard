@@ -25,5 +25,6 @@
   "blockCustomer": "Blockera kund",
   "notSpecified": "Ej angivet",
   "invalidDataFormat": "Ogiltigt dataformat från servern",
-  "actions": "Åtgärder"
+  "actions": "Åtgärder",
+  "rating": "Betyg"
 }

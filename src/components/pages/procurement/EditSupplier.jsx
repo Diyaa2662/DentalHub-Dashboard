@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useLanguage } from "../../../contexts/LanguageContext";
 import api from "../../../services/api";
 import { TextBox, TextArea } from "devextreme-react";
+import { SelectBox } from "devextreme-react/select-box"; // ⬅️ أضف هذا الاستيراد
 import {
   ArrowLeft,
   Save,
@@ -18,12 +19,13 @@ import {
   Info,
   AlertCircle,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 
 const EditSupplier = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, currentLanguage } = useLanguage(); // ⬅️ أضف currentLanguage
 
   // حالة البيانات الأصلية للمقارنة
   const [originalData, setOriginalData] = useState(null);
@@ -45,19 +47,39 @@ const EditSupplier = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
-  // قائمة أنواع المنتجات
-  const productTypes = [
-    "Equipment",
-    "Disposables",
-    "Oral Hygiene",
-    "Surgical Tools",
-    "Clinic Furniture",
-    "Imaging",
-    "Orthodontic",
-    "Sterilization",
-    "Digital",
-    "Restorative",
-  ];
+  // State للفئات من API
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoriesError, setCategoriesError] = useState(null);
+
+  // ✅ جلب الفئات من API
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+
+      const response = await api.get("/categories");
+      const apiData = response.data?.data;
+
+      if (Array.isArray(apiData)) {
+        // تصفية الفئات النشطة فقط
+        const activeCategories = apiData.filter((cat) => cat.enabled === true);
+        setCategories(activeCategories);
+      } else {
+        setCategories([]);
+      }
+    } catch (err) {
+      setCategoriesError(
+        err.response?.data?.message ||
+          err.message ||
+          t("failedToLoadCategories", "procurement") ||
+          "Failed to load categories"
+      );
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
 
   // ✅ جلب بيانات المزود من API
   useEffect(() => {
@@ -66,6 +88,10 @@ const EditSupplier = () => {
         setLoading(true);
         setError(null);
 
+        // جلب الفئات أولاً
+        await fetchCategories();
+
+        // ثم جلب بيانات المزود
         const response = await api.get(`/suppliers/${id}`);
 
         if (response.data && response.data.data) {
@@ -101,6 +127,7 @@ const EditSupplier = () => {
     };
 
     fetchSupplier();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, t]);
 
   // ✅ تتبع التغييرات لمقارنة مع البيانات الأصلية
@@ -111,6 +138,33 @@ const EditSupplier = () => {
       setHasChanges(isChanged);
     }
   }, [formData, originalData]);
+
+  // تحويل الفئات لخيارات SelectBox بناءً على اللغة
+  const getCategoryDisplayName = (category) => {
+    // إذا كانت اللغة سويدي وكان هناك اسم سويدي، استخدمه
+    if (currentLanguage === "sv" && category.s_name && category.s_name.trim()) {
+      return category.s_name;
+    }
+    // وإلا استخدم الاسم الإنجليزي
+    return category.name || category.name_en || "Unnamed Category";
+  };
+
+  // تحضير خيارات الفئات للـ SelectBox
+  const categoryOptions = categories.map((category) => ({
+    id: category.id,
+    value: category.name || category.name_en, // القيمة المرسلة للـ API
+    label: getCategoryDisplayName(category), // الاسم المعروض بناءً على اللغة
+  }));
+
+  // إضافة خيار "Other" كخيار احتياطي
+  const allOptions = [
+    ...categoryOptions,
+    {
+      id: "other",
+      value: "Other",
+      label: t("other", "procurement") || "Other",
+    },
+  ];
 
   // معالجة تغيير الحقول النصية
   const handleChange = (name, value) => {
@@ -304,6 +358,10 @@ const EditSupplier = () => {
       setLoading(true);
       setError(null);
 
+      // إعادة تحميل الفئات
+      await fetchCategories();
+
+      // إعادة تحميل بيانات المزود
       const response = await api.get(`/supplier/${id}`);
 
       if (response.data && response.data.data) {
@@ -332,6 +390,11 @@ const EditSupplier = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ✅ إعادة تحميل الفئات فقط
+  const handleRefreshCategories = async () => {
+    await fetchCategories();
   };
 
   if (loading) {
@@ -448,6 +511,25 @@ const EditSupplier = () => {
                 {t("error", "common") || "Error"}
               </h3>
               <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ رسالة تحذير تحميل الفئات */}
+      {categoriesError && (
+        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+          <div className="flex items-center">
+            <AlertCircle className="text-yellow-600 mr-3" size={20} />
+            <div>
+              <h3 className="font-medium text-yellow-800">
+                {t("categoriesLoadWarning", "procurement") || "Warning"}
+              </h3>
+              <p className="text-yellow-600 text-sm">
+                {categoriesError} -{" "}
+                {t("usingDefaultOptions", "procurement") ||
+                  "Using default options"}
+              </p>
             </div>
           </div>
         </div>
@@ -621,26 +703,67 @@ const EditSupplier = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t("productType", "procurement") || "Product Type"} *
-                  </label>
-                  <select
-                    value={formData.product_type}
-                    onChange={(e) =>
-                      handleChange("product_type", e.target.value)
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                  >
-                    <option value="">
-                      {t("selectProductType", "procurement") ||
-                        "Select Product Type"}
-                    </option>
-                    {productTypes.map((type, index) => (
-                      <option key={index} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700 flex items-center">
+                      <Package className="mr-2 text-gray-500" size={16} />
+                      {t("productType", "procurement") || "Product Type"} *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleRefreshCategories}
+                      disabled={categoriesLoading}
+                      className="text-xs text-dental-blue hover:text-blue-600 hover:underline flex items-center"
+                      title={
+                        t("refreshCategories", "procurement") ||
+                        "Refresh categories"
+                      }
+                    >
+                      {categoriesLoading ? (
+                        <Loader2 size={12} className="mr-1 animate-spin" />
+                      ) : (
+                        <Package size={12} className="mr-1" />
+                      )}
+                      {t("refreshCategories", "procurement") || "Refresh"}
+                    </button>
+                  </div>
+
+                  {categoriesLoading ? (
+                    <div className="flex items-center justify-center py-4 border border-gray-300 rounded-lg">
+                      <Loader2
+                        className="animate-spin text-dental-blue mr-2"
+                        size={20}
+                      />
+                      <span className="text-gray-600">
+                        {t("loadingCategories", "procurement") ||
+                          "Loading categories..."}
+                      </span>
+                    </div>
+                  ) : (
+                    <SelectBox
+                      items={allOptions}
+                      value={formData.product_type}
+                      onValueChange={(value) =>
+                        handleChange("product_type", value)
+                      }
+                      displayExpr="label"
+                      valueExpr="value"
+                      placeholder={
+                        categories.length === 0
+                          ? t("noCategoriesAvailable", "procurement") ||
+                            "No categories available"
+                          : t("selectProductType", "procurement") ||
+                            "Select product type"
+                      }
+                      searchEnabled={true}
+                      width="100%"
+                      isValid={!validationErrors.product_type}
+                      noDataText={
+                        t("noCategoriesFound", "procurement") ||
+                        "No categories found"
+                      }
+                    />
+                  )}
+
                   {validationErrors.product_type && (
                     <p className="text-red-600 text-xs mt-1">
                       {validationErrors.product_type}
@@ -714,11 +837,11 @@ const EditSupplier = () => {
 
                 <button
                   type="submit"
-                  disabled={updating}
+                  disabled={updating || categoriesLoading}
                   className={`
                     px-6 py-2 rounded-lg font-medium transition flex items-center justify-center
                     ${
-                      updating
+                      updating || categoriesLoading
                         ? "bg-gray-400 cursor-not-allowed text-white"
                         : "bg-dental-blue text-white hover:bg-blue-600"
                     }
@@ -770,32 +893,14 @@ const EditSupplier = () => {
                     </span>
                   </div>
                 </div>
-                <div className="pt-4 border-t border-gray-200">
-                  <p className="text-sm text-gray-600">Last Updated</p>
-                  <p className="font-medium">
-                    {new Date().toLocaleDateString()}
+                <div>
+                  <p className="text-sm text-gray-600">Categories Available</p>
+                  <p className="font-medium text-gray-800">
+                    {categories.length}{" "}
+                    {t("activeCategories", "procurement") ||
+                      "active categories"}
                   </p>
                 </div>
-              </div>
-            </div>
-
-            {/* API Information */}
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                🔗 {t("apiInformation", "procurement") || "API Information"}
-              </h3>
-              <div className="space-y-2 text-sm text-gray-600">
-                <p>
-                  <span className="font-medium">GET:</span> /supplier/{id}
-                </p>
-                <p>
-                  <span className="font-medium">POST:</span> /updatesupplier/
-                  {id}
-                </p>
-                <p className="mt-2 text-xs">
-                  {t("dataWillBeUpdated", "procurement") ||
-                    "Data will be updated directly in the database via API."}
-                </p>
               </div>
             </div>
           </div>

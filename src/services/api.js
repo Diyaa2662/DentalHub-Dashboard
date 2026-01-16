@@ -1,19 +1,15 @@
-// ملف: src/services/api.js
 import axios from 'axios';
 
-const BASE_URL = 'https://dentist-production.up.railway.app/api'; 
+const BASE_URL = 'https://nethy-production.up.railway.app/api'; 
 
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
-  // ❌ أزل الـ headers الافتراضية هنا لأنها تسبب المشكلة
 });
 
 // 🔐 إعداد Bearer Token تلقائياً من localStorage
-// في ملف api.js - النسخة المحسنة
 api.interceptors.request.use(
   (config) => {
-    // ✅ اجعل هذا الشرط أول شيء
     // إذا كان FormData لا تلمس Content-Type
     const isFormData = config.data instanceof FormData;
     
@@ -27,11 +23,6 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // ✅ طباعة للتصحيح (يمكن حذفها لاحقاً)
-    // console.log(`Request to: ${config.url}`);
-    // console.log(`Is FormData: ${isFormData}`);
-    // console.log(`Content-Type: ${config.headers['Content-Type']}`);
     
     return config;
   },

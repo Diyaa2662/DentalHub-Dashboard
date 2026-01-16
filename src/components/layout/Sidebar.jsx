@@ -72,12 +72,6 @@ const Sidebar = () => {
           icon: <FolderTree size={18} />,
           path: "/categories",
         },
-        {
-          id: "inventory",
-          label: t("inventoryManagement", "navigation"),
-          icon: <Package size={18} />,
-          path: "/inventory",
-        },
       ],
     },
     {
@@ -155,6 +149,12 @@ const Sidebar = () => {
       icon: <TrendingUp size={20} />,
       items: [
         {
+          id: "inventory",
+          label: t("inventoryManagement", "navigation"),
+          icon: <Package size={18} />,
+          path: "/inventory",
+        },
+        {
           id: "analytics",
           label: t("analytics", "navigation") || t("analytics", "common"),
           icon: <BarChart3 size={18} />,
@@ -193,9 +193,7 @@ const Sidebar = () => {
               <Activity className="text-white" size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-800">
-                DentalPro Shop
-              </h1>
+              <h1 className="text-xl font-bold text-gray-800">DentalHub</h1>
               <p className="text-sm text-gray-500">
                 {t("adminDashboard", "navigation") || "لوحة التحكم"}
               </p>
@@ -306,7 +304,7 @@ const Sidebar = () => {
               <p className="font-medium text-gray-800">
                 {t("adminUser", "navigation") || "المدير"}
               </p>
-              <p className="text-sm text-gray-500">admin@dentalpro.com</p>
+              <p className="text-sm text-gray-500">admin@dentalhub.com</p>
             </div>
           </div>
 

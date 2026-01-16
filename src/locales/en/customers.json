@@ -25,5 +25,6 @@
   "blockCustomer": "Block Customer",
   "notSpecified": "Not specified",
   "invalidDataFormat": "Invalid data format from server",
-  "actions": "Actions"
+  "actions": "Actions",
+  "rating": "Rating"
 }

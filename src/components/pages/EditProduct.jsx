@@ -89,7 +89,7 @@ const EditProduct = () => {
             ...img,
             fullUrl: img.url.startsWith("http")
               ? img.url
-              : `https://dentist-production.up.railway.app${img.url}`,
+              : `https://nethy-production.up.railway.app${img.url}`,
           })) || [];
 
         const preparedData = {
