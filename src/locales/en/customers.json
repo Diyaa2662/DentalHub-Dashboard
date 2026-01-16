@@ -26,5 +26,13 @@
   "notSpecified": "Not specified",
   "invalidDataFormat": "Invalid data format from server",
   "actions": "Actions",
-  "rating": "Rating"
+  "rating": "Rating",
+  "ratingHelp": "Enter a value between 0 and 5",
+  "editRating": "Edit Rating",
+  "currentRating": "Current Rating",
+  "newRating": "New Rating",
+  "saveRating": "Save Rating",
+  "customer": "Customer",
+  "failedToUpdateRating": "Failed to update rating",
+  "ratingUpdated": "Rating updated successfully"
 }

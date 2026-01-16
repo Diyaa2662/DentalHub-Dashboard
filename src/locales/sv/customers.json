@@ -26,5 +26,13 @@
   "notSpecified": "Ej angivet",
   "invalidDataFormat": "Ogiltigt dataformat från servern",
   "actions": "Åtgärder",
-  "rating": "Betyg"
+  "rating": "Betyg",
+  "ratingHelp": "Ange ett värde mellan 0 och 5",
+  "editRating": "Redigera betyg",
+  "currentRating": "Nuvarande betyg",
+  "newRating": "Nytt betyg",
+  "saveRating": "Spara betyg",
+  "customer": "Kund",
+  "failedToUpdateRating": "Kunde inte uppdatera betyg",
+  "ratingUpdated": "Betyget uppdaterades framgångsrikt"
 }

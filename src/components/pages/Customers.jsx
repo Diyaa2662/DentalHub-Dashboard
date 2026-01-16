@@ -20,7 +20,10 @@ import {
   AlertCircle,
   RefreshCw,
   Ban,
+  Star,
+  Edit,
 } from "lucide-react";
+import { Popup } from "devextreme-react/popup";
 
 const Customers = () => {
   const { t } = useLanguage();
@@ -29,6 +32,15 @@ const Customers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // حالة للتقييم الجديد
+  const [ratingPopup, setRatingPopup] = useState({
+    visible: false,
+    customerId: null,
+    customerName: "",
+    currentRating: "",
+    newRating: "",
+  });
+
   // ✅ بيانات ثابتة للإحصائيات والتوب كاستومرز
   const statsData = {
     totalCustomers: "1,234",
@@ -36,44 +48,6 @@ const Customers = () => {
     fromLastMonth: "+12.5%",
     avgOrderGrowth: "+5.3%",
   };
-
-  // const topCustomersData = [
-  //   {
-  //     rank: 1,
-  //     name: "Dr. Michael Chen",
-  //     spent: "$12,800",
-  //     orders: 8,
-  //     growth: "+24%",
-  //   },
-  //   {
-  //     rank: 2,
-  //     name: "Dr. Lisa Martinez",
-  //     spent: "$9,250",
-  //     orders: 18,
-  //     growth: "+18%",
-  //   },
-  //   {
-  //     rank: 3,
-  //     name: "Dr. Sarah Johnson",
-  //     spent: "$8,450",
-  //     orders: 15,
-  //     growth: "+15%",
-  //   },
-  //   {
-  //     rank: 4,
-  //     name: "Dr. Maria Garcia",
-  //     spent: "$7,450",
-  //     orders: 14,
-  //     growth: "+12%",
-  //   },
-  //   {
-  //     rank: 5,
-  //     name: "Dr. Emily Williams",
-  //     spent: "$5,320",
-  //     orders: 23,
-  //     growth: "+8%",
-  //   },
-  // ];
 
   // ✅ جلب بيانات الزبائن من API
   useEffect(() => {
@@ -90,7 +64,7 @@ const Customers = () => {
 
       // ✅ استخراج البيانات من هيكل الاستجابة المبسط
       const apiData = response.data?.data;
-
+      console.log("Fetched Customers Data:", apiData);
       if (Array.isArray(apiData)) {
         if (apiData.length === 0) {
           // ✅ لا يوجد زبائن
@@ -126,6 +100,9 @@ const Customers = () => {
               customer.registration_date ||
               "";
 
+            // ✅ معالجة التقييم
+            const rate = customer.rate || customer.rating || "0.00";
+
             return {
               id: customerId,
               name: customerName,
@@ -139,6 +116,7 @@ const Customers = () => {
               orders: ordersCount,
               totalSpent: totalSpent,
               joinDate: joinDate,
+              rate: rate, // إضافة التقييم
             };
           });
 
@@ -178,6 +156,73 @@ const Customers = () => {
     ) {
       // ⏳ سيتم ربطها بالـAPI لاحقاً
       alert(`${t("customerBlocked", "customers")}: ${name}`);
+    }
+  };
+
+  // ✅ فتح بوب اب تعديل التقييم
+  const openRatingPopup = (customer) => {
+    setRatingPopup({
+      visible: true,
+      customerId: customer.id,
+      customerName: customer.name,
+      currentRating: customer.rate || "0.00",
+      newRating: customer.rate || "0.00",
+    });
+  };
+
+  // ✅ إغلاق بوب اب التقييم
+  const closeRatingPopup = () => {
+    setRatingPopup({
+      visible: false,
+      customerId: null,
+      customerName: "",
+      currentRating: "",
+      newRating: "",
+    });
+  };
+
+  // ✅ تغيير قيمة التقييم
+  const handleRatingChange = (value) => {
+    // التأكد من أن القيمة بين 0 و 5
+    let ratingValue = parseFloat(value);
+    if (isNaN(ratingValue)) ratingValue = 0;
+    if (ratingValue < 0) ratingValue = 0;
+    if (ratingValue > 5) ratingValue = 5;
+
+    setRatingPopup({
+      ...ratingPopup,
+      newRating: ratingValue.toFixed(2),
+    });
+  };
+
+  // ✅ حفظ التقييم الجديد
+  const saveRating = async () => {
+    if (!ratingPopup.customerId) return;
+
+    try {
+      const response = await api.post(`/updaterate/${ratingPopup.customerId}`, {
+        rate: parseFloat(ratingPopup.newRating),
+      });
+
+      if (response.status === 200) {
+        // تحديث البيانات المحلية
+        setCustomersData((prevData) =>
+          prevData.map((customer) =>
+            customer.id === ratingPopup.customerId
+              ? { ...customer, rate: ratingPopup.newRating }
+              : customer
+          )
+        );
+
+        closeRatingPopup();
+      }
+    } catch (err) {
+      console.error("Error updating rating:", err);
+      alert(
+        t("failedToUpdateRating", "customers") ||
+          "Failed to update rating: " +
+            (err.response?.data?.message || err.message)
+      );
     }
   };
 
@@ -512,6 +557,23 @@ const Customers = () => {
               )}
             />
 
+            {/* ✅ عمود التقييم الجديد */}
+            <Column
+              dataField="rate"
+              caption={t("rating", "customers") || "Rating"}
+              width={"auto"}
+              alignment="center"
+              allowHeaderFiltering={true}
+              allowFiltering={true}
+              allowGrouping={true}
+              cellRender={({ data }) => (
+                <div className="flex items-center justify-center space-x-1">
+                  <Star className="text-yellow-500 fill-yellow-500" size={16} />
+                  <span className="font-medium">{data.rate}</span>
+                </div>
+              )}
+            />
+
             <Column
               dataField="orders"
               caption={t("orders", "navigation")}
@@ -544,13 +606,20 @@ const Customers = () => {
               allowGrouping={true}
             />
 
-            {/* ✅ عمود Actions مع زر الحظر */}
+            {/* ✅ عمود Actions مع زر تعديل التقييم وزر الحظر */}
             <Column
               caption={t("actions", "customers") || "Actions"}
-              width={100}
+              width={120}
               alignment="center"
               cellRender={({ data }) => (
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center space-x-2">
+                  <button
+                    className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
+                    title={t("editRating", "customers") || "Edit Rating"}
+                    onClick={() => openRatingPopup(data)}
+                  >
+                    <Edit size={18} />
+                  </button>
                   <button
                     className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
                     title={t("blockCustomer", "customers") || "Block Customer"}
@@ -565,58 +634,79 @@ const Customers = () => {
         )}
       </div>
 
-      {/* Top Customers - بيانات ثابتة */}
-      {/* <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800">
-              {t("topCustomers", "customers")}
-            </h3>
+      {/* ✅ Popup لتعديل التقييم */}
+      <Popup
+        visible={ratingPopup.visible}
+        onHiding={closeRatingPopup}
+        dragEnabled={false}
+        hideOnOutsideClickk={true}
+        showTitle={true}
+        title={t("editRating", "customers") || "Edit Customer Rating"}
+        width={400}
+        height={320}
+      >
+        <div className="p-4 space-y-6">
+          <div className="space-y-2">
             <p className="text-sm text-gray-600">
-              {t("highestSpendingCustomers", "customers")}
+              {t("customer", "customers") || "Customer"}:
+            </p>
+            <p className="font-medium text-gray-800">
+              {ratingPopup.customerName}
             </p>
           </div>
-          <Users className="text-dental-teal" size={24} />
-        </div>
 
-        <div className="space-y-4">
-          {topCustomersData.map((customer) => (
-            <div
-              key={customer.rank}
-              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-            >
-              <div className="flex items-center space-x-4">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-                    customer.rank === 1
-                      ? "bg-yellow-500"
-                      : customer.rank === 2
-                      ? "bg-gray-400"
-                      : customer.rank === 3
-                      ? "bg-amber-700"
-                      : "bg-gray-300"
-                  }`}
-                >
-                  {customer.rank}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-800">{customer.name}</p>
-                  <p className="text-sm text-gray-600">
-                    {customer.orders} {t("orders", "navigation").toLowerCase()}{" "}
-                    • {t("total", "customers")}: {customer.spent}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-medium text-green-600">{customer.growth}</p>
-                <p className="text-sm text-gray-600">
-                  {t("growth", "customers")}
-                </p>
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600">
+              {t("currentRating", "customers") || "Current Rating"}:
+            </p>
+            <div className="flex items-center space-x-2">
+              <Star className="text-yellow-500 fill-yellow-500" size={20} />
+              <span className="text-lg font-bold">
+                {ratingPopup.currentRating}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm text-gray-600">
+              {t("newRating", "customers") || "New Rating"} (0 - 5):
+            </label>
+            <div className="flex items-center space-x-4">
+              <input
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                value={ratingPopup.newRating}
+                onChange={(e) => handleRatingChange(e.target.value)}
+                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <div className="flex items-center space-x-1">
+                <Star className="text-yellow-500 fill-yellow-500" size={20} />
+                <span className="font-medium">{ratingPopup.newRating}</span>
               </div>
             </div>
-          ))}
+            <p className="text-xs text-gray-500">
+              {t("ratingHelp", "customers") || "Enter a value between 0 and 5"}
+            </p>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              onClick={closeRatingPopup}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+            >
+              {t("cancel", "common") || "Cancel"}
+            </button>
+            <button
+              onClick={saveRating}
+              className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition"
+            >
+              {t("saveRating", "customers") || "Save Rating"}
+            </button>
+          </div>
         </div>
-      </div> */}
+      </Popup>
     </div>
   );
 };
