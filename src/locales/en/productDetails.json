@@ -78,5 +78,6 @@
   "deleteSuccess": "Product deleted successfully",
   "deleteError": "Error deleting product",
   "alertStock": "Alert Stock",
-  "statusFromAPI": "Status from server"
+  "statusFromAPI": "Status from server",
+  "noImagesAvailable": "No images available"
 }

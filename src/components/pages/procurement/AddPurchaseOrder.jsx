@@ -966,7 +966,7 @@ const AddPurchaseOrder = () => {
                       <option value="GBP">GBP (£)</option>
                     </select>
                     <Globe
-                      className="absolute right-3 top-2.5 text-gray-400"
+                      className="absolute right-6 top-2.5 text-gray-400"
                       size={18}
                     />
                   </div>

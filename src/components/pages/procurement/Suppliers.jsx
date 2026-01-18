@@ -70,7 +70,7 @@ const Suppliers = () => {
       } else {
         setError(
           t("invalidDataFormat", "procurement") ||
-            "Invalid data format from server"
+            "Invalid data format from server",
         );
         setSuppliersData([]);
         setStats({ totalSuppliers: 0 });
@@ -80,7 +80,7 @@ const Suppliers = () => {
         err.response?.data?.message ||
           err.message ||
           t("failedToLoadSuppliers", "procurement") ||
-          "Failed to load suppliers"
+          "Failed to load suppliers",
       );
 
       setSuppliersData([]);
@@ -189,7 +189,7 @@ const Suppliers = () => {
       alert(
         err.response?.data?.message ||
           t("deleteError", "procurement") ||
-          "Error deleting supplier"
+          "Error deleting supplier",
       );
     }
   };
@@ -224,9 +224,9 @@ const Suppliers = () => {
                 <p className="text-sm text-gray-500">
                   {t("totalSuppliers", "procurement") || "Total Suppliers"}
                 </p>
-                <p className="text-2xl font-bold text-gray-800">
+                <div className="text-2xl font-bold text-gray-800">
                   <div className="animate-pulse bg-gray-200 h-8 w-16 rounded"></div>
-                </p>
+                </div>
               </div>
               <div className="p-2 bg-blue-50 rounded-lg">
                 <Building className="text-blue-600" size={24} />

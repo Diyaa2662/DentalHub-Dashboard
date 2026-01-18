@@ -4,7 +4,7 @@ const BASE_URL = 'https://nethy-production.up.railway.app/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
 });
 
 // 🔐 إعداد Bearer Token تلقائياً من localStorage

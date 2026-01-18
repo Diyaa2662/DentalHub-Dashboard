@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
+import api from "../../services/api";
 import {
   ArrowLeft,
   Printer,
@@ -17,12 +18,14 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  Filter,
-  Tag,
   ShoppingCart,
   Box,
-  ChevronRight,
   PackageIcon,
+  AlertCircle,
+  RefreshCw,
+  Check,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 
 const OrderDetails = () => {
@@ -30,147 +33,348 @@ const OrderDetails = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
 
-  // بيانات وهمية للطلب (ستأتي من API لاحقاً)
+  // ✅ تعريف الحالات الثابتة (نفس صفحة الطلبات)
+  const STATUSES = {
+    PENDING: "pending",
+    CONFIRMED: "confirmed",
+    CANCELED: "canceled",
+  };
+
   const [order, setOrder] = useState(null);
+  const [customerInfo, setCustomerInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingCustomer, setLoadingCustomer] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [error, setError] = useState(null);
+  const [customerError, setCustomerError] = useState(null);
 
   useEffect(() => {
-    // محاكاة جلب بيانات الطلب من API
-    setTimeout(() => {
-      const mockOrder = {
-        id: parseInt(id),
-        customerName: "Dr. Sarah Johnson",
-        customerEmail: "sarah@dentalclinic.com",
-        customerPhone: "(555) 123-4567",
-        orderDate: "2024-01-15",
-        estimatedDelivery: "2024-01-22",
-
-        // تفاصيل المبلغ
-        subtotal: 450,
-        tax: 45,
-        discount: 22.5,
-        shippingFee: 15,
-        totalAmount: 487.5,
-        currency: "USD",
-
-        // طريقة الدفع
-        paymentMethod: "credit_card",
-        transactionId: "TXN-7890123456",
-        paymentStatus: "paid",
-
-        // معلومات الشحن
-        shippingAddress: "123 Dental Street, Suite 456, New York, NY 10001",
-        billingAddress: "123 Dental Street, Suite 456, New York, NY 10001",
-        shippingMethod: "Express Delivery",
-        trackingNumber: "TRK-7894561230",
-        orderStatus: "completed",
-
-        // ملاحظات العميل
-        customerNotes:
-          "Please deliver between 9 AM - 5 PM. Call before delivery.",
-
-        // عناصر الطلب مع قيم ثابتة
-        items: [
-          {
-            id: 1,
-            product: "Advanced Dental Chair",
-            quantity: 1,
-            unitPrice: 450,
-            // ✅ قيم ثابتة كما طلبت
-            subTotal: 450,
-            discountAmount: 45, // خصم ثابت بالدولار
-            taxAmount: 22.5, // ضريبة قيمة ثابتة
-            finalPrice: 427.5,
-            currentStock: 12,
-            image:
-              "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w-400&auto=format&fit=crop",
-          },
-          {
-            id: 2,
-            product: "Surgical Gloves (Box of 100)",
-            quantity: 2,
-            unitPrice: 25,
-            // ✅ قيم ثابتة كما طلبت
-            subTotal: 50,
-            discountAmount: 5,
-            taxAmount: 2.5,
-            finalPrice: 47.5,
-            currentStock: 45,
-            image:
-              "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w-400&auto=format&fit=crop",
-          },
-          {
-            id: 3,
-            product: "Dental Mirror Set",
-            quantity: 3,
-            unitPrice: 15,
-            // ✅ قيم ثابتة كما طلبت
-            subTotal: 45,
-            discountAmount: 4.5,
-            taxAmount: 2.25,
-            finalPrice: 42.75,
-            currentStock: 28,
-            image:
-              "https://images.unsplash.com/photo-1551601651-2a8555f1a136?w-400&auto=format&fit=crop",
-          },
-        ],
-      };
-      setOrder(mockOrder);
-      setLoading(false);
-    }, 500);
+    fetchOrderDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // ترجمة العملة
-  const getCurrencyDisplay = (currencyCode) => {
-    const currencies = {
-      USD: t("USD", "orderDetails"),
-      EUR: t("EUR", "orderDetails"),
-      GBP: t("GBP", "orderDetails"),
-      SAR: t("SAR", "orderDetails"),
-      AED: t("AED", "orderDetails"),
-    };
-    return currencies[currencyCode] || currencyCode;
+  // ✅ دالة لإنشاء رابط الصورة الكامل
+  const getFullImageUrl = (url) => {
+    if (!url) return getDefaultImage();
+    if (url.startsWith("http")) return url;
+    return `https://nethy-production.up.railway.app${url}`;
   };
 
-  // ترجمة حالة الطلب
-  const getOrderStatusDisplay = (status) => {
-    const statuses = {
-      pending: {
-        text: t("pending", "common"),
-        color: "bg-yellow-100 text-yellow-800",
-        icon: <Clock size={16} />,
-      },
-      processing: {
-        text: t("processing", "common"),
-        color: "bg-blue-100 text-blue-800",
-        icon: <Filter size={16} />,
-      },
-      completed: {
-        text: t("completed", "common"),
-        color: "bg-green-100 text-green-800",
-        icon: <CheckCircle size={16} />,
-      },
-      shipped: {
-        text: t("shipped", "orders"),
-        color: "bg-purple-100 text-purple-800",
-        icon: <Truck size={16} />,
-      },
-      cancelled: {
-        text: t("cancelled", "common"),
-        color: "bg-red-100 text-red-800",
-        icon: <XCircle size={16} />,
-      },
-    };
-    return (
-      statuses[status] || {
-        text: status,
-        color: "bg-gray-100 text-gray-800",
-        icon: <Clock size={16} />,
+  // ✅ دالة للحصول على صورة افتراضية آمنة
+  const getDefaultImage = () => {
+    const svgData = `
+      <svg width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="#f3f4f6"/>
+        <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">No Image</text>
+      </svg>
+    `;
+    return `data:image/svg+xml;base64,${btoa(svgData)}`;
+  };
+
+  // ✅ دالة لتحميل الصورة بشكل آمن مع fallback
+  const loadImageSafely = (url, fallbackUrl = null) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(url);
+      img.onerror = () => resolve(fallbackUrl || getDefaultImage());
+      img.src = url;
+    });
+  };
+
+  // ✅ توليد صورة افتراضية للمنتج من Unsplash
+  const getProductImage = (productId) => {
+    const images = [
+      "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=400&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=400&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1512290923901-15a3c1d01b51?w=400&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1564466809055-6c0414b8d7d9?w=400&auto=format&fit=crop",
+    ];
+    return images[productId % images.length] || getDefaultImage();
+  };
+
+  const fetchOrderDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setCustomerInfo(null);
+      setCustomerError(null);
+
+      const response = await api.get(`/customerorders/${id}`);
+      const data = response.data;
+
+      if (data.order) {
+        // ✅ معالجة حالة الطلب من API - استخدام نفس منطق صفحة الطلبات
+        let orderStatus = STATUSES.PENDING; // الحالة الافتراضية
+
+        if (data.order.status) {
+          const statusLower = data.order.status.toLowerCase();
+          if (statusLower === STATUSES.CONFIRMED) {
+            orderStatus = STATUSES.CONFIRMED;
+          } else if (statusLower === STATUSES.CANCELED) {
+            orderStatus = STATUSES.CANCELED;
+          } else if (statusLower === STATUSES.PENDING) {
+            orderStatus = STATUSES.PENDING;
+          }
+        }
+
+        // تحويل بيانات API لتنسيق التطبيق
+        const formattedOrder = {
+          id: data.order.id,
+          orderNumber: data.order.order_number,
+          userId: data.order.user_id,
+          customerName:
+            data.order.user_name || `Customer #${data.order.user_id}`,
+          orderDate:
+            data.order.order_date || data.order.created_at?.split("T")[0],
+
+          // تفاصيل المبلغ من API
+          subtotal: parseFloat(data.order.subtotal) || 0,
+          tax: parseFloat(data.order.tax_amount) || 0,
+          discount: parseFloat(data.order.discount_amount) || 0,
+          totalAmount: parseFloat(data.order.total_amount) || 0,
+          currency: data.order.currency || "USD",
+
+          // طريقة الدفع
+          paymentMethod: data.order.payment_method || "not_specified",
+
+          // حالة الطلب - استخدام الحالة المعالجة
+          orderStatus: orderStatus,
+          originalStatus: data.order.status,
+
+          // ملاحظات العميل
+          customerNotes: data.order.notes || "",
+
+          // عناصر الطلب من products array
+          items: data.products
+            ? await Promise.all(
+                data.products.map(async (product) => {
+                  const pivot = product.pivot;
+                  const subtotal = parseFloat(pivot.subtotal) || 0;
+                  const discountAmount = parseFloat(pivot.discount_amount) || 0;
+                  const taxAmount = parseFloat(pivot.tax_amount) || 0;
+                  const finalPrice = subtotal - discountAmount + taxAmount;
+
+                  // استخدام الصور من API
+                  let productImage = getProductImage(product.id);
+                  if (
+                    product.images &&
+                    product.images.length > 0 &&
+                    product.images[0].url
+                  ) {
+                    const fullImageUrl = getFullImageUrl(product.images[0].url);
+                    productImage = await loadImageSafely(
+                      fullImageUrl,
+                      productImage,
+                    );
+                  }
+
+                  return {
+                    id: product.id,
+                    product: product.name || `Product ${product.id}`,
+                    sku: product.sku || `SKU-${product.id}`,
+                    quantity: pivot.quantity || 1,
+                    unitPrice:
+                      parseFloat(pivot.unit_price) ||
+                      parseFloat(product.price) ||
+                      0,
+                    subTotal: subtotal,
+                    discountAmount: discountAmount,
+                    taxAmount: taxAmount,
+                    finalPrice: finalPrice,
+                    currentStock: product.stock_quantity || 0,
+                    status: product.status || "instock",
+                    image: productImage,
+                    allImages: product.images
+                      ? product.images.map((img) => ({
+                          ...img,
+                          fullUrl: getFullImageUrl(img.url),
+                        }))
+                      : [],
+                  };
+                }),
+              )
+            : [],
+        };
+
+        setOrder(formattedOrder);
+
+        // جلب معلومات الزبون
+        if (data.order.user_id) {
+          fetchCustomerInfo(data.order.user_id);
+        } else {
+          setLoading(false);
+        }
+      } else {
+        setError(t("orderNotFound", "orderDetails") || "Order not found");
+        setLoading(false);
       }
-    );
+    } catch (err) {
+      console.error("Error fetching order details:", err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          t("failedToLoadOrder", "orderDetails") ||
+          "Failed to load order details",
+      );
+      setLoading(false);
+    }
   };
 
-  // ترجمة طريقة الدفع
+  // ✅ جلب معلومات الزبون من API منفصل
+  const fetchCustomerInfo = async (userId) => {
+    try {
+      setLoadingCustomer(true);
+      setCustomerError(null);
+
+      const response = await api.get(`/users/${userId}`);
+      const customerData =
+        response.data?.user || response.data?.data || response.data;
+
+      if (customerData) {
+        setCustomerInfo({
+          name: customerData.name || "",
+          email: customerData.email || "",
+          phone: customerData.phone || "",
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching customer info:", err);
+      setCustomerError(
+        err.response?.data?.message ||
+          err.message ||
+          t("failedToLoadCustomer", "orderDetails") ||
+          "Failed to load customer information",
+      );
+    } finally {
+      setLoadingCustomer(false);
+      setLoading(false);
+    }
+  };
+
+  // ✅ الحصول على أيقونة الحالة
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case STATUSES.CONFIRMED:
+        return <CheckCircle size={16} className="text-green-600" />;
+      case STATUSES.PENDING:
+        return <Clock size={16} className="text-yellow-600" />;
+      case STATUSES.CANCELED:
+        return <XCircle size={16} className="text-red-600" />;
+      default:
+        return <Package size={16} className="text-gray-600" />;
+    }
+  };
+
+  // ✅ الحصول على لون الحالة
+  const getStatusColor = (status) => {
+    switch (status) {
+      case STATUSES.CONFIRMED:
+        return "bg-green-100 text-green-800 border border-green-200";
+      case STATUSES.PENDING:
+        return "bg-yellow-100 text-yellow-800 border border-yellow-200";
+      case STATUSES.CANCELED:
+        return "bg-red-100 text-red-800 border border-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border border-gray-200";
+    }
+  };
+
+  // ✅ الحصول على نص الحالة
+  const getStatusText = (status) => {
+    switch (status) {
+      case STATUSES.CONFIRMED:
+        return t("confirmed", "common") || "Confirmed";
+      case STATUSES.PENDING:
+        return t("pending", "common") || "Pending";
+      case STATUSES.CANCELED:
+        return t("canceled", "common") || "Canceled";
+      default:
+        return status?.charAt(0).toUpperCase() + status?.slice(1) || "Unknown";
+    }
+  };
+
+  // ✅ دالة إعادة التحميل
+  const handleRefresh = () => {
+    fetchOrderDetails();
+  };
+
+  // ✅ دالة تغيير حالة الطلب (نفس منطق صفحة الطلبات)
+  const updateOrderStatus = async (newStatus) => {
+    if (!order) return;
+
+    setUpdatingStatus(true);
+    try {
+      let endpoint;
+
+      if (newStatus === STATUSES.CONFIRMED) {
+        endpoint = `/confirmcustomerorder/${order.id}`;
+      } else if (newStatus === STATUSES.CANCELED) {
+        endpoint = `/cancelcustomerorder/${order.id}`;
+      } else {
+        alert(t("invalidStatus", "orderDetails") || "Invalid status");
+        setUpdatingStatus(false);
+        return;
+      }
+
+      const response = await api.post(endpoint);
+
+      if (response.status === 200 || response.status === 201) {
+        // تحديث حالة الطلب محلياً
+        const updatedOrder = {
+          ...order,
+          orderStatus: newStatus,
+          originalStatus: newStatus,
+        };
+
+        setOrder(updatedOrder);
+
+        alert(
+          t("orderStatusUpdated", "orderDetails") ||
+            `Order status updated to ${getStatusText(newStatus)}`,
+        );
+      }
+    } catch (err) {
+      console.error("Error updating order status:", err);
+      alert(
+        t("failedToUpdateStatus", "orderDetails") ||
+          "Failed to update order status: " +
+            (err.response?.data?.message || err.message),
+      );
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // ✅ زر تأكيد الطلب (لحالة pending فقط) - منطق الزر القديم
+  const handleConfirmOrder = () => {
+    if (order.orderStatus !== STATUSES.PENDING) return;
+
+    if (
+      window.confirm(
+        t("confirmOrderConfirmation", "orderDetails") ||
+          `Are you sure you want to confirm order #${order.orderNumber}?`,
+      )
+    ) {
+      updateOrderStatus(STATUSES.CONFIRMED);
+    }
+  };
+
+  // ✅ زر إلغاء الطلب (لحالة confirmed فقط) - منطق الزر القديم
+  const handleCancelOrder = () => {
+    if (order.orderStatus !== STATUSES.CONFIRMED) return;
+
+    if (
+      window.confirm(
+        t("cancelOrderConfirmation", "orderDetails") ||
+          `Are you sure you want to cancel order #${order.orderNumber}?`,
+      )
+    ) {
+      updateOrderStatus(STATUSES.CANCELED);
+    }
+  };
+
+  // ✅ ترجمة طريقة الدفع
   const getPaymentMethodDisplay = (method) => {
     const methods = {
       credit_card: {
@@ -197,6 +401,18 @@ const OrderDetails = () => {
         color: "text-purple-600",
         bg: "bg-purple-50",
       },
+      paypal: {
+        text: "PayPal",
+        icon: <CreditCard size={16} />,
+        color: "text-blue-600",
+        bg: "bg-blue-50",
+      },
+      not_specified: {
+        text: t("notSpecified", "common") || "Not Specified",
+        icon: <CreditCard size={16} />,
+        color: "text-gray-600",
+        bg: "bg-gray-50",
+      },
     };
     return (
       methods[method] || {
@@ -208,32 +424,12 @@ const OrderDetails = () => {
     );
   };
 
-  // ترجمة حالة الدفع
-  const getPaymentStatusDisplay = (status) => {
-    const statuses = {
-      paid: {
-        text: t("paid", "orderDetails"),
-        color: "bg-green-100 text-green-800",
-      },
-      pending: {
-        text: t("pending", "common"),
-        color: "bg-yellow-100 text-yellow-800",
-      },
-      refunded: {
-        text: t("refunded", "orderDetails"),
-        color: "bg-red-100 text-red-800",
-      },
-      failed: {
-        text: t("failed", "orderDetails"),
-        color: "bg-red-100 text-red-800",
-      },
-    };
-    return (
-      statuses[status] || {
-        text: status,
-        color: "bg-gray-100 text-gray-800",
-      }
-    );
+  // ✅ تنسيق المبلغ
+  const formatCurrency = (amount, currency = "USD") => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency,
+    }).format(amount);
   };
 
   const handlePrintInvoice = () => {
@@ -241,79 +437,109 @@ const OrderDetails = () => {
   };
 
   const handleContactCustomer = () => {
-    window.location.href = `mailto:${order.customerEmail}`;
-  };
-
-  const handleUpdateStatus = () => {
-    const newStatus = prompt(
-      `${t("enterNewStatus", "orderDetails")} (${t("pending", "common")}/${t(
-        "processing",
-        "common"
-      )}/${t("completed", "common")}/${t("shipped", "orders")}/${t(
-        "cancelled",
-        "common"
-      )}):`
-    );
-    if (newStatus) {
+    if (customerInfo?.email) {
+      window.location.href = `mailto:${customerInfo.email}`;
+    } else {
       alert(
-        `${t("orderStatus", "orderDetails")} ${t(
-          "updatedTo",
-          "orderDetails"
-        )} ${newStatus}`
+        t("emailNotAvailable", "orderDetails") ||
+          "Customer email not available",
       );
     }
   };
 
-  const handleConfirmDelivery = () => {
-    // تأكيد التوصيل - مؤقت حتى ربط الباك اند
-    alert(
-      `✅ ${t("order", "orderDetails")} #${order.id} ${t(
-        "markedDelivered",
-        "orderDetails"
-      )}`
-    );
-    // يمكنك إضافة منطق هنا لاحقاً
-    // مثل: setOrder({...order, orderStatus: 'completed'});
-  };
-
+  // ✅ حالة التحميل
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dental-blue"></div>
-      </div>
-    );
-  }
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate("/orders")}
+              className="p-2 hover:bg-gray-100 rounded-lg transition"
+            >
+              <ArrowLeft size={24} className="text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                {t("orderDetails", "orderDetails")}
+              </h1>
+              <div className="flex items-center space-x-4 mt-1">
+                <p className="text-gray-600">
+                  {t("loadingOrderDetails", "orderDetails") ||
+                    "Loading order details..."}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-  if (!order) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <ShoppingCart className="mx-auto text-gray-400" size={48} />
-          <h3 className="mt-4 text-lg font-semibold text-gray-800">
-            {t("orderNotFound", "orderDetails")}
-          </h3>
-          <button
-            onClick={() => navigate("/orders")}
-            className="mt-4 px-4 py-2 bg-dental-blue text-white rounded-lg hover:bg-blue-600 transition"
-          >
-            {t("backToOrders", "orderDetails")}
-          </button>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dental-blue mx-auto mb-4"></div>
+            <p className="text-gray-600">
+              {t("loadingOrder", "orderDetails") || "Loading order details..."}
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
-  const orderStatus = getOrderStatusDisplay(order.orderStatus);
-  const paymentMethod = getPaymentMethodDisplay(order.paymentMethod);
-  const paymentStatus = getPaymentStatusDisplay(order.paymentStatus);
+  // ✅ حالة الخطأ
+  if (error || !order) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate("/orders")}
+              className="p-2 hover:bg-gray-100 rounded-lg transition"
+            >
+              <ArrowLeft size={24} className="text-gray-600" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                {t("orderDetails", "orderDetails")}
+              </h1>
+            </div>
+          </div>
+        </div>
 
-  // تنسيق المبلغ
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
-  };
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <div className="flex items-center mb-4">
+            <AlertCircle className="text-red-600 mr-3" size={24} />
+            <div>
+              <h3 className="font-bold text-red-800">
+                {t("errorLoadingOrder", "orderDetails") ||
+                  "Error Loading Order"}
+              </h3>
+              <p className="text-red-600">
+                {error || t("orderNotFound", "orderDetails")}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              onClick={() => navigate("/orders")}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+            >
+              {t("backToOrders", "orderDetails")}
+            </button>
+            <button
+              onClick={handleRefresh}
+              className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition flex items-center space-x-2"
+            >
+              <RefreshCw size={18} />
+              <span>{t("tryAgain", "common") || "Try Again"}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const paymentMethod = getPaymentMethodDisplay(order.paymentMethod);
 
   return (
     <div className="space-y-6">
@@ -332,13 +558,15 @@ const OrderDetails = () => {
             </h1>
             <div className="flex items-center space-x-4 mt-1">
               <p className="text-gray-600">
-                {t("order", "orderDetails")} #{order.id} • {order.customerName}
+                {t("order", "orderDetails")} #{order.id} • {order.orderNumber}
               </p>
               <span
-                className={`px-3 py-1 rounded-full text-sm font-medium inline-flex items-center space-x-1 ${orderStatus.color}`}
+                className={`px-3 py-1 rounded-full text-sm font-medium inline-flex items-center space-x-1 ${getStatusColor(
+                  order.orderStatus,
+                )}`}
               >
-                {orderStatus.icon}
-                <span>{orderStatus.text}</span>
+                {getStatusIcon(order.orderStatus)}
+                <span>{getStatusText(order.orderStatus)}</span>
               </span>
             </div>
           </div>
@@ -346,18 +574,19 @@ const OrderDetails = () => {
 
         <div className="flex space-x-3">
           <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2"
+            title={t("refresh", "common") || "Refresh"}
+          >
+            <RefreshCw size={18} />
+            <span>{t("refresh", "common") || "Refresh"}</span>
+          </button>
+          <button
             onClick={handlePrintInvoice}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2"
           >
             <Printer size={20} />
             <span>{t("printInvoice", "orderDetails")}</span>
-          </button>
-          <button
-            onClick={handleUpdateStatus}
-            className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition flex items-center space-x-2"
-          >
-            <CheckCircle size={20} />
-            <span>{t("updateStatus", "orderDetails")}</span>
           </button>
         </div>
       </div>
@@ -381,97 +610,148 @@ const OrderDetails = () => {
               </div>
             </div>
 
-            <div className="space-y-4">
-              {order.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex items-center space-x-4 flex-1">
-                    {/* ✅ حجم الصورة أكبر */}
-                    <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                      <img
-                        src={item.image}
-                        alt={item.product}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = "https://via.placeholder.com/80x80";
-                        }}
-                      />
+            {order.items.length === 0 ? (
+              <div className="text-center py-8">
+                <Package className="text-gray-400 mx-auto mb-4" size={48} />
+                <p className="text-gray-600">
+                  {t("noItemsInOrder", "orderDetails") ||
+                    "No items in this order"}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {order.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="flex items-center space-x-4 flex-1">
+                      <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                        <img
+                          src={item.image}
+                          alt={item.product}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = getDefaultImage();
+                          }}
+                        />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-800 text-lg mb-6 truncate">
+                          {item.product}
+                        </p>
+                        <p className="text-sm text-gray-500 mb-2">
+                          SKU: {item.sku}
+                        </p>
+
+                        <div className="text-sm text-gray-700 flex flex-wrap items-center gap-4">
+                          <div className="flex items-center bg-gray-50 px-1 py-1 rounded">
+                            <span className="font-medium mr-1">
+                              {t("quantity", "orderDetails")}:
+                            </span>
+                            <span className="font-medium text-gray-800">
+                              {item.quantity}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center bg-blue-50 px-1 py-1 rounded">
+                            <span className="font-medium mr-1">
+                              {t("unitPrice", "orderDetails")}:
+                            </span>
+                            <span className="font-medium text-blue-700">
+                              {formatCurrency(item.unitPrice, order.currency)}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center bg-blue-50 px-1 py-1 rounded">
+                            <span className="font-medium mr-1">
+                              {t("subtotal", "orderDetails")}:
+                            </span>
+                            <span className="font-medium text-blue-700">
+                              {formatCurrency(item.subTotal, order.currency)}
+                            </span>
+                          </div>
+
+                          {item.discountAmount > 0 && (
+                            <div className="flex items-center bg-red-50 px-1 py-1 rounded">
+                              <span className="font-medium mr-1">
+                                {t("discount", "orderDetails")}:
+                              </span>
+                              <span className="font-medium text-red-600">
+                                -
+                                {formatCurrency(
+                                  item.discountAmount,
+                                  order.currency,
+                                )}
+                              </span>
+                            </div>
+                          )}
+
+                          {item.taxAmount > 0 && (
+                            <div className="flex items-center bg-green-50 px-1 py-1 rounded">
+                              <span className="font-medium mr-1">
+                                {t("tax", "orderDetails")}:
+                              </span>
+                              <span className="font-medium text-green-700">
+                                +
+                                {formatCurrency(item.taxAmount, order.currency)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      {/* ✅ اسم المنتج أكبر وبارز */}
-                      <p className="font-bold text-gray-800 text-lg mb-6 truncate">
-                        {item.product}
-                      </p>
+                    <div className="text-right ml-4 min-w-[140px] flex flex-col items-end">
+                      <div className="mb-1">
+                        <p className="font-extrabold text-gray-800 text-xl">
+                          {formatCurrency(item.finalPrice, order.currency)}
+                        </p>
+                        <p className="text-xs text-gray-500 font-medium">
+                          {t("total", "orderDetails")}
+                        </p>
+                      </div>
 
-                      {/* ✅ المعلومات في سطر واحد مرتب */}
-                      <div className="text-sm text-gray-700 flex flex-wrap items-center gap-4">
-                        <div className="flex items-center bg-gray-50 px-1 py-1 rounded">
-                          <span className="font-medium mr-1">
-                            {t("quantity", "orderDetails")}:
-                          </span>
-                          <span className="font-medium text-gray-800">
-                            {item.quantity}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center bg-blue-50 px-1 py-1 rounded">
-                          <span className="font-medium mr-1">
-                            {t("subtotal", "orderDetails")}:
-                          </span>
-                          <span className="font-medium text-blue-700">
-                            {formatCurrency(item.subTotal)}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center bg-red-50 px-1 py-1 rounded">
-                          <span className="font-medium mr-1">
-                            {t("discount", "orderDetails")}:
-                          </span>
-                          <span className="font-medium text-red-600">
-                            -{formatCurrency(item.discountAmount)}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center bg-green-50 px-1 py-1 rounded">
-                          <span className="font-medium mr-1">
-                            {t("tax", "orderDetails")}:
-                          </span>
-                          <span className="font-medium text-green-700">
-                            +{formatCurrency(item.taxAmount)}
+                      <div className="mt-auto pt-2">
+                        <div
+                          className={`inline-flex items-center px-3 py-1.5 rounded-lg border ${
+                            item.currentStock > 10
+                              ? "bg-green-100 border-green-200"
+                              : item.currentStock > 0
+                                ? "bg-yellow-100 border-yellow-200"
+                                : "bg-red-100 border-red-200"
+                          }`}
+                        >
+                          <PackageIcon
+                            size={14}
+                            className={`mr-2 ${
+                              item.currentStock > 10
+                                ? "text-green-600"
+                                : item.currentStock > 0
+                                  ? "text-yellow-600"
+                                  : "text-red-600"
+                            }`}
+                          />
+                          <span
+                            className={`text-sm font-bold ${
+                              item.currentStock > 10
+                                ? "text-green-800"
+                                : item.currentStock > 0
+                                  ? "text-yellow-800"
+                                  : "text-red-800"
+                            }`}
+                          >
+                            {t("stock", "orderDetails")}: {item.currentStock}
                           </span>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  <div className="text-right ml-4 min-w-[140px] flex flex-col items-end">
-                    {/* ✅ التوتال النهائي بخط واضح */}
-                    <div className="mb-1">
-                      <p className="font-extrabold text-gray-800 text-xl">
-                        {formatCurrency(item.finalPrice)}
-                      </p>
-                      <p className="text-xs text-gray-500 font-medium">
-                        {t("total", "orderDetails")}
-                      </p>
-                    </div>
-
-                    {/* ✅ Current Stock محاذاة مع التوتال */}
-                    <div className="mt-auto pt-2">
-                      <div className="inline-flex items-center px-3 py-1.5 bg-blue-100 rounded-lg border border-blue-200">
-                        <PackageIcon size={14} className="text-blue-600 mr-2" />
-                        <span className="text-sm font-bold text-blue-800">
-                          {t("stock", "orderDetails")}: {item.currentStock}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Order Summary */}
@@ -491,20 +771,49 @@ const OrderDetails = () => {
             </div>
 
             <div className="space-y-3">
-              {/* Total Amount فقط */}
+              <div className="flex justify-between py-2">
+                <span className="text-gray-600">
+                  {t("subtotal", "orderDetails")}
+                </span>
+                <span className="font-medium">
+                  {formatCurrency(order.subtotal, order.currency)}
+                </span>
+              </div>
+
+              {order.discount > 0 && (
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-600">
+                    {t("discount", "orderDetails")}
+                  </span>
+                  <span className="font-medium text-red-600">
+                    -{formatCurrency(order.discount, order.currency)}
+                  </span>
+                </div>
+              )}
+
+              {order.tax > 0 && (
+                <div className="flex justify-between py-2">
+                  <span className="text-gray-600">
+                    {t("tax", "orderDetails")}
+                  </span>
+                  <span className="font-medium text-green-600">
+                    +{formatCurrency(order.tax, order.currency)}
+                  </span>
+                </div>
+              )}
+
               <div className="flex justify-between items-center py-4 border-t border-gray-200">
                 <div>
                   <p className="text-lg font-bold text-gray-800">
                     {t("totalAmount", "orderDetails")}
                   </p>
                   <p className="text-sm text-gray-600">
-                    {t("currency", "orderDetails")}:{" "}
-                    {getCurrencyDisplay(order.currency)}
+                    {t("currency", "orderDetails")}: {order.currency}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-gray-800">
-                    {formatCurrency(order.totalAmount)}
+                    {formatCurrency(order.totalAmount, order.currency)}
                   </p>
                   <p className="text-sm text-gray-600">
                     {t("grandTotal", "orderDetails")}
@@ -514,7 +823,7 @@ const OrderDetails = () => {
             </div>
           </div>
 
-          {/* Customer Notes */}
+          {/* Customer Notes - فقط إذا كانت موجودة */}
           {order.customerNotes && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center space-x-3 mb-4">
@@ -547,12 +856,13 @@ const OrderDetails = () => {
                   {t("orderInformation", "orderDetails")}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  #{order.id} • {t("orderStatus", "orderDetails")}
+                  #{order.id} • {order.orderNumber}
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
+              {/* تاريخ الطلب */}
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
                   <Calendar className="text-gray-500 mr-2" size={18} />
@@ -563,36 +873,125 @@ const OrderDetails = () => {
                 <span className="font-medium">{order.orderDate}</span>
               </div>
 
+              {/* عدد العناصر */}
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
-                  <Truck className="text-gray-500 mr-2" size={18} />
+                  <ShoppingCart className="text-gray-500 mr-2" size={18} />
                   <span className="text-gray-700">
-                    {t("estimatedDelivery", "orderDetails")}
+                    {t("items", "orderDetails")}
                   </span>
                 </div>
-                <span className="font-medium">{order.estimatedDelivery}</span>
+                <span className="font-medium">{order.items.length}</span>
               </div>
 
+              {/* حالة الطلب */}
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
-                  <ChevronRight className="text-gray-500 mr-2" size={18} />
-                  <span className="text-gray-700">
-                    {t("shippingMethod", "orderDetails")}
-                  </span>
+                  <Clock className="text-gray-500 mr-2" size={18} />
+                  <span className="text-gray-700">{t("status", "orders")}</span>
                 </div>
-                <span className="font-medium">{order.shippingMethod}</span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center">
-                  <Box className="text-gray-500 mr-2" size={18} />
-                  <span className="text-gray-700">
-                    {t("trackingNumber", "orderDetails")}
-                  </span>
-                </div>
-                <span className="font-medium text-blue-600">
-                  {order.trackingNumber}
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium inline-flex items-center space-x-1 ${getStatusColor(
+                    order.orderStatus,
+                  )}`}
+                >
+                  {getStatusIcon(order.orderStatus)}
+                  <span>{getStatusText(order.orderStatus)}</span>
                 </span>
+              </div>
+
+              {/* طريقة الدفع */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center">
+                  {paymentMethod.icon}
+                  <span className="ml-2 text-gray-700">
+                    {t("paymentMethod", "orderDetails")}
+                  </span>
+                </div>
+                <span className="font-medium">{paymentMethod.text}</span>
+              </div>
+
+              {/* ✅ أزرار تغيير الحالة - منطق الزر القديم */}
+              <div className="pt-4 border-t border-gray-200">
+                {/* زر Confirm - يظهر فقط للحالة PENDING */}
+                {order.orderStatus === STATUSES.PENDING && (
+                  <button
+                    onClick={handleConfirmOrder}
+                    disabled={updatingStatus}
+                    className={`w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
+                      updatingStatus
+                        ? "bg-green-200 text-green-800 cursor-not-allowed"
+                        : "bg-green-600 text-white hover:bg-green-700"
+                    }`}
+                  >
+                    {updatingStatus ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>
+                          {t("confirming", "orderDetails") || "Confirming..."}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={18} />
+                        <span>
+                          {t("confirmOrder", "orderDetails") || "Confirm Order"}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* زر Cancel - يظهر فقط للحالة CONFIRMED */}
+                {order.orderStatus === STATUSES.CONFIRMED && (
+                  <button
+                    onClick={handleCancelOrder}
+                    disabled={updatingStatus}
+                    className={`w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
+                      updatingStatus
+                        ? "bg-red-200 text-red-800 cursor-not-allowed"
+                        : "bg-red-600 text-white hover:bg-red-700"
+                    }`}
+                  >
+                    {updatingStatus ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>
+                          {t("cancelling", "orderDetails") || "Cancelling..."}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <X size={18} />
+                        <span>
+                          {t("cancelOrder", "orderDetails") || "Cancel Order"}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* رسائل مساعدة */}
+                {order.orderStatus === STATUSES.PENDING && (
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    {t("pendingOrderHelp", "orderDetails") ||
+                      "This order is awaiting confirmation"}
+                  </p>
+                )}
+
+                {order.orderStatus === STATUSES.CONFIRMED && (
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    {t("confirmedOrderHelp", "orderDetails") ||
+                      "This order has been confirmed and can be canceled if needed"}
+                  </p>
+                )}
+
+                {order.orderStatus === STATUSES.CANCELED && (
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    {t("canceledOrderHelp", "orderDetails") ||
+                      "This order has been canceled"}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -607,109 +1006,88 @@ const OrderDetails = () => {
                 <h3 className="text-lg font-semibold text-gray-800">
                   {t("customerInformation", "orderDetails")}
                 </h3>
-                <p className="text-sm text-gray-600">{order.customerName}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <Mail className="text-gray-500 mr-3" size={18} />
-                <div>
-                  <p className="text-sm text-gray-600">
-                    {t("email", "orderDetails")}
-                  </p>
-                  <p className="font-medium">{order.customerEmail}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <Phone className="text-gray-500 mr-3" size={18} />
-                <div>
-                  <p className="text-sm text-gray-600">
-                    {t("phoneNumber", "orderDetails")}
-                  </p>
-                  <p className="font-medium">{order.customerPhone}</p>
-                </div>
-              </div>
-
-              <button
-                onClick={handleContactCustomer}
-                className="w-full py-3 px-4 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center justify-center space-x-2"
-              >
-                <Mail size={18} />
-                <span>{t("contactCustomer", "orderDetails")}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Payment Details */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <CreditCard className="text-dental-blue" size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">
-                  {t("paymentDetails", "orderDetails")}
-                </h3>
                 <p className="text-sm text-gray-600">
-                  {t("paymentMethod", "orderDetails")} •{" "}
-                  {t("paymentStatus", "orderDetails")}
+                  {customerInfo?.name || order.customerName}
                 </p>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center">
-                    {paymentMethod.icon}
-                    <span className="ml-2 text-gray-700">
-                      {t("paymentMethod", "orderDetails")}
-                    </span>
-                  </div>
-                  <span className="font-medium">{paymentMethod.text}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">
-                    {t("transactionId", "orderDetails")}
-                  </span>
-                  <span className="text-sm font-medium">
-                    {order.transactionId}
-                  </span>
+            {loadingCustomer ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dental-blue"></div>
+              </div>
+            ) : customerError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center">
+                  <AlertCircle className="text-red-600 mr-2" size={16} />
+                  <p className="text-sm text-red-600">{customerError}</p>
                 </div>
               </div>
+            ) : customerInfo ? (
+              <div className="space-y-4">
+                {/* الاسم */}
+                {customerInfo.name && (
+                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <User className="text-gray-500 mr-3" size={18} />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600">
+                        {t("customerName", "orderDetails")}
+                      </p>
+                      <p className="font-medium truncate">
+                        {customerInfo.name}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-700">
-                    {t("paymentStatus", "orderDetails")}
-                  </span>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${paymentStatus.color}`}
+                {/* البريد الإلكتروني */}
+                {customerInfo.email && (
+                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <Mail className="text-gray-500 mr-3" size={18} />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600">
+                        {t("email", "orderDetails")}
+                      </p>
+                      <p className="font-medium truncate">
+                        {customerInfo.email}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* الهاتف */}
+                {customerInfo.phone && (
+                  <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <Phone className="text-gray-500 mr-3" size={18} />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600">
+                        {t("phoneNumber", "orderDetails")}
+                      </p>
+                      <p className="font-medium">{customerInfo.phone}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* زر الاتصال - فقط إذا كان هناك إيميل */}
+                {customerInfo.email && (
+                  <button
+                    onClick={handleContactCustomer}
+                    className="w-full py-3 px-4 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center justify-center space-x-2"
                   >
-                    {paymentStatus.text}
-                  </span>
-                </div>
+                    <Mail size={18} />
+                    <span>{t("contactCustomer", "orderDetails")}</span>
+                  </button>
+                )}
               </div>
-
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-700">
-                    {t("currency", "orderDetails")}
-                  </span>
-                  <div className="flex items-center">
-                    <DollarSign className="text-green-500 mr-1" size={16} />
-                    <span className="font-medium">
-                      {getCurrencyDisplay(order.currency)}
-                    </span>
-                    <span className="ml-1 text-sm text-gray-600">
-                      ({order.currency})
-                    </span>
-                  </div>
-                </div>
+            ) : (
+              <div className="text-center py-8">
+                <User className="text-gray-400 mx-auto mb-4" size={48} />
+                <p className="text-gray-600">
+                  {t("noCustomerInfo", "orderDetails") ||
+                    "No customer information available"}
+                </p>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -731,15 +1109,6 @@ const OrderDetails = () => {
           >
             <Printer size={20} />
             <span>{t("printInvoice", "orderDetails")}</span>
-          </button>
-
-          {/* ✅ زر تأكيد الطلب الجديد */}
-          <button
-            onClick={handleConfirmDelivery}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition flex items-center space-x-2"
-          >
-            <CheckCircle size={20} />
-            <span>{t("confirmDelivery", "orderDetails")}</span>
           </button>
         </div>
       </div>

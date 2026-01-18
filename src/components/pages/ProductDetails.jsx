@@ -21,6 +21,7 @@ import {
   Percent,
   X,
   Eye,
+  Image as ImageIcon,
 } from "lucide-react";
 
 const ProductDetails = () => {
@@ -38,6 +39,45 @@ const ProductDetails = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // ✅ دالة لإنشاء رابط الصورة الكامل
+  const getFullImageUrl = (url) => {
+    if (!url) return getDefaultImage();
+    if (url.startsWith("http")) return url;
+    return `https://nethy-production.up.railway.app${url}`;
+  };
+
+  // ✅ دالة للحصول على صورة افتراضية آمنة
+  const getDefaultImage = () => {
+    const svgData = `
+      <svg width="600" height="600" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="#f3f4f6"/>
+        <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="20" fill="#9ca3af" text-anchor="middle" dy=".3em">No Image</text>
+      </svg>
+    `;
+    return `data:image/svg+xml;base64,${btoa(svgData)}`;
+  };
+
+  // ✅ دالة للحصول على صورة مصغرة افتراضية آمنة
+  const getDefaultThumbnail = () => {
+    const svgData = `
+      <svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="#f3f4f6"/>
+        <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">No Image</text>
+      </svg>
+    `;
+    return `data:image/svg+xml;base64,${btoa(svgData)}`;
+  };
+
+  // ✅ دالة لتحميل الصورة بشكل آمن مع fallback
+  const loadImageSafely = (url, fallbackUrl = null) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(url);
+      img.onerror = () => resolve(fallbackUrl || getDefaultImage());
+      img.src = url;
+    });
+  };
+
   const fetchProductDetails = async () => {
     try {
       setLoading(true);
@@ -47,14 +87,25 @@ const ProductDetails = () => {
       const apiData = response.data?.data;
 
       if (apiData) {
-        // معالجة الصور لإنشاء روابط كاملة
-        const processedImages =
-          apiData.images?.map((img) => ({
-            ...img,
-            fullUrl: img.url.startsWith("http")
-              ? img.url
-              : `https://nethy-production.up.railway.app${img.url}`,
-          })) || [];
+        // ✅ معالجة الصور لإنشاء روابط كاملة والتحقق من توفرها
+        const processImages = async () => {
+          if (!apiData.images || !Array.isArray(apiData.images)) {
+            return [];
+          }
+
+          const imagePromises = apiData.images.map(async (img) => {
+            const fullUrl = getFullImageUrl(img.url);
+            const safeUrl = await loadImageSafely(fullUrl, getDefaultImage());
+            return {
+              ...img,
+              fullUrl: safeUrl,
+            };
+          });
+
+          return await Promise.all(imagePromises);
+        };
+
+        const processedImages = await processImages();
 
         // الحصول على قيم الخصم وتحويلها لأرقام
         const price = parseFloat(apiData.price) || 0;
@@ -79,7 +130,7 @@ const ProductDetails = () => {
           sku: apiData.sku || "",
           price: price,
           low_stock_alert_threshold:
-            parseInt(apiData.low_stock_alert_threshold) || 10, // تغيير الاسم هنا
+            parseInt(apiData.low_stock_alert_threshold) || 10,
           cost: parseFloat(apiData.cost) || 0,
           stock_quantity: parseInt(apiData.stock_quantity) || 0,
           category: apiData.category || "",
@@ -87,7 +138,7 @@ const ProductDetails = () => {
           discount_price: discountPrice,
           images: processedImages,
           product_rate: parseFloat(apiData.product_rate) || 0,
-          status: apiData.status || "instock", // استخدم الحالة من الـAPI
+          status: apiData.status || "instock",
           created_at: apiData.created_at || "",
 
           // حقول محسوبة
@@ -99,7 +150,7 @@ const ProductDetails = () => {
         setProduct(processedProduct);
       } else {
         setError(
-          t("noProductData", "productDetails") || "No product data found"
+          t("noProductData", "productDetails") || "No product data found",
         );
       }
     } catch (err) {
@@ -107,7 +158,7 @@ const ProductDetails = () => {
         err.response?.data?.message ||
           err.message ||
           t("loadProductFailed", "productDetails") ||
-          "Failed to load product details"
+          "Failed to load product details",
       );
     } finally {
       setLoading(false);
@@ -178,7 +229,6 @@ const ProductDetails = () => {
           bg: "bg-orange-100",
         };
       default:
-        // إذا كانت القيمة غير معروفة، نعرضها كما هي
         return {
           text: status,
           color: "text-blue-600",
@@ -196,11 +246,19 @@ const ProductDetails = () => {
     for (let i = 0; i < 5; i++) {
       if (i < fullStars) {
         stars.push(
-          <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />
+          <Star
+            key={i}
+            size={16}
+            className="fill-yellow-400 text-yellow-400"
+          />,
         );
       } else if (i === fullStars && hasHalfStar) {
         stars.push(
-          <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />
+          <Star
+            key={i}
+            size={16}
+            className="fill-yellow-400 text-yellow-400"
+          />,
         );
       } else {
         stars.push(<Star key={i} size={16} className="text-gray-300" />);
@@ -245,7 +303,7 @@ const ProductDetails = () => {
     if (
       window.confirm(
         t("confirmDelete", "products", { name: productName }) ||
-          `Are you sure you want to delete product "${productName}"?`
+          `Are you sure you want to delete product "${productName}"?`,
       )
     ) {
       try {
@@ -257,6 +315,15 @@ const ProductDetails = () => {
         alert(t("deleteError", "products") || "Error deleting product");
       }
     }
+  };
+
+  // ✅ دالة معالجة أخطاء الصور
+  const handleImageError = (e, isThumbnail = false) => {
+    e.target.onerror = null;
+    e.target.src = isThumbnail ? getDefaultThumbnail() : getDefaultImage();
+    e.target.className = isThumbnail
+      ? "w-full h-full object-contain"
+      : "w-full h-full object-contain opacity-80";
   };
 
   if (loading) {
@@ -360,11 +427,15 @@ const ProductDetails = () => {
                           selectedImageIndex + 1
                         }`}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.src =
-                            "https://via.placeholder.com/600x600?text=No+Image";
-                        }}
+                        onError={(e) => handleImageError(e, false)}
                       />
+                      {product.images[selectedImageIndex]?.fullUrl.includes(
+                        "data:image/svg+xml",
+                      ) && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <ImageIcon className="w-16 h-16 text-gray-300" />
+                        </div>
+                      )}
                       {product.images.length > 1 && (
                         <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
                           {selectedImageIndex + 1} / {product.images.length}
@@ -373,7 +444,11 @@ const ProductDetails = () => {
                     </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                      <Package className="text-gray-400" size={48} />
+                      <ImageIcon className="w-16 h-16 text-gray-400" />
+                      <span className="ml-2 text-gray-500">
+                        {t("noImagesAvailable", "productDetails") ||
+                          "No images available"}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -399,11 +474,13 @@ const ProductDetails = () => {
                         src={image.fullUrl}
                         alt={`Thumbnail ${index + 1}`}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.src =
-                            "https://via.placeholder.com/150x150?text=No+Image";
-                        }}
+                        onError={(e) => handleImageError(e, true)}
                       />
+                      {image.fullUrl.includes("data:image/svg+xml") && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <ImageIcon className="w-6 h-6 text-gray-400" />
+                        </div>
+                      )}
                     </button>
                   ))}
 
@@ -494,7 +571,7 @@ const ProductDetails = () => {
                   </p>
                   <p className="font-medium text-gray-800">
                     {product.low_stock_alert_threshold}{" "}
-                    {t("units", "products") || "units"} {/* تغيير هنا */}
+                    {t("units", "products") || "units"}
                   </p>
                 </div>
               </div>

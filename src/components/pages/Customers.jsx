@@ -64,7 +64,7 @@ const Customers = () => {
 
       // ✅ استخراج البيانات من هيكل الاستجابة المبسط
       const apiData = response.data?.data;
-      console.log("Fetched Customers Data:", apiData);
+
       if (Array.isArray(apiData)) {
         if (apiData.length === 0) {
           // ✅ لا يوجد زبائن
@@ -126,7 +126,7 @@ const Customers = () => {
         // ✅ حالة عدم وجود بيانات أو تنسيق غير صحيح
         setError(
           t("invalidDataFormat", "customers") ||
-            "No customer data found or invalid data format"
+            "No customer data found or invalid data format",
         );
         setCustomersData([]);
       }
@@ -136,7 +136,7 @@ const Customers = () => {
         err.response?.data?.message ||
           err.message ||
           t("failedToLoadCustomers", "customers") ||
-          "Failed to load customers"
+          "Failed to load customers",
       );
       setCustomersData([]);
     } finally {
@@ -210,8 +210,8 @@ const Customers = () => {
           prevData.map((customer) =>
             customer.id === ratingPopup.customerId
               ? { ...customer, rate: ratingPopup.newRating }
-              : customer
-          )
+              : customer,
+          ),
         );
 
         closeRatingPopup();
@@ -221,7 +221,7 @@ const Customers = () => {
       alert(
         t("failedToUpdateRating", "customers") ||
           "Failed to update rating: " +
-            (err.response?.data?.message || err.message)
+            (err.response?.data?.message || err.message),
       );
     }
   };

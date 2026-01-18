@@ -78,5 +78,6 @@
   "deleteSuccess": "Produkten raderades framgångsrikt",
   "deleteError": "Fel vid radering av produkt",
   "alertStock": "Varning för lager",
-  "statusFromAPI": "Status från servern"
+  "statusFromAPI": "Status från servern",
+  "noImagesAvailable": "Inga bilder tillgängliga"
 }
