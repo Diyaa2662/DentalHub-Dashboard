@@ -960,49 +960,6 @@ const Products = () => {
           </>
         )}
       </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">
-              {t("inventoryValue", "products") || "Inventory Value"}
-            </h3>
-            <DollarSign className="text-green-500" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">$245,800</p>
-          <p className="text-sm text-gray-600 mt-2">
-            {t("totalInventoryValue", "products") || "Total inventory value"}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">
-              {t("avgPrice", "products") || "Average Price"}
-            </h3>
-            <Package className="text-blue-500" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">$890</p>
-          <p className="text-sm text-gray-600 mt-2">
-            {t("averageProductPrice", "products") || "Average product price"}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">
-              {t("stockTurnover", "products") || "Stock Turnover"}
-            </h3>
-            <TrendingUp className="text-purple-500" size={20} />
-          </div>
-          <p className="text-2xl font-bold text-gray-800">4.2x</p>
-          <p className="text-sm text-gray-600 mt-2">
-            {t("annualStockTurnover", "products") ||
-              "Annual stock turnover rate"}
-          </p>
-        </div>
-      </div>
     </div>
   );
 };
