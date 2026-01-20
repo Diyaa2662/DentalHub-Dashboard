@@ -33,5 +33,7 @@
   "reportsAnalytics": "Rapporter & Analys",
   "suppliersInvoices": "Leverantörer & Fakturor",
   "supplierInvoices": "Leverantörsfakturor",
-  "supplierInvoicesManagement": "Hantering av Leverantörsfakturor"
+  "supplierInvoicesManagement": "Hantering av Leverantörsfakturor",
+  "payment": "Betalning",
+  "payments": "Betalningar"
 }

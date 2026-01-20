@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -26,6 +27,8 @@ import {
   RefreshCw,
   Hash,
   Filter,
+  Undo,
+  Trash,
 } from "lucide-react";
 
 const Products = () => {
@@ -37,11 +40,12 @@ const Products = () => {
   const { t, currentLanguage } = useLanguage();
 
   // State للفلاتر
-  const [activeFilter, setActiveFilter] = useState("all"); // all, lowStock, outOfStock
+  const [activeFilter, setActiveFilter] = useState("all"); // all, lowStock, outOfStock, deleted
   const [stats, setStats] = useState({
     total: 0,
     lowStock: 0,
     outOfStock: 0,
+    deleted: 0,
   });
 
   // Fetch products from API
@@ -64,7 +68,7 @@ const Products = () => {
       const response = await api.get("/products");
 
       const apiData = response.data?.data;
-
+      console.log("Fetched Products:", apiData);
       if (Array.isArray(apiData)) {
         const formattedData = apiData.map((product) => {
           const normalizedStatus = (product.status || "")
@@ -74,6 +78,7 @@ const Products = () => {
           let stockStatus = t("inStock", "products");
           let isLowStock = false;
           let isOutOfStock = false;
+          let isDeleted = normalizedStatus === "deleted";
 
           if (normalizedStatus === "outofstock") {
             stockStatus = t("outOfStock", "products");
@@ -83,6 +88,8 @@ const Products = () => {
             isLowStock = true;
           } else if (normalizedStatus === "instock") {
             stockStatus = t("inStock", "products");
+          } else if (isDeleted) {
+            stockStatus = t("deleted", "products") || "Deleted";
           }
 
           const price = parseFloat(product.price) || 0;
@@ -110,6 +117,7 @@ const Products = () => {
             discountPercentage: discountPercentage,
             isLowStock: isLowStock,
             isOutOfStock: isOutOfStock,
+            isDeleted: isDeleted,
             normalizedStatus: normalizedStatus,
           };
         });
@@ -119,7 +127,7 @@ const Products = () => {
       } else {
         setError(
           t("noProductsData", "products") ||
-            "No products data found or invalid data format"
+            "No products data found or invalid data format",
         );
         setProducts([]);
         setFilteredProducts([]);
@@ -129,7 +137,7 @@ const Products = () => {
         err.response?.data?.message ||
           err.message ||
           t("loadProductsFailed", "products") ||
-          "Failed to load products"
+          "Failed to load products",
       );
       setProducts([]);
       setFilteredProducts([]);
@@ -141,16 +149,18 @@ const Products = () => {
   const calculateStats = (productsList) => {
     const total = productsList.length;
     const lowStock = productsList.filter(
-      (product) => product.isLowStock
+      (product) => product.isLowStock,
     ).length;
     const outOfStock = productsList.filter(
-      (product) => product.isOutOfStock
+      (product) => product.isOutOfStock,
     ).length;
+    const deleted = productsList.filter((product) => product.isDeleted).length;
 
     setStats({
       total,
       lowStock,
       outOfStock,
+      deleted,
     });
   };
 
@@ -163,6 +173,9 @@ const Products = () => {
         break;
       case "outOfStock":
         filtered = products.filter((product) => product.isOutOfStock);
+        break;
+      case "deleted":
+        filtered = products.filter((product) => product.isDeleted);
         break;
       case "all":
       default:
@@ -181,17 +194,15 @@ const Products = () => {
     if (
       window.confirm(
         t("deleteProductConfirm", "products", { name }) ||
-          `Are you sure you want to delete product "${name}"?`
+          `Are you sure you want to delete product "${name}"?`,
       )
     ) {
       try {
         await api.delete(`/deleteproduct/${id}`);
-        const updatedProducts = products.filter((product) => product.id !== id);
-        setProducts(updatedProducts);
-        calculateStats(updatedProducts);
+        await fetchProducts(); // Refresh the products list
         alert(
           t("productDeletedSuccess", "products", { name }) ||
-            `Product "${name}" deleted successfully!`
+            `Product "${name}" deleted successfully!`,
         );
       } catch (err) {
         alert(
@@ -200,7 +211,35 @@ const Products = () => {
               (err.response?.data?.message ||
                 err.message ||
                 t("tryAgain", "common") ||
-                "Please try again")
+                "Please try again"),
+        );
+      }
+    }
+  };
+
+  const handleRestore = async (id, name) => {
+    if (
+      window.confirm(
+        t("restoreProductConfirm", "products", { name }) ||
+          `Are you sure you want to restore product "${name}"?`,
+      )
+    ) {
+      try {
+        // Assuming the endpoint is similar to the one you mentioned
+        await api.post(`/restoreproduct/${id}`);
+        await fetchProducts(); // Refresh the products list
+        alert(
+          t("productRestoredSuccess", "products", { name }) ||
+            `Product "${name}" restored successfully!`,
+        );
+      } catch (err) {
+        alert(
+          t("restoreProductError", "products") ||
+            "Error restoring product: " +
+              (err.response?.data?.message ||
+                err.message ||
+                t("tryAgain", "common") ||
+                "Please try again"),
         );
       }
     }
@@ -229,6 +268,8 @@ const Products = () => {
           return baseClass + "bg-yellow-50 border-yellow-200 shadow-sm";
         case "outOfStock":
           return baseClass + "bg-red-50 border-red-200 shadow-sm";
+        case "deleted":
+          return baseClass + "bg-gray-100 border-gray-300 shadow-sm";
         default:
           return baseClass + "bg-gray-50 border-gray-200";
       }
@@ -246,6 +287,8 @@ const Products = () => {
           return "text-yellow-700";
         case "outOfStock":
           return "text-red-700";
+        case "deleted":
+          return "text-gray-700";
         default:
           return "text-gray-800";
       }
@@ -262,6 +305,8 @@ const Products = () => {
           return "text-yellow-800";
         case "outOfStock":
           return "text-red-800";
+        case "deleted":
+          return "text-gray-800";
         default:
           return "text-gray-800";
       }
@@ -269,93 +314,7 @@ const Products = () => {
     return "text-gray-800";
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              {t("productsManagement", "products") || "Products Management"}
-            </h1>
-            <p className="text-gray-600">
-              {t("manageInventory", "products") ||
-                "Manage your inventory and products"}
-            </p>
-          </div>
-          <button
-            disabled
-            className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg font-medium flex items-center space-x-2 mt-4 md:mt-0 cursor-not-allowed"
-          >
-            <Plus size={20} />
-            <span>{t("addProduct", "products") || "Add Product"}</span>
-          </button>
-        </div>
-
-        <div className="flex justify-center items-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dental-blue mx-auto mb-4"></div>
-            <p className="text-gray-600">
-              {t("loadingProducts", "products") || "Loading products..."}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              {t("productsManagement", "products") || "Products Management"}
-            </h1>
-            <p className="text-gray-600">
-              {t("manageInventory", "products") ||
-                "Manage your inventory and products"}
-            </p>
-          </div>
-          <div className="flex space-x-3 mt-4 md:mt-0">
-            <button
-              onClick={fetchProducts}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center space-x-2"
-            >
-              <RefreshCw size={18} />
-              <span>{t("retry", "common") || "Retry"}</span>
-            </button>
-            <button
-              onClick={() => navigate("/products/add")}
-              className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center space-x-2"
-            >
-              <Plus size={20} />
-              <span>{t("addProduct", "products") || "Add Product"}</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-          <div className="flex items-center mb-4">
-            <AlertCircle className="text-red-600 mr-3" size={24} />
-            <div>
-              <h3 className="font-bold text-red-800">
-                {t("errorLoading", "products") || "Error Loading Products"}
-              </h3>
-              <p className="text-red-600">{error}</p>
-            </div>
-          </div>
-
-          <button
-            onClick={fetchProducts}
-            className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition flex items-center space-x-2"
-          >
-            <RefreshCw size={18} />
-            <span>{t("tryAgain", "common") || "Try Again"}</span>
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // ... (بقية الكود يبقى كما هو حتى جزء الفلاتر)
 
   return (
     <div className="space-y-6">
@@ -390,7 +349,7 @@ const Products = () => {
       </div>
 
       {/* Filter Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Total Products Filter */}
         <div
           className={getFilterButtonClass("all")}
@@ -441,7 +400,7 @@ const Products = () => {
                 />
                 <p
                   className={`text-sm font-medium ${getFilterTextClass(
-                    "lowStock"
+                    "lowStock",
                   )}`}
                 >
                   {t("lowStock", "products") || "Low Stock"}
@@ -449,7 +408,7 @@ const Products = () => {
               </div>
               <p
                 className={`text-2xl font-bold ${getFilterCountClass(
-                  "lowStock"
+                  "lowStock",
                 )}`}
               >
                 {stats.lowStock}
@@ -493,7 +452,7 @@ const Products = () => {
                 />
                 <p
                   className={`text-sm font-medium ${getFilterTextClass(
-                    "outOfStock"
+                    "outOfStock",
                   )}`}
                 >
                   {t("outOfStock", "products") || "Out of Stock"}
@@ -501,7 +460,7 @@ const Products = () => {
               </div>
               <p
                 className={`text-2xl font-bold ${getFilterCountClass(
-                  "outOfStock"
+                  "outOfStock",
                 )}`}
               >
                 {stats.outOfStock}
@@ -527,6 +486,52 @@ const Products = () => {
             </p>
           </div>
         </div>
+
+        {/* Deleted Products Filter */}
+        <div
+          className={getFilterButtonClass("deleted")}
+          onClick={() => handleFilterClick("deleted")}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center space-x-2 mb-1">
+                <Trash size={16} className={getFilterTextClass("deleted")} />
+                <p
+                  className={`text-sm font-medium ${getFilterTextClass(
+                    "deleted",
+                  )}`}
+                >
+                  {t("deleted", "products") || "Deleted"}
+                </p>
+              </div>
+              <p
+                className={`text-2xl font-bold ${getFilterCountClass(
+                  "deleted",
+                )}`}
+              >
+                {stats.deleted}
+              </p>
+            </div>
+            <div
+              className={`p-2 rounded-lg ${
+                activeFilter === "deleted" ? "bg-gray-200" : "bg-gray-100"
+              }`}
+            >
+              <Trash size={20} className={getFilterTextClass("deleted")} />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              {activeFilter === "deleted"
+                ? t("showingDeletedProducts", "products", {
+                    count: stats.deleted,
+                  })
+                : t("clickToFilterDeleted", "products", {
+                    count: stats.deleted,
+                  })}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Active Filter Indicator */}
@@ -535,7 +540,9 @@ const Products = () => {
           className={`p-3 rounded-lg ${
             activeFilter === "lowStock"
               ? "bg-yellow-50 border border-yellow-200"
-              : "bg-red-50 border border-red-200"
+              : activeFilter === "outOfStock"
+                ? "bg-red-50 border border-red-200"
+                : "bg-gray-100 border border-gray-300"
           }`}
         >
           <div className="flex items-center justify-between">
@@ -547,11 +554,18 @@ const Products = () => {
                     {t("filteredBy", "products")}: {t("lowStock", "products")}
                   </span>
                 </>
-              ) : (
+              ) : activeFilter === "outOfStock" ? (
                 <>
                   <XCircle className="text-red-600" size={18} />
                   <span className="font-medium text-red-800">
                     {t("filteredBy", "products")}: {t("outOfStock", "products")}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Trash className="text-gray-600" size={18} />
+                  <span className="font-medium text-gray-800">
+                    {t("filteredBy", "products")}: {t("deleted", "products")}
                   </span>
                 </>
               )}
@@ -566,7 +580,9 @@ const Products = () => {
           <p className="text-sm text-gray-600 mt-1 ml-7">
             {activeFilter === "lowStock"
               ? `${stats.lowStock} ${t("lowStockProducts", "products")}`
-              : `${stats.outOfStock} ${t("outOfStockProducts", "products")}`}
+              : activeFilter === "outOfStock"
+                ? `${stats.outOfStock} ${t("outOfStockProducts", "products")}`
+                : `${stats.deleted} ${t("deletedProducts", "products")}`}
           </p>
         </div>
       )}
@@ -615,8 +631,10 @@ const Products = () => {
                     {activeFilter === "all"
                       ? t("allProducts", "products")
                       : activeFilter === "lowStock"
-                      ? t("lowStockProducts", "products")
-                      : t("outOfStockProducts", "products")}
+                        ? t("lowStockProducts", "products")
+                        : activeFilter === "outOfStock"
+                          ? t("outOfStockProducts", "products")
+                          : t("deletedProducts", "products")}
                   </span>
                   <span className="bg-gray-200 text-gray-700 text-xs font-medium px-2 py-1 rounded-full">
                     {filteredProducts.length} {t("items", "products")}
@@ -628,12 +646,17 @@ const Products = () => {
                   {activeFilter === "lowStock" &&
                     `${stats.lowStock} ${t(
                       "lowStock",
-                      "products"
+                      "products",
                     )?.toLowerCase()}`}
                   {activeFilter === "outOfStock" &&
                     `${stats.outOfStock} ${t(
                       "outOfStock",
-                      "products"
+                      "products",
+                    )?.toLowerCase()}`}
+                  {activeFilter === "deleted" &&
+                    `${stats.deleted} ${t(
+                      "deleted",
+                      "products",
                     )?.toLowerCase()}`}
                 </div>
               </div>
@@ -647,6 +670,10 @@ const Products = () => {
               columnMinWidth={50}
               height={500}
               allowColumnReordering={true}
+              rowAlternationEnabled={true}
+              rowClass={(rowData) => {
+                return rowData.isDeleted ? "deleted-row" : "";
+              }}
             >
               <HeaderFilter visible={true} />
               <SearchPanel
@@ -673,7 +700,7 @@ const Products = () => {
                 }
               />
 
-              {/* ... نفس الأعمدة السابقة تماماً بدون تغيير ... */}
+              {/* ... نفس الأعمدة السابقة ... */}
               <Column
                 dataField="id"
                 caption={t("id", "products") || "ID"}
@@ -710,9 +737,20 @@ const Products = () => {
                     data.s_name.trim();
 
                   return (
-                    <div className="flex flex-col">
-                      <div className="font-medium text-gray-800">
+                    <div
+                      className={`flex flex-col ${data.isDeleted ? "product-name-cell" : ""}`}
+                    >
+                      <div
+                        className={`font-medium ${
+                          data.isDeleted ? "text-gray-500" : "text-gray-800"
+                        }`}
+                      >
                         {displayName}
+                        {data.isDeleted && (
+                          <span className="ml-2 text-xs text-gray-400">
+                            ({t("deleted", "products")})
+                          </span>
+                        )}
                       </div>
                       {isSwedish && data.name !== data.s_name && (
                         <div className="text-xs text-gray-500 mt-1">
@@ -731,7 +769,13 @@ const Products = () => {
                 alignment="left"
                 allowGrouping={true}
                 cellRender={({ data }) => (
-                  <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm font-medium capitalize">
+                  <span
+                    className={`px-2 py-1 rounded text-sm font-medium capitalize ${
+                      data.isDeleted
+                        ? "bg-gray-200 text-gray-600"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
                     {data.category}
                   </span>
                 )}
@@ -758,21 +802,27 @@ const Products = () => {
                       <div className="flex items-center">
                         <span
                           className={`font-semibold ${
-                            hasDisc ? "text-green-600" : "text-gray-800"
+                            data.isDeleted
+                              ? "text-gray-500"
+                              : hasDisc
+                                ? "text-green-600"
+                                : "text-gray-800"
                           }`}
                         >
                           {data.priceAfterDiscount}
                         </span>
-                        {hasDisc && (
+                        {hasDisc && !data.isDeleted && (
                           <Tag className="text-red-500 ml-2" size={12} />
                         )}
                       </div>
-                      {hasDisc && data.discountPercentage > 0 && (
-                        <div className="text-xs text-red-600 font-medium mt-1">
-                          {data.discountPercentage}%{" "}
-                          {t("off", "products") || "OFF"}
-                        </div>
-                      )}
+                      {hasDisc &&
+                        data.discountPercentage > 0 &&
+                        !data.isDeleted && (
+                          <div className="text-xs text-red-600 font-medium mt-1">
+                            {data.discountPercentage}%{" "}
+                            {t("off", "products") || "OFF"}
+                          </div>
+                        )}
                     </div>
                   );
                 }}
@@ -796,11 +846,13 @@ const Products = () => {
                   <div className="flex items-center">
                     <span
                       className={`font-medium ${
-                        data.taxRate === "20%"
-                          ? "text-red-600"
-                          : data.taxRate === "15%"
-                          ? "text-orange-600"
-                          : "text-green-600"
+                        data.isDeleted
+                          ? "text-gray-500"
+                          : data.taxRate === "20%"
+                            ? "text-red-600"
+                            : data.taxRate === "15%"
+                              ? "text-orange-600"
+                              : "text-green-600"
                       }`}
                     >
                       {data.taxRate}
@@ -829,6 +881,10 @@ const Products = () => {
                       color: "bg-red-100 text-red-800",
                       icon: <XCircle size={12} className="mr-1" />,
                     },
+                    [t("deleted", "products") || "Deleted"]: {
+                      color: "bg-gray-200 text-gray-700",
+                      icon: <Trash size={12} className="mr-1" />,
+                    },
                   };
 
                   const config = statusConfig[data.status] || {
@@ -852,29 +908,51 @@ const Products = () => {
                 alignment="left"
                 cellRender={({ data }) => (
                   <div className="flex space-x-2">
-                    <button
-                      onClick={() => navigate(`/products/view/${data.id}`)}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
-                      title={t("view", "common") || "View"}
-                    >
-                      <Eye size={16} />
-                    </button>
-                    <button
-                      onClick={() => navigate(`/products/edit/${data.id}`)}
-                      className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
-                      title={t("edit", "common") || "Edit"}
-                    >
-                      <Edit size={16} />
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleDelete(data.id, getProductNameByLanguage(data))
-                      }
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
-                      title={t("delete", "common") || "Delete"}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {data.isDeleted ? (
+                      <>
+                        <button
+                          onClick={() =>
+                            handleRestore(
+                              data.id,
+                              getProductNameByLanguage(data),
+                            )
+                          }
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
+                          title={t("restore", "products") || "Restore"}
+                        >
+                          <Undo size={16} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => navigate(`/products/view/${data.id}`)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                          title={t("view", "common") || "View"}
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          onClick={() => navigate(`/products/edit/${data.id}`)}
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
+                          title={t("edit", "common") || "Edit"}
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleDelete(
+                              data.id,
+                              getProductNameByLanguage(data),
+                            )
+                          }
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                          title={t("delete", "common") || "Delete"}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               />

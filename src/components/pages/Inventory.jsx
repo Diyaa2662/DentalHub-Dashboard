@@ -1,6 +1,6 @@
-// eslint-disable-next-line no-unused-vars
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
+import api from "../../services/api";
 import {
   DataGrid,
   Column,
@@ -9,6 +9,7 @@ import {
   Pager,
   HeaderFilter,
   GroupPanel,
+  LoadPanel,
 } from "devextreme-react/data-grid";
 import {
   Package,
@@ -19,114 +20,198 @@ import {
   ArrowDown,
   RotateCcw,
   CheckCircle,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 
 const Inventory = () => {
   const { t } = useLanguage();
 
-  // بيانات وهمية لحركة المستودع
-  const inventoryData = [
-    {
-      id: 1,
-      product: "Advanced Dental Chair",
-      quantity: 2,
-      relatedProducts: ["Dental Stool", "X-Ray Unit"],
-      type: "in",
-      return: false,
-      inStock: 14,
-      date: "2024-01-15",
-      notes: "New stock from supplier",
-    },
-    {
-      id: 2,
-      product: "Portable X-Ray Unit",
-      quantity: 1,
-      relatedProducts: ["Protective Apron", "Film Processor"],
-      type: "out",
-      return: false,
-      inStock: 7,
-      date: "2024-01-14",
-      notes: "Order fulfillment for Dr. Chen",
-    },
-    {
-      id: 3,
-      product: "Surgical Instrument Set",
-      quantity: 3,
-      relatedProducts: ["Sterilization Kit", "Surgical Gloves"],
-      type: "out",
-      return: true,
-      inStock: 28,
-      date: "2024-01-14",
-      notes: "Customer return - defective item",
-    },
-    {
-      id: 4,
-      product: "Digital Impressions Scanner",
-      quantity: 2,
-      relatedProducts: ["Scanner Tips", "Software License"],
-      type: "in",
-      return: false,
-      inStock: 7,
-      date: "2024-01-13",
-      notes: "Restock from manufacturer",
-    },
-    {
-      id: 5,
-      product: "Autoclave Sterilizer",
-      quantity: 1,
-      relatedProducts: ["Sterilization Pouches", "Indicators"],
-      type: "in",
-      return: false,
-      inStock: 16,
-      date: "2024-01-12",
-      notes: "New inventory",
-    },
-    {
-      id: 6,
-      product: "Composite Resin Kit",
-      quantity: 5,
-      relatedProducts: ["Bonding Agent", "Curing Light"],
-      type: "out",
-      return: false,
-      inStock: 37,
-      date: "2024-01-12",
-      notes: "Bulk order for dental clinic",
-    },
-    {
-      id: 7,
-      product: "Dental Loupes 3.5x",
-      quantity: 2,
-      relatedProducts: ["LED Headlight", "Carrying Case"],
-      type: "in",
-      return: true,
-      inStock: 2,
-      date: "2024-01-11",
-      notes: "Returned from demo unit",
-    },
-    {
-      id: 8,
-      product: "Ultrasonic Scaler",
-      quantity: 1,
-      relatedProducts: ["Scaler Tips", "Water Lines"],
-      type: "out",
-      return: false,
-      inStock: 6,
-      date: "2024-01-11",
-      notes: "Sold to private practice",
-    },
-  ];
+  const [inventoryData, setInventoryData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState({
+    totalMovements: 0,
+    incomingStock: 0,
+    outgoingStock: 0,
+    returns: 0,
+  });
 
-  // إحصائيات
-  const stats = {
-    totalMovements: inventoryData.length,
-    incomingStock: inventoryData.filter((item) => item.type === "in").length,
-    outgoingStock: inventoryData.filter((item) => item.type === "out").length,
-    returns: inventoryData.filter((item) => item.return === true).length,
+  useEffect(() => {
+    fetchInventoryData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchInventoryData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.get("/stockmovments");
+      const movements = response.data?.data || [];
+
+      // ✅ تنسيق البيانات من API
+      const formattedData = movements.map((movement) => {
+        let typeText = "unknown";
+        let typeColor = "bg-gray-100 text-gray-800";
+        let arrowIcon = null;
+
+        if (movement.type === "in") {
+          typeText = t("typeIn", "inventory") || "In";
+          typeColor = "bg-green-100 text-green-800";
+          arrowIcon = <ArrowDown size={12} className="mr-1" />;
+        } else if (movement.type === "out") {
+          typeText = t("typeOut", "inventory") || "Out";
+          typeColor = "bg-red-100 text-red-800";
+          arrowIcon = <ArrowUp size={12} className="mr-1" />;
+        }
+
+        let returnStatusText = movement.return
+          ? t("yes", "common") || "Yes"
+          : t("no", "common") || "No";
+        let returnStatusColor = movement.return
+          ? "bg-yellow-100 text-yellow-800"
+          : "bg-gray-100 text-gray-800";
+        let returnIcon = movement.return ? (
+          <RotateCcw size={12} className="mr-1" />
+        ) : (
+          <CheckCircle size={12} className="mr-1" />
+        );
+
+        let stockColor = "bg-gray-100 text-gray-800";
+        if (movement.quantity_in_stock > 20) {
+          stockColor = "bg-green-100 text-green-800";
+        } else if (movement.quantity_in_stock > 10) {
+          stockColor = "bg-yellow-100 text-yellow-800";
+        } else if (movement.quantity_in_stock > 0) {
+          stockColor = "bg-orange-100 text-orange-800";
+        } else {
+          stockColor = "bg-red-100 text-red-800";
+        }
+
+        return {
+          id: movement.id,
+          product_id: movement.product_id,
+          product: `Product #${movement.product_id}`,
+          quantity: movement.quantity_ordered,
+          type: movement.type,
+          return: movement.return,
+          inStock: movement.quantity_in_stock,
+          date: movement.created_at?.split("T")[0] || "N/A",
+          notes: movement.notes || "",
+          related_type: movement.related_type,
+          related_id: movement.related_id,
+          typeText: typeText,
+          typeColor: typeColor,
+          arrowIcon: arrowIcon,
+          returnStatusText: returnStatusText,
+          returnStatusColor: returnStatusColor,
+          returnIcon: returnIcon,
+          stockColor: stockColor,
+          originalData: movement,
+        };
+      });
+
+      setInventoryData(formattedData);
+      calculateStats(formattedData);
+    } catch (err) {
+      console.error("Error fetching inventory data:", err);
+      setError(
+        t("failedToLoadInventory", "inventory") ||
+          "Failed to load inventory data",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateStats = (data) => {
+    const totalMovements = data.length;
+    const incomingStock = data.filter((item) => item.type === "in").length;
+    const outgoingStock = data.filter((item) => item.type === "out").length;
+    const returns = data.filter((item) => item.return === true).length;
+
+    setStats({
+      totalMovements,
+      incomingStock,
+      outgoingStock,
+      returns,
+    });
+  };
+
+  const handleRefresh = () => {
+    fetchInventoryData();
   };
 
   const handleAddMovement = () => {
     alert(t("addMovement", "inventory") || "Add new movement functionality");
   };
+
+  // ✅ حالة التحميل
+  if (loading) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {t("inventoryManagement", "inventory")}
+            </h1>
+            <p className="text-gray-600">
+              {t("loadingInventory", "inventory") ||
+                "Loading inventory data..."}
+            </p>
+          </div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dental-blue"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ حالة الخطأ
+  if (error) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {t("inventoryManagement", "inventory")}
+            </h1>
+            <p className="text-gray-600">
+              {t("warehouseMovement", "inventory")}
+            </p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2"
+          >
+            <RefreshCw size={18} />
+            <span>{t("retry", "common") || "Retry"}</span>
+          </button>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <div className="flex items-center mb-4">
+            <AlertCircle className="text-red-600 mr-3" size={24} />
+            <div>
+              <h3 className="font-bold text-red-800">
+                {t("errorLoadingInventory", "inventory") ||
+                  "Error Loading Inventory"}
+              </h3>
+              <p className="text-red-600">{error}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition flex items-center space-x-2"
+          >
+            <RefreshCw size={18} />
+            <span>{t("tryAgain", "common") || "Try Again"}</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -140,6 +225,13 @@ const Inventory = () => {
         </div>
         <div className="flex space-x-3 mt-4 md:mt-0">
           <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2"
+          >
+            <RefreshCw size={20} />
+            <span>{t("refresh", "common") || "Refresh"}</span>
+          </button>
+          <button
             onClick={handleAddMovement}
             className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center space-x-2"
           >
@@ -149,7 +241,7 @@ const Inventory = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - باستخدام البيانات الحقيقية */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between">
@@ -222,230 +314,190 @@ const Inventory = () => {
           <h3 className="text-lg font-semibold text-gray-800">
             {t("productMovements", "inventory")}
           </h3>
+          <p className="text-sm text-gray-600">
+            {inventoryData.length}{" "}
+            {t("movementsFound", "inventory") || "movements found"}
+          </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
-          <DataGrid
-            dataSource={inventoryData}
-            showBorders={true}
-            columnAutoWidth={true}
-            height={500}
-            allowColumnResizing={true}
-            allowColumnReordering={true}
-            columnResizingMode="widget"
-          >
-            <HeaderFilter visible={true} />
-            <SearchPanel
-              visible={true}
-              placeholder={t("searchMovements", "inventory")}
-            />
-            <GroupPanel
-              visible={true}
-              emptyPanelText={
-                t("dragColumnHereToGroup", "products") ||
-                "Drag a column header here to group by that column"
-              }
-              allowColumnDragging={true}
-            />
-            <Paging defaultPageSize={10} />
-            <Pager
-              showPageSizeSelector={true}
-              allowedPageSizes={[5, 10, 20]}
-              showInfo={true}
-            />
+        {inventoryData.length === 0 ? (
+          <div className="text-center py-12">
+            <Package className="text-gray-400 mx-auto mb-4" size={48} />
+            <h3 className="text-lg font-medium text-gray-800 mb-2">
+              {t("noMovements", "inventory") || "No Movements"}
+            </h3>
+            <p className="text-gray-600">
+              {t("noMovementsDescription", "inventory") ||
+                "No inventory movements found"}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <DataGrid
+              dataSource={inventoryData}
+              showBorders={true}
+              columnAutoWidth={true}
+              height={500}
+              allowColumnResizing={true}
+              allowColumnReordering={true}
+              columnResizingMode="widget"
+            >
+              <LoadPanel enabled={false} />
+              <HeaderFilter visible={true} />
+              <SearchPanel
+                visible={true}
+                placeholder={
+                  t("searchMovements", "inventory") || "Search movements..."
+                }
+              />
+              <GroupPanel
+                visible={true}
+                emptyPanelText={
+                  t("dragColumnHereToGroup", "products") ||
+                  "Drag a column header here to group by that column"
+                }
+                allowColumnDragging={true}
+              />
+              <Paging defaultPageSize={10} />
+              <Pager
+                showPageSizeSelector={true}
+                allowedPageSizes={[5, 10, 20]}
+                showInfo={true}
+              />
 
-            {/* Product */}
-            <Column
-              dataField="product"
-              caption={t("product", "inventory")}
-              width={"auto"}
-              alignment="left"
-              allowGrouping={false}
-            />
+              {/* ID */}
+              <Column
+                dataField="id"
+                caption={t("id", "common") || "ID"}
+                width={"auto"}
+                alignment="left"
+                allowGrouping={false}
+              />
 
-            {/* Quantity */}
-            <Column
-              dataField="quantity"
-              caption={t("quantity", "inventory")}
-              width={"auto"}
-              alignment="left"
-              allowGrouping={true}
-              cellRender={({ data }) => (
-                <div className="flex items-center">
-                  <span
-                    className={`font-bold ${
-                      data.type === "in" ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {data.type === "in" ? "+" : "-"}
-                    {data.quantity}
-                  </span>
-                  <span className="ml-2 text-gray-500 text-sm">units</span>
-                </div>
-              )}
-            />
+              {/* Product ID */}
+              <Column
+                dataField="product_id"
+                caption={t("productId", "inventory") || "Product ID"}
+                width={"auto"}
+                alignment="left"
+                allowGrouping={true}
+              />
 
-            {/* Related Products */}
-            <Column
-              dataField="relatedProducts"
-              caption={t("relatedProducts", "inventory")}
-              width={"auto"}
-              alignment="left"
-              allowGrouping={false}
-              cellRender={({ data }) => (
-                <div className="flex flex-wrap gap-1">
-                  {data.relatedProducts.map((product, index) => (
+              {/* Quantity */}
+              <Column
+                dataField="quantity"
+                caption={t("quantity", "inventory")}
+                width={"auto"}
+                alignment="left"
+                allowGrouping={true}
+                cellRender={({ data }) => (
+                  <div className="flex items-center">
                     <span
-                      key={index}
-                      className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
+                      className={`font-bold ${
+                        data.type === "in" ? "text-green-600" : "text-red-600"
+                      }`}
                     >
-                      {product}
+                      {data.type === "in" ? "+" : "-"}
+                      {data.quantity}
                     </span>
-                  ))}
-                </div>
-              )}
-            />
+                    <span className="ml-2 text-gray-500 text-sm">
+                      {t("units", "inventory") || "units"}
+                    </span>
+                  </div>
+                )}
+              />
 
-            {/* Type */}
-            <Column
-              dataField="type"
-              caption={t("movementType", "inventory")}
-              width={"auto"}
-              alignment="left"
-              allowGrouping={true}
-              cellRender={({ data }) => (
-                <div
-                  className={`flex items-center px-6 py-1 rounded-full text-xs font-medium ${
-                    data.type === "in"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
-                >
-                  {data.type === "in" ? (
-                    <>
-                      <ArrowUp size={12} className="mr-1" />
-                      {t("typeIn", "inventory")}
-                    </>
-                  ) : (
-                    <>
-                      <ArrowDown size={12} className="mr-1" />
-                      {t("typeOut", "inventory")}
-                    </>
-                  )}
-                </div>
-              )}
-            />
-
-            {/* Return */}
-            <Column
-              dataField="return"
-              caption={t("returnStatus", "inventory")}
-              width={"auto"}
-              alignment="left"
-              allowGrouping={true}
-              cellRender={({ data }) => (
-                <div
-                  className={`flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                    data.return
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
-                >
-                  {data.return ? (
-                    <>
-                      <RotateCcw size={12} className="mr-1" />
-                      {t("yes", "common")}
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle size={12} className="mr-1" />
-                      {t("no", "common")}
-                    </>
-                  )}
-                </div>
-              )}
-            />
-
-            {/* In Stock */}
-            <Column
-              dataField="inStock"
-              caption={t("inStock", "inventory")}
-              width={"auto"}
-              alignment="left"
-              allowGrouping={true}
-              cellRender={({ data }) => (
-                <div className="flex items-center justify-between">
+              {/* Type */}
+              <Column
+                dataField="type"
+                caption={t("movementType", "inventory")}
+                width={"auto"}
+                alignment="left"
+                allowGrouping={true}
+                cellRender={({ data }) => (
                   <div
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      data.inStock > 10
-                        ? "bg-green-100 text-green-800"
-                        : data.inStock > 5
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
+                    className={`flex items-center px-6 py-1 rounded-full text-xs font-medium ${data.typeColor}`}
                   >
-                    {data.inStock} units
+                    {data.arrowIcon}
+                    {data.typeText}
                   </div>
-                </div>
-              )}
-            />
+                )}
+              />
 
-            {/* Date */}
-            <Column
-              dataField="date"
-              caption={t("movementDate", "inventory")}
-              width={"auto"}
-              alignment="left"
-              allowGrouping={true}
-            />
-          </DataGrid>
-        </div>
-
-        {/* Recent Movements */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800">
-                {t("recentMovements", "inventory")}
-              </h3>
-              <p className="text-sm text-gray-600">
-                Latest warehouse transactions
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {inventoryData.slice(0, 5).map((movement) => (
-              <div
-                key={movement.id}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-              >
-                <div className="flex items-center space-x-4">
+              {/* Return */}
+              <Column
+                dataField="return"
+                caption={t("returnStatus", "inventory")}
+                width={"auto"}
+                alignment="left"
+                allowGrouping={true}
+                cellRender={({ data }) => (
                   <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      movement.type === "in" ? "bg-green-50" : "bg-red-50"
-                    }`}
+                    className={`flex items-center px-3 py-1 rounded-full text-xs font-medium ${data.returnStatusColor}`}
                   >
-                    {movement.type === "in" ? (
-                      <ArrowUp className="text-green-500" size={20} />
-                    ) : (
-                      <ArrowDown className="text-red-500" size={20} />
-                    )}
+                    {data.returnIcon}
+                    {data.returnStatusText}
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-800">
-                      {movement.product}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {movement.quantity} units
-                    </p>
+                )}
+              />
+
+              {/* In Stock */}
+              <Column
+                dataField="inStock"
+                caption={t("inStock", "inventory")}
+                width={"auto"}
+                alignment="left"
+                allowGrouping={true}
+                cellRender={({ data }) => (
+                  <div className="flex items-center justify-between">
+                    <div
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${data.stockColor}`}
+                    >
+                      {data.inStock} {t("units", "inventory") || "units"}
+                    </div>
                   </div>
-                </div>
-                <span className="text-sm text-gray-500">{movement.date}</span>
-              </div>
-            ))}
+                )}
+              />
+
+              {/* Date */}
+              <Column
+                dataField="date"
+                caption={t("movementDate", "inventory")}
+                width={"auto"}
+                alignment="left"
+                allowGrouping={true}
+              />
+
+              {/* Related Info */}
+              <Column
+                dataField="related_type"
+                caption={t("relatedTo", "inventory") || "Related To"}
+                width={"auto"}
+                alignment="left"
+                allowGrouping={true}
+                cellRender={({ data }) => (
+                  <div className="text-sm">
+                    <span className="font-medium">{data.related_type}: </span>
+                    <span className="text-gray-600">#{data.related_id}</span>
+                  </div>
+                )}
+              />
+
+              {/* Notes */}
+              <Column
+                dataField="notes"
+                caption={t("notes", "procurement") || "Notes"}
+                width={"auto"}
+                alignment="left"
+                cellRender={({ data }) => (
+                  <div className="text-sm text-gray-600">
+                    {data.notes || "-"}
+                  </div>
+                )}
+              />
+            </DataGrid>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

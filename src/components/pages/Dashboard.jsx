@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { DataGrid, Column } from "devextreme-react/data-grid";
 import {
@@ -11,7 +11,9 @@ import {
   Tooltip,
   Title,
   Grid,
+  ValueAxis,
 } from "devextreme-react/chart";
+import SelectBox from "devextreme-react/select-box";
 import {
   TrendingUp,
   Package,
@@ -21,100 +23,207 @@ import {
   Star,
 } from "lucide-react";
 import StatCard from "../ui/StatCard";
+import api from "../../services/api";
 
 const Dashboard = () => {
   const { t } = useLanguage();
+  const [loading, setLoading] = useState(true);
+  const [statsData, setStatsData] = useState([]);
+  const [ordersData, setOrdersData] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+  const [salesData, setSalesData] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [availableYears] = useState([2022, 2023, 2024, 2025, 2026]);
 
-  // Mock data for statistics
-  const statsData = [
-    {
-      title: "totalRevenue",
-      value: "$45,231.89",
-      change: "+20.1%",
-      icon: <DollarSign className="text-green-500" size={24} />,
-      color: "bg-green-50",
-      trend: "up",
-    },
-    {
-      title: "totalProducts",
-      value: "2,345",
-      change: "+5.2%",
-      icon: <Package className="text-blue-500" size={24} />,
-      color: "bg-blue-50",
-      trend: "up",
-    },
-    {
-      title: "totalCustomers",
-      value: "3,456",
-      change: "+8.3%",
-      icon: <Users className="text-purple-500" size={24} />,
-      color: "bg-purple-50",
-      trend: "up",
-    },
-    {
-      title: "ordersToday",
-      value: "45",
-      change: "-2.3%",
-      icon: <ShoppingCart className="text-orange-500" size={24} />,
-      color: "bg-orange-50",
-      trend: "down",
-    },
-  ];
+  // Helper functions for API calls
+  const fetchStatsData = async (endpoint) => {
+    try {
+      const response = await api.get(endpoint);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching ${endpoint}:`, error);
+      throw error;
+    }
+  };
 
-  // Mock data for recent orders
-  const ordersData = [
-    {
-      id: 1,
-      customer: "Dr. Sarah Johnson",
-      product: "Dental Drill Set",
-      amount: "$450",
-      status: "Completed",
-      date: "2024-01-15",
-    },
-    {
-      id: 2,
-      customer: "Dr. Michael Chen",
-      product: "X-Ray Machine",
-      amount: "$2,800",
-      status: "Processing",
-      date: "2024-01-14",
-    },
-    {
-      id: 3,
-      customer: "Dr. Emily Williams",
-      product: "Scaling Kit",
-      amount: "$320",
-      status: "Pending",
-      date: "2024-01-14",
-    },
-    {
-      id: 4,
-      customer: "Dr. Robert Kim",
-      product: "Impression Material",
-      amount: "$180",
-      status: "Completed",
-      date: "2024-01-13",
-    },
-    {
-      id: 5,
-      customer: "Dr. Lisa Martinez",
-      product: "Surgical Instruments",
-      amount: "$1,250",
-      status: "Shipped",
-      date: "2024-01-12",
-    },
-  ];
+  const fetchRecentOrders = async (endpoint) => {
+    try {
+      const response = await api.get(endpoint);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching recent orders:`, error);
+      throw error;
+    }
+  };
 
-  // Mock data for sales chart
-  const salesData = [
-    { month: "Jan", sales: 4000, orders: 240 },
-    { month: "Feb", sales: 3000, orders: 139 },
-    { month: "Mar", sales: 2000, orders: 980 },
-    { month: "Apr", sales: 2780, orders: 390 },
-    { month: "May", sales: 1890, orders: 480 },
-    { month: "Jun", sales: 2390, orders: 380 },
-    { month: "Jul", sales: 3490, orders: 430 },
-  ];
+  const fetchTopProducts = async (endpoint) => {
+    try {
+      const response = await api.get(endpoint);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching top products:`, error);
+      throw error;
+    }
+  };
+
+  const fetchSalesData = async (endpoint, yearData) => {
+    try {
+      const response = await api.post(endpoint, yearData);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching sales data:`, error);
+      throw error;
+    }
+  };
+
+  // Fetch all dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        // Fetch basic stats
+        const [
+          revenueResponse,
+          productsResponse,
+          customersResponse,
+          ordersResponse,
+        ] = await Promise.all([
+          fetchStatsData("/totalrevanue"),
+          fetchStatsData("/totalproducts"),
+          fetchStatsData("/totalcustomers"),
+          fetchStatsData("/orderstoday"),
+        ]);
+
+        // Format stats data based on actual API responses
+        const formattedStats = [
+          {
+            title: t("totalRevenue", "dashboard"),
+            value: `$${Number(
+              revenueResponse.total_revanue || 0,
+            ).toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`,
+            icon: <DollarSign className="text-green-500" size={24} />,
+            color: "bg-green-50",
+          },
+          {
+            title: t("totalProducts", "dashboard"),
+            value: Number(productsResponse.data || 0).toLocaleString("en-US"),
+            icon: <Package className="text-blue-500" size={24} />,
+            color: "bg-blue-50",
+          },
+          {
+            title: t("totalCustomers", "dashboard"),
+            value: Number(
+              customersResponse.total_customers || 0,
+            ).toLocaleString("en-US"),
+            icon: <Users className="text-purple-500" size={24} />,
+            color: "bg-purple-50",
+          },
+          {
+            title: t("ordersToday", "dashboard"),
+            value: Number(
+              ordersResponse.total_orders_today || 0,
+            ).toLocaleString("en-US"),
+            icon: <ShoppingCart className="text-orange-500" size={24} />,
+            color: "bg-orange-50",
+          },
+        ];
+
+        setStatsData(formattedStats);
+
+        // Fetch recent orders
+        const orders = await fetchRecentOrders("/fiverecentorders");
+        setOrdersData(Array.isArray(orders.data) ? orders.data : []);
+
+        // Fetch top products
+        const products = await fetchTopProducts("/topproducts");
+        setTopProducts(Array.isArray(products.data) ? products.data : []);
+
+        // Fetch initial sales data for current year
+        await fetchSalesOverview(selectedYear);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch sales data when year changes
+  useEffect(() => {
+    if (selectedYear) {
+      fetchSalesOverview(selectedYear);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear]);
+
+  const fetchSalesOverview = async (year) => {
+    try {
+      const response = await fetchSalesData("/salestoorders", { year });
+      // Convert month numbers to names
+      const monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      const formattedData =
+        response.monthly_revanue?.map((item) => ({
+          month: monthNames[item.month - 1] || `Month ${item.month}`,
+          sales: item.sales || 0,
+          orders: item.orders || 0,
+        })) || [];
+
+      setSalesData(formattedData);
+    } catch (error) {
+      console.error("Error fetching sales data:", error);
+      setSalesData([]);
+    }
+  };
+
+  const handleYearChange = (e) => {
+    setSelectedYear(e.value);
+  };
+
+  // Format recent orders data for the table
+  const formatOrderData = (orders) => {
+    return orders.map((order) => ({
+      id: order.id,
+      customer: order.user_name,
+      product: `Order #${order.order_number}`,
+      amount: `$${order.total_amount}`,
+      status: order.status,
+      date: order.order_date,
+      items: order.number_of_items,
+    }));
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-dental-blue border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <p className="mt-4 text-gray-600">
+          {t("loading", "common") || "Loading dashboard data..."}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -129,15 +238,14 @@ const Dashboard = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsData.map((stat, index) => (
-          <StatCard
-            key={index}
-            title={t(stat.title, "dashboard")}
-            value={stat.value}
-            change={stat.change}
-            icon={stat.icon}
-            color={stat.color}
-            trend={stat.trend}
-          />
+          <div key={index}>
+            <StatCard
+              title={stat.title} // هنا نستخدم العنوان المترجم مباشرة
+              value={stat.value}
+              icon={stat.icon}
+              color={stat.color}
+            />
+          </div>
         ))}
       </div>
 
@@ -151,24 +259,67 @@ const Dashboard = () => {
                 {t("salesOverview", "dashboard")}
               </h3>
               <p className="text-sm text-gray-600">
-                {t("monthlyRevenueOrders", "dashboard") ||
-                  "Monthly revenue and orders"}
+                {t("monthlyRevenueOrders", "dashboard")}
               </p>
             </div>
-            <TrendingUp className="text-dental-blue" size={24} />
+            <div className="flex items-center space-x-4">
+              <div className="flex flex-col items-end">
+                <SelectBox
+                  items={availableYears}
+                  value={selectedYear}
+                  onValueChanged={handleYearChange}
+                  width={120}
+                  searchEnabled={false}
+                />
+                <label className="text-xs text-gray-500 mt-1">
+                  {t("selectYear", "dashboard") || "Select Year"}
+                </label>
+              </div>
+              <TrendingUp className="text-dental-blue" size={24} />
+            </div>
           </div>
-          <Chart id="chart" dataSource={salesData} palette="Soft">
-            <CommonSeriesSettings argumentField="month" />
-            <Series valueField="sales" name={t("sales", "products") + " ($)"} />
-            <Series valueField="orders" name={t("orders", "navigation")} />
-            <ArgumentAxis>
-              <Grid visible={true} />
-            </ArgumentAxis>
-            <Legend verticalAlignment="bottom" horizontalAlignment="center" />
-            <Export enabled={true} />
-            <Tooltip enabled={true} />
-            <Title text={t("monthlyPerformance", "dashboard")} />
-          </Chart>
+          {salesData.length > 0 ? (
+            <Chart id="chart" dataSource={salesData} palette="Soft">
+              <CommonSeriesSettings argumentField="month" type="line" />
+              <Series
+                valueField="sales"
+                name={t("sales", "products") + " ($)"}
+                axis="sales"
+              />
+              <Series
+                valueField="orders"
+                name={t("orders", "navigation")}
+                axis="orders"
+              />
+              <ArgumentAxis>
+                <Grid visible={true} />
+              </ArgumentAxis>
+              <ValueAxis name="sales" position="left" />
+              <ValueAxis name="orders" position="right" />
+              <Legend
+                verticalAlignment="bottom"
+                horizontalAlignment="center"
+                margin={{ bottom: 20 }}
+              />
+              <Export enabled={true} />
+              <Tooltip
+                enabled={true}
+                shared={true}
+                customizeTooltip={(e) => {
+                  return {
+                    text: `${e.seriesName}: ${e.valueText}`,
+                  };
+                }}
+              />
+              <Title
+                text={`${t("monthlyPerformance", "dashboard")} - ${selectedYear}`}
+              />
+            </Chart>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              {t("noDataAvailable", "common") || "No data available"}
+            </div>
+          )}
         </div>
 
         {/* Recent Orders */}
@@ -179,60 +330,90 @@ const Dashboard = () => {
                 {t("recentOrders", "dashboard")}
               </h3>
               <p className="text-sm text-gray-600">
-                {t("latestCustomerPurchases", "dashboard") ||
-                  "Latest customer purchases"}
+                {t("latestCustomerPurchases", "dashboard")}
               </p>
             </div>
             <ShoppingCart className="text-dental-purple" size={24} />
           </div>
-          <DataGrid
-            dataSource={ordersData}
-            showBorders={true}
-            columnAutoWidth={true}
-            height={350}
-          >
-            <Column dataField="id" caption={t("id", "products")} width={60} />
-            <Column
-              dataField="customer"
-              caption={t("customer", "navigation")}
-            />
-            <Column
-              dataField="product"
-              caption={t("product", "products") || "Product"}
-            />
-            <Column
-              dataField="amount"
-              caption={t("amount", "common") || "Amount"}
-            />
-            <Column
-              dataField="status"
-              caption={t("status", "common")}
-              cellRender={({ data }) => (
-                <span
-                  className={`
-                  px-3 py-1 rounded-full text-xs font-medium
-                  ${
-                    data.status === "Completed"
-                      ? "bg-green-100 text-green-800"
-                      : data.status === "Processing"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : data.status === "Pending"
-                      ? "bg-orange-100 text-orange-800"
-                      : "bg-blue-100 text-blue-800"
-                  }
-                `}
-                >
-                  {data.status === "Completed"
-                    ? t("completed", "common")
-                    : data.status === "Processing"
-                    ? t("processing", "common") || "Processing"
-                    : data.status === "Pending"
-                    ? t("pending", "common")
-                    : data.status}
-                </span>
-              )}
-            />
-          </DataGrid>
+          {ordersData.length > 0 ? (
+            <DataGrid
+              dataSource={formatOrderData(ordersData)}
+              showBorders={true}
+              columnAutoWidth={true}
+              height={350}
+            >
+              <Column dataField="id" caption={t("id", "products")} width={60} />
+              <Column
+                dataField="customer"
+                caption={t("customer", "dashboard") || "Customer"}
+              />
+              <Column
+                dataField="product"
+                caption={t("product", "dashboard") || "Product"}
+                cellRender={({ data }) => (
+                  <div>
+                    <div>{data.product}</div>
+                    <div className="text-xs text-gray-500">
+                      {data.items} {t("items", "dashboard") || "items"}
+                    </div>
+                  </div>
+                )}
+              />
+              <Column
+                dataField="amount"
+                caption={t("amount", "dashboard") || "Amount"}
+              />
+              <Column
+                dataField="status"
+                caption={t("status", "dashboard")}
+                cellRender={({ data }) => {
+                  const statusConfig = {
+                    confirmed: {
+                      className: "bg-green-100 text-green-800",
+                      label: t("confirmed", "dashboard") || "Confirmed",
+                    },
+                    pending: {
+                      className: "bg-yellow-100 text-yellow-800",
+                      label: t("pending", "dashboard") || "Pending",
+                    },
+                    processing: {
+                      className: "bg-blue-100 text-blue-800",
+                      label: t("processing", "dashboard") || "Processing",
+                    },
+                    shipped: {
+                      className: "bg-purple-100 text-purple-800",
+                      label: t("shipped", "dashboard") || "Shipped",
+                    },
+                    completed: {
+                      className: "bg-green-100 text-green-800",
+                      label: t("completed", "dashboard") || "Completed",
+                    },
+                    cancelled: {
+                      className: "bg-red-100 text-red-800",
+                      label: t("cancelled", "dashboard") || "Cancelled",
+                    },
+                  };
+
+                  const config = statusConfig[data.status.toLowerCase()] || {
+                    className: "bg-gray-100 text-gray-800",
+                    label: data.status,
+                  };
+
+                  return (
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${config.className}`}
+                    >
+                      {config.label}
+                    </span>
+                  );
+                }}
+              />
+            </DataGrid>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              {t("noOrdersFound", "dashboard") || "No orders found"}
+            </div>
+          )}
         </div>
       </div>
 
@@ -244,121 +425,67 @@ const Dashboard = () => {
               {t("topProducts", "dashboard")}
             </h3>
             <p className="text-sm text-gray-600">
-              {t("bestSellingEquipment", "dashboard") ||
-                "Best selling dental equipment"}
+              {t("bestSellingEquipment", "dashboard")}
             </p>
           </div>
           <Star className="text-dental-teal" size={24} />
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  {t("product", "products") || "Product"}
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  {t("category", "products")}
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  {t("price", "products")}
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  {t("stock", "products")}
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  {t("sales", "products")}
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  {t("rating", "products")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                {
-                  product: "Advanced Dental Chair",
-                  category: "Equipment",
-                  price: "$4,500",
-                  stock: 12,
-                  sales: 45,
-                  rating: 4.8,
-                },
-                {
-                  product: "Portable X-Ray Unit",
-                  category: "Imaging",
-                  price: "$2,800",
-                  stock: 8,
-                  sales: 32,
-                  rating: 4.7,
-                },
-                {
-                  product: "Surgical Instrument Set",
-                  category: "Surgical",
-                  price: "$1,200",
-                  stock: 25,
-                  sales: 78,
-                  rating: 4.9,
-                },
-                {
-                  product: "Digital Impressions Scanner",
-                  category: "Digital",
-                  price: "$3,500",
-                  stock: 5,
-                  sales: 18,
-                  rating: 4.6,
-                },
-                {
-                  product: "Autoclave Sterilizer",
-                  category: "Sterilization",
-                  price: "$950",
-                  stock: 15,
-                  sales: 56,
-                  rating: 4.5,
-                },
-              ].map((item, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-gray-100 hover:bg-gray-50"
-                >
-                  <td className="py-3 px-4">{item.product}</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 bg-gray-100 rounded text-sm">
-                      {item.category}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 font-medium">{item.price}</td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`
-                      px-2 py-1 rounded text-sm
-                      ${
-                        item.stock > 10
-                          ? "bg-green-100 text-green-800"
-                          : item.stock > 5
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
-                      }
-                    `}
-                    >
-                      {item.stock} {t("units", "products") || "units"}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">{item.sales}</td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center">
-                      <Star
-                        size={16}
-                        className="text-yellow-500 fill-current"
-                      />
-                      <span className="ml-1">{item.rating}</span>
-                    </div>
-                  </td>
+        {topProducts.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
+                    {t("product", "dashboard") || "Product"}
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
+                    {t("productId", "dashboard") || "Product ID"}
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
+                    {t("totalSold", "dashboard") || "Total Sold"}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {topProducts.map((item, index) => (
+                  <tr
+                    key={index}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <td className="py-3 px-4">{item.product_name}</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-1 bg-gray-100 rounded text-sm">
+                        #{item.product_id}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`
+                        px-3 py-1 rounded-full text-sm font-medium
+                        ${
+                          item.total_sold > 10
+                            ? "bg-green-100 text-green-800"
+                            : item.total_sold > 5
+                              ? "bg-blue-100 text-blue-800"
+                              : item.total_sold > 0
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-gray-100 text-gray-800"
+                        }
+                      `}
+                      >
+                        {item.total_sold} {t("units", "dashboard") || "units"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="py-8 flex items-center justify-center text-gray-500">
+            {t("noProductsFound", "dashboard") || "No products found"}
+          </div>
+        )}
       </div>
     </div>
   );

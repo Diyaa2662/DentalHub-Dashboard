@@ -89,5 +89,13 @@
   "backToInvoices": "Back to invoices",
   "noOrderAssociated": "No order associated with this invoice",
   "invoicePaid": "This invoice has been paid",
-  "noCustomerInfo": "No customer information available"
+  "noCustomerInfo": "No customer information available",
+  "changeInvoiceStatus": "Change Invoice Status",
+  "markAsUnpaid": "Mark as Unpaid",
+  "changingStatus": "Changing status...",
+  "changeInvoiceStatusConfirmation": "Are you sure you want to change invoice status to",
+  "invoiceStatusUpdated": "Invoice status successfully updated",
+  "failedToChangeInvoiceStatus": "Failed to change invoice status",
+  "invoicePaidHelp": "Invoice is marked as paid. You can change it to unpaid if needed.",
+  "invoiceUnpaidHelp": "Invoice is currently unpaid. Mark it as paid when payment is received."
 }

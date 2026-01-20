@@ -76,5 +76,10 @@
   "invalidStatus": "Invalid status",
   "pendingOrderHelp": "This order is awaiting confirmation",
   "confirmedOrderHelp": "This order has been confirmed and can be canceled if needed",
-  "canceledOrderHelp": "This order has been canceled"
+  "canceledOrderHelp": "This order has been canceled",
+  "noImage": "No Image",
+  "confirmingOrder": "Confirming order...",
+  "cancellingOrder": "Cancelling order...",
+  "orderAlreadyConfirmed": "Order is already confirmed",
+  "orderAlreadyCanceled": "Order is already canceled"
 }

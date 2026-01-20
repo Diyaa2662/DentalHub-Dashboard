@@ -89,5 +89,13 @@
   "backToInvoices": "Tillbaka till fakturor",
   "noOrderAssociated": "Ingen order associerad med denna faktura",
   "invoicePaid": "Denna faktura har betalats",
-  "noCustomerInfo": "Ingen kundinformation tillgänglig"
+  "noCustomerInfo": "Ingen kundinformation tillgänglig",
+  "changeInvoiceStatus": "Ändra Fakturastatus",
+  "markAsUnpaid": "Markera som Obetald",
+  "changingStatus": "Ändrar status...",
+  "changeInvoiceStatusConfirmation": "Är du säker på att du vill ändra fakturastatus till",
+  "invoiceStatusUpdated": "Fakturastatus uppdaterad",
+  "failedToChangeInvoiceStatus": "Kunde inte ändra fakturastatus",
+  "invoicePaidHelp": "Fakturan är markerad som betald. Du kan ändra den till obetald om det behövs.",
+  "invoiceUnpaidHelp": "Fakturan är för närvarande obetald. Markera den som betald när betalning mottagits."
 }

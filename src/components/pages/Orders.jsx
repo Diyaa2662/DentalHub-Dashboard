@@ -13,13 +13,10 @@ import {
 } from "devextreme-react/data-grid";
 import {
   ShoppingCart,
-  Download,
   Eye,
-  Trash2,
   CheckCircle,
   Clock,
   XCircle,
-  Truck,
   DollarSign,
   Calendar,
   CreditCard,
@@ -369,35 +366,7 @@ const Orders = () => {
     );
   };
 
-  // ✅ حذف الطلب
-  const handleDeleteOrder = async (orderId, orderNumber) => {
-    if (
-      window.confirm(
-        `${t("confirmDeleteOrder", "orders") || "Delete order"} #${orderNumber}?`,
-      )
-    ) {
-      try {
-        await api.post(`/deletecustomerorder/${orderId}`);
-
-        // تحديث البيانات المحلية
-        setOrdersData((prev) => prev.filter((order) => order.id !== orderId));
-        calculateStats(ordersData.filter((order) => order.id !== orderId));
-
-        alert(
-          `${t("orderDeleted", "orders") || "Order deleted"}: ${orderNumber}`,
-        );
-      } catch (err) {
-        console.error("Error deleting order:", err);
-        alert(
-          t("failedToDeleteOrder", "orders") ||
-            "Failed to delete order: " +
-              (err.response?.data?.message || err.message),
-        );
-      }
-    }
-  };
-
-  // ✅ عرض خلية الإجراءات (بدون أزرار تغيير الحالة)
+  // ✅ عرض خلية الإجراءات (فقط زر المشاهدة)
   const actionCellRender = (data) => {
     return (
       <div className="flex items-center space-x-3">
@@ -407,14 +376,6 @@ const Orders = () => {
           onClick={() => navigate(`/orders/view/${data.data.id}`)}
         >
           <Eye size={18} />
-        </button>
-
-        <button
-          className="text-red-600 hover:text-red-800 transition"
-          title={t("delete", "common") || "Delete"}
-          onClick={() => handleDeleteOrder(data.data.id, data.data.orderNumber)}
-        >
-          <Trash2 size={18} />
         </button>
       </div>
     );

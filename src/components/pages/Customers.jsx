@@ -16,12 +16,13 @@ import {
   Phone,
   MapPin,
   Calendar,
-  UserPlus,
   AlertCircle,
   RefreshCw,
   Ban,
   Star,
   Edit,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { Popup } from "devextreme-react/popup";
 
@@ -32,6 +33,12 @@ const Customers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // ✅ إضافة حالة للإحصائيات الحقيقية
+  const [statsData, setStatsData] = useState({
+    totalCustomers: "0",
+    avgOrderValue: "$0.00",
+  });
+
   // حالة للتقييم الجديد
   const [ratingPopup, setRatingPopup] = useState({
     visible: false,
@@ -41,19 +48,55 @@ const Customers = () => {
     newRating: "",
   });
 
-  // ✅ بيانات ثابتة للإحصائيات والتوب كاستومرز
-  const statsData = {
-    totalCustomers: "1,234",
-    avgOrderValue: "$845",
-    fromLastMonth: "+12.5%",
-    avgOrderGrowth: "+5.3%",
-  };
-
   // ✅ جلب بيانات الزبائن من API
   useEffect(() => {
     fetchCustomers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ✅ دالة لحساب الإحصائيات من البيانات الحقيقية
+  const calculateStats = (customers) => {
+    if (!customers || customers.length === 0) {
+      return {
+        totalCustomers: "0",
+        avgOrderValue: "$0.00",
+      };
+    }
+
+    try {
+      // 1. حساب إجمالي الزبائن
+      const totalCustomers = customers.length;
+
+      // 2. حساب متوسط قيمة الطلب
+      let totalSpent = 0;
+      let totalOrders = 0;
+
+      customers.forEach((customer) => {
+        // استخراج قيمة المصروفات من تنسيق السلسلة "0.00"
+        const spentValue = parseFloat(customer.total_spent) || 0;
+        totalSpent += spentValue;
+
+        // إجمالي الطلبات
+        const orders = parseInt(customer.orders_count) || 0;
+        totalOrders += orders;
+      });
+
+      // حساب متوسط قيمة الطلب (إجمالي المصروفات ÷ إجمالي الطلبات)
+      const avgOrderValue =
+        totalOrders > 0 ? (totalSpent / totalOrders).toFixed(2) : 0;
+
+      return {
+        totalCustomers: totalCustomers.toLocaleString(),
+        avgOrderValue: `$${avgOrderValue}`,
+      };
+    } catch (err) {
+      console.error("Error calculating stats:", err);
+      return {
+        totalCustomers: customers.length.toLocaleString(),
+        avgOrderValue: "$0.00",
+      };
+    }
+  };
 
   const fetchCustomers = async () => {
     try {
@@ -62,65 +105,41 @@ const Customers = () => {
 
       const response = await api.get("/customers");
 
-      // ✅ استخراج البيانات من هيكل الاستجابة المبسط
+      // ✅ استخراج البيانات من هيكل الاستجابة
       const apiData = response.data?.data;
 
       if (Array.isArray(apiData)) {
         if (apiData.length === 0) {
           // ✅ لا يوجد زبائن
           setCustomersData([]);
+          setStatsData({
+            totalCustomers: "0",
+            avgOrderValue: "$0.00",
+          });
         } else {
-          // ✅ تحويل البيانات للتنسيق المناسب
+          // ✅ استخدام البيانات كما هي من API بدون تحويل تنسيق المصروفات
           const formattedData = apiData.map((customer) => {
-            // ✅ التأكد من وجود البيانات الأساسية
-            const customerId = customer.id || customer.customer_id;
-            const customerName =
-              customer.name ||
-              customer.full_name ||
-              customer.email ||
-              `Customer #${customerId}`;
-
-            // ✅ حساب إجمالي الطلبات والمصروفات (إذا لم تكن موجودة)
-            const ordersCount =
-              customer.orders_count || customer.total_orders || 0;
-
-            // ✅ معالجة إجمالي المصروفات
-            let totalSpent = "$0.00";
-            if (customer.total_spent !== undefined) {
-              const spentValue = parseFloat(customer.total_spent);
-              totalSpent = isNaN(spentValue)
-                ? "$0.00"
-                : `$${spentValue.toFixed(2)}`;
-            }
-
-            // ✅ معالجة تاريخ الانضمام
-            const joinDate =
-              customer.join_date ||
-              customer.created_at ||
-              customer.registration_date ||
-              "";
-
-            // ✅ معالجة التقييم
-            const rate = customer.rate || customer.rating || "0.00";
-
             return {
-              id: customerId,
-              name: customerName,
+              id: customer.id,
+              name: customer.name,
               email: customer.email || "",
-              phone: customer.phone || customer.phone_number || "",
-              location:
-                customer.location ||
-                customer.address ||
-                customer.city ||
-                t("notSpecified", "customers"),
-              orders: ordersCount,
-              totalSpent: totalSpent,
-              joinDate: joinDate,
-              rate: rate, // إضافة التقييم
+              phone: customer.phone || "",
+              address: customer.address || t("notSpecified", "customers"),
+              orders_count: customer.orders_count || 0,
+              total_spent: customer.total_spent || "0.00", // حفظ كسلسلة نصية
+              join_date: customer.join_date,
+              rate: customer.rate || "0.00",
+              status: customer.status || "active", // إضافة الحالة
+              type: customer.type,
+              roles: customer.roles,
             };
           });
 
           setCustomersData(formattedData);
+
+          // ✅ حساب الإحصائيات من البيانات الحقيقية
+          const calculatedStats = calculateStats(apiData); // استخدام apiData الأصلية
+          setStatsData(calculatedStats);
         }
       } else {
         // ✅ حالة عدم وجود بيانات أو تنسيق غير صحيح
@@ -129,6 +148,10 @@ const Customers = () => {
             "No customer data found or invalid data format",
         );
         setCustomersData([]);
+        setStatsData({
+          totalCustomers: "0",
+          avgOrderValue: "$0.00",
+        });
       }
     } catch (err) {
       console.error("Error fetching customers:", err);
@@ -139,6 +162,10 @@ const Customers = () => {
           "Failed to load customers",
       );
       setCustomersData([]);
+      setStatsData({
+        totalCustomers: "0",
+        avgOrderValue: "$0.00",
+      });
     } finally {
       setLoading(false);
     }
@@ -149,13 +176,68 @@ const Customers = () => {
     fetchCustomers();
   };
 
-  // ✅ دالة حظر الزبون (مؤقتة - سترتبط بالـAPI لاحقاً)
-  const handleBlockCustomer = (id, name) => {
+  // ✅ دالة حظر الزبون - متصلة بالـAPI
+  const handleBlockCustomer = async (id, name) => {
     if (
       window.confirm(`${t("confirmBlockCustomer", "customers")} "${name}"?`)
     ) {
-      // ⏳ سيتم ربطها بالـAPI لاحقاً
-      alert(`${t("customerBlocked", "customers")}: ${name}`);
+      try {
+        // ✅ ربط مع API حظر المستخدم
+        await api.post(`/banuser/${id}`);
+
+        // تحديث الواجهة بعد الحظر
+        setCustomersData((prevData) =>
+          prevData.map((customer) =>
+            customer.id === id ? { ...customer, status: "blocked" } : customer,
+          ),
+        );
+
+        alert(`${t("customerBlocked", "customers")}: ${name}`);
+      } catch (err) {
+        console.error("Error blocking customer:", err);
+        alert(
+          t("failedToBlockCustomer", "customers") ||
+            "Failed to block customer: " +
+              (err.response?.data?.message || err.message),
+        );
+      }
+    }
+  };
+
+  // ✅ دالة فك حظر الزبون - متصلة بالـAPI
+  const handleUnblockCustomer = async (id, name) => {
+    if (
+      window.confirm(`${t("confirmUnblockCustomer", "customers")} "${name}"?`)
+    ) {
+      try {
+        // ✅ ربط مع API فك حظر المستخدم
+        await api.post(`/unbanuser/${id}`);
+
+        // تحديث الواجهة بعد فك الحظر
+        setCustomersData((prevData) =>
+          prevData.map((customer) =>
+            customer.id === id ? { ...customer, status: "active" } : customer,
+          ),
+        );
+
+        alert(`${t("customerUnblocked", "customers")}: ${name}`);
+      } catch (err) {
+        console.error("Error unblocking customer:", err);
+        alert(
+          t("failedToUnblockCustomer", "customers") ||
+            "Failed to unblock customer: " +
+              (err.response?.data?.message || err.message),
+        );
+      }
+    }
+  };
+
+  // ✅ دالة لتحديد حالة الحظر واختيار الإجراء المناسب
+  const handleBlockAction = (customer) => {
+    if (customer.status === "blocked") {
+      handleUnblockCustomer(customer.id, customer.name);
+    } else {
+      handleBlockCustomer(customer.id, customer.name);
     }
   };
 
@@ -214,6 +296,16 @@ const Customers = () => {
           ),
         );
 
+        // إعادة حساب الإحصائيات بعد التحديث
+        const updatedStats = calculateStats(
+          customersData.map((customer) =>
+            customer.id === ratingPopup.customerId
+              ? { ...customer, rate: ratingPopup.newRating }
+              : customer,
+          ),
+        );
+        setStatsData(updatedStats);
+
         closeRatingPopup();
       }
     } catch (err) {
@@ -257,9 +349,6 @@ const Customers = () => {
                 <Users className="text-dental-blue" size={24} />
               </div>
             </div>
-            <p className="text-sm text-green-600 mt-2">
-              ↑ {statsData.fromLastMonth} {t("fromLastMonth", "orders")}
-            </p>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-gray-200">
@@ -276,9 +365,6 @@ const Customers = () => {
                 <Calendar className="text-purple-500" size={24} />
               </div>
             </div>
-            <p className="text-sm text-green-600 mt-2">
-              ↑ {statsData.avgOrderGrowth} {t("fromLastMonth", "orders")}
-            </p>
           </div>
         </div>
 
@@ -325,9 +411,6 @@ const Customers = () => {
                 <Users className="text-dental-blue" size={24} />
               </div>
             </div>
-            <p className="text-sm text-green-600 mt-2">
-              ↑ {statsData.fromLastMonth} {t("fromLastMonth", "orders")}
-            </p>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-gray-200">
@@ -344,9 +427,6 @@ const Customers = () => {
                 <Calendar className="text-purple-500" size={24} />
               </div>
             </div>
-            <p className="text-sm text-green-600 mt-2">
-              ↑ {statsData.avgOrderGrowth} {t("fromLastMonth", "orders")}
-            </p>
           </div>
         </div>
 
@@ -398,7 +478,7 @@ const Customers = () => {
         </div>
       </div>
 
-      {/* Customer Stats - بيانات ثابتة */}
+      {/* Customer Stats - بيانات حقيقية */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between">
@@ -414,9 +494,6 @@ const Customers = () => {
               <Users className="text-dental-blue" size={24} />
             </div>
           </div>
-          <p className="text-sm text-green-600 mt-2">
-            ↑ {statsData.fromLastMonth} {t("fromLastMonth", "orders")}
-          </p>
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-gray-200">
@@ -433,9 +510,6 @@ const Customers = () => {
               <Calendar className="text-purple-500" size={24} />
             </div>
           </div>
-          <p className="text-sm text-green-600 mt-2">
-            ↑ {statsData.avgOrderGrowth} {t("fromLastMonth", "orders")}
-          </p>
         </div>
       </div>
 
@@ -542,8 +616,8 @@ const Customers = () => {
             />
 
             <Column
-              dataField="location"
-              caption={t("location", "customers")}
+              dataField="address"
+              caption={t("address", "customers")}
               width={"auto"}
               alignment="left"
               allowHeaderFiltering={true}
@@ -552,12 +626,12 @@ const Customers = () => {
               cellRender={({ data }) => (
                 <div className="flex items-center">
                   <MapPin size={14} className="mr-2 text-gray-400" />
-                  {data.location || t("notSpecified", "customers")}
+                  {data.address || t("notSpecified", "customers")}
                 </div>
               )}
             />
 
-            {/* ✅ عمود التقييم الجديد */}
+            {/* ✅ عمود التقييم */}
             <Column
               dataField="rate"
               caption={t("rating", "customers") || "Rating"}
@@ -574,8 +648,38 @@ const Customers = () => {
               )}
             />
 
+            {/* ✅ عمود الحالة */}
             <Column
-              dataField="orders"
+              dataField="status"
+              caption={t("status", "customers") || "Status"}
+              width={"auto"}
+              alignment="center"
+              allowHeaderFiltering={true}
+              allowFiltering={true}
+              allowGrouping={true}
+              cellRender={({ data }) => (
+                <div className="flex items-center justify-center">
+                  {data.status === "active" ? (
+                    <div className="flex items-center space-x-2 px-3 py-1 bg-green-100 text-green-800 rounded-full">
+                      <CheckCircle size={14} />
+                      <span className="text-sm font-medium">
+                        {t("active", "customers") || "Active"}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2 px-3 py-1 bg-red-100 text-red-800 rounded-full">
+                      <XCircle size={14} />
+                      <span className="text-sm font-medium">
+                        {t("blocked", "customers") || "Blocked"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            />
+
+            <Column
+              dataField="orders_count"
               caption={t("orders", "navigation")}
               width={"auto"}
               alignment="left"
@@ -585,17 +689,20 @@ const Customers = () => {
             />
 
             <Column
-              dataField="totalSpent"
+              dataField="total_spent"
               caption={t("totalSpent", "customers")}
               width={"auto"}
               alignment="left"
               allowHeaderFiltering={true}
               allowFiltering={true}
               allowGrouping={true}
+              cellRender={({ data }) => (
+                <div>${data.total_spent || "0.00"}</div>
+              )}
             />
 
             <Column
-              dataField="joinDate"
+              dataField="join_date"
               caption={t("joinDate", "customers")}
               width={"auto"}
               alignment="left"
@@ -606,7 +713,7 @@ const Customers = () => {
               allowGrouping={true}
             />
 
-            {/* ✅ عمود Actions مع زر تعديل التقييم وزر الحظر */}
+            {/* ✅ عمود Actions مع زر تعديل التقييم وزر الحظر/فك الحظر */}
             <Column
               caption={t("actions", "customers") || "Actions"}
               width={120}
@@ -621,9 +728,18 @@ const Customers = () => {
                     <Edit size={18} />
                   </button>
                   <button
-                    className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
-                    title={t("blockCustomer", "customers") || "Block Customer"}
-                    onClick={() => handleBlockCustomer(data.id, data.name)}
+                    className={`p-2 rounded-lg transition ${
+                      data.status === "blocked"
+                        ? "text-green-600 hover:text-green-800 hover:bg-green-50"
+                        : "text-red-600 hover:text-red-800 hover:bg-red-50"
+                    }`}
+                    title={
+                      data.status === "blocked"
+                        ? t("unblockCustomer", "customers") ||
+                          "Unblock Customer"
+                        : t("blockCustomer", "customers") || "Block Customer"
+                    }
+                    onClick={() => handleBlockAction(data)}
                   >
                     <Ban size={18} />
                   </button>

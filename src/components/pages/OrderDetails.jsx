@@ -4,14 +4,11 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import api from "../../services/api";
 import {
   ArrowLeft,
-  Printer,
   Mail,
-  Truck,
   Package,
   DollarSign,
   CreditCard,
   User,
-  MapPin,
   Calendar,
   Phone,
   FileText,
@@ -25,7 +22,7 @@ import {
   RefreshCw,
   Check,
   X,
-  AlertTriangle,
+  Image as ImageIcon,
 } from "lucide-react";
 
 const OrderDetails = () => {
@@ -45,6 +42,7 @@ const OrderDetails = () => {
   const [loading, setLoading] = useState(true);
   const [loadingCustomer, setLoadingCustomer] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [error, setError] = useState(null);
   const [customerError, setCustomerError] = useState(null);
 
@@ -55,42 +53,24 @@ const OrderDetails = () => {
 
   // ✅ دالة لإنشاء رابط الصورة الكامل
   const getFullImageUrl = (url) => {
-    if (!url) return getDefaultImage();
+    if (!url) return null;
     if (url.startsWith("http")) return url;
     return `https://nethy-production.up.railway.app${url}`;
   };
 
-  // ✅ دالة للحصول على صورة افتراضية آمنة
-  const getDefaultImage = () => {
-    const svgData = `
-      <svg width="80" height="80" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100%" height="100%" fill="#f3f4f6"/>
-        <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">No Image</text>
-      </svg>
-    `;
-    return `data:image/svg+xml;base64,${btoa(svgData)}`;
-  };
-
-  // ✅ دالة لتحميل الصورة بشكل آمن مع fallback
-  const loadImageSafely = (url, fallbackUrl = null) => {
+  // ✅ دالة للتحقق من وجود الصورة
+  const checkImageExists = (url) => {
     return new Promise((resolve) => {
+      if (!url) {
+        resolve(false);
+        return;
+      }
+
       const img = new Image();
-      img.onload = () => resolve(url);
-      img.onerror = () => resolve(fallbackUrl || getDefaultImage());
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
       img.src = url;
     });
-  };
-
-  // ✅ توليد صورة افتراضية للمنتج من Unsplash
-  const getProductImage = (productId) => {
-    const images = [
-      "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=400&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=400&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1512290923901-15a3c1d01b51?w=400&auto=format&fit=crop",
-      "https://images.unsplash.com/photo-1564466809055-6c0414b8d7d9?w=400&auto=format&fit=crop",
-    ];
-    return images[productId % images.length] || getDefaultImage();
   };
 
   const fetchOrderDetails = async () => {
@@ -104,8 +84,8 @@ const OrderDetails = () => {
       const data = response.data;
 
       if (data.order) {
-        // ✅ معالجة حالة الطلب من API - استخدام نفس منطق صفحة الطلبات
-        let orderStatus = STATUSES.PENDING; // الحالة الافتراضية
+        // ✅ معالجة حالة الطلب من API
+        let orderStatus = STATUSES.PENDING;
 
         if (data.order.status) {
           const statusLower = data.order.status.toLowerCase();
@@ -127,25 +107,15 @@ const OrderDetails = () => {
             data.order.user_name || `Customer #${data.order.user_id}`,
           orderDate:
             data.order.order_date || data.order.created_at?.split("T")[0],
-
-          // تفاصيل المبلغ من API
           subtotal: parseFloat(data.order.subtotal) || 0,
           tax: parseFloat(data.order.tax_amount) || 0,
           discount: parseFloat(data.order.discount_amount) || 0,
           totalAmount: parseFloat(data.order.total_amount) || 0,
           currency: data.order.currency || "USD",
-
-          // طريقة الدفع
           paymentMethod: data.order.payment_method || "not_specified",
-
-          // حالة الطلب - استخدام الحالة المعالجة
           orderStatus: orderStatus,
           originalStatus: data.order.status,
-
-          // ملاحظات العميل
           customerNotes: data.order.notes || "",
-
-          // عناصر الطلب من products array
           items: data.products
             ? await Promise.all(
                 data.products.map(async (product) => {
@@ -155,18 +125,19 @@ const OrderDetails = () => {
                   const taxAmount = parseFloat(pivot.tax_amount) || 0;
                   const finalPrice = subtotal - discountAmount + taxAmount;
 
-                  // استخدام الصور من API
-                  let productImage = getProductImage(product.id);
+                  let productImage = null;
+                  let hasValidImage = false;
+
                   if (
                     product.images &&
                     product.images.length > 0 &&
                     product.images[0].url
                   ) {
                     const fullImageUrl = getFullImageUrl(product.images[0].url);
-                    productImage = await loadImageSafely(
-                      fullImageUrl,
-                      productImage,
-                    );
+                    hasValidImage = await checkImageExists(fullImageUrl);
+                    if (hasValidImage) {
+                      productImage = fullImageUrl;
+                    }
                   }
 
                   return {
@@ -185,6 +156,7 @@ const OrderDetails = () => {
                     currentStock: product.stock_quantity || 0,
                     status: product.status || "instock",
                     image: productImage,
+                    hasImage: hasValidImage,
                     allImages: product.images
                       ? product.images.map((img) => ({
                           ...img,
@@ -199,7 +171,6 @@ const OrderDetails = () => {
 
         setOrder(formattedOrder);
 
-        // جلب معلومات الزبون
         if (data.order.user_id) {
           fetchCustomerInfo(data.order.user_id);
         } else {
@@ -299,28 +270,37 @@ const OrderDetails = () => {
     fetchOrderDetails();
   };
 
-  // ✅ دالة تغيير حالة الطلب (نفس منطق صفحة الطلبات)
+  // ✅ دالة تغيير حالة الطلب
   const updateOrderStatus = async (newStatus) => {
     if (!order) return;
 
     setUpdatingStatus(true);
     try {
       let endpoint;
+      let actionText;
 
       if (newStatus === STATUSES.CONFIRMED) {
         endpoint = `/confirmcustomerorder/${order.id}`;
+        actionText =
+          t("confirmingOrder", "orderDetails") || "Confirming order...";
       } else if (newStatus === STATUSES.CANCELED) {
         endpoint = `/cancelcustomerorder/${order.id}`;
+        // eslint-disable-next-line no-unused-vars
+        actionText =
+          t("cancellingOrder", "orderDetails") || "Cancelling order...";
       } else {
         alert(t("invalidStatus", "orderDetails") || "Invalid status");
         setUpdatingStatus(false);
         return;
       }
 
+      console.log(`Sending request to: ${endpoint} for order ${order.id}`);
+
       const response = await api.post(endpoint);
 
+      console.log("API Response:", response.data);
+
       if (response.status === 200 || response.status === 201) {
-        // تحديث حالة الطلب محلياً
         const updatedOrder = {
           ...order,
           orderStatus: newStatus,
@@ -329,48 +309,123 @@ const OrderDetails = () => {
 
         setOrder(updatedOrder);
 
+        setTimeout(() => {
+          fetchOrderDetails();
+        }, 500);
+
         alert(
           t("orderStatusUpdated", "orderDetails") ||
-            `Order status updated to ${getStatusText(newStatus)}`,
+            `Order status successfully updated to ${getStatusText(newStatus)}`,
         );
+      } else {
+        throw new Error(`Unexpected response status: ${response.status}`);
       }
     } catch (err) {
       console.error("Error updating order status:", err);
-      alert(
+
+      let errorMessage =
         t("failedToUpdateStatus", "orderDetails") ||
-          "Failed to update order status: " +
-            (err.response?.data?.message || err.message),
-      );
+        "Failed to update order status";
+
+      if (err.response) {
+        errorMessage += `: ${err.response.data?.message || err.response.statusText}`;
+        console.error("Response data:", err.response.data);
+        console.error("Response status:", err.response.status);
+      } else if (err.request) {
+        errorMessage += ": No response from server";
+        console.error("Request was made but no response received");
+      } else {
+        errorMessage += `: ${err.message}`;
+      }
+
+      alert(errorMessage);
     } finally {
       setUpdatingStatus(false);
     }
   };
 
-  // ✅ زر تأكيد الطلب (لحالة pending فقط) - منطق الزر القديم
+  // ✅ زر تأكيد الطلب
   const handleConfirmOrder = () => {
-    if (order.orderStatus !== STATUSES.PENDING) return;
+    if (order.orderStatus === STATUSES.CONFIRMED) {
+      alert(
+        t("orderAlreadyConfirmed", "orderDetails") ||
+          "Order is already confirmed",
+      );
+      return;
+    }
 
     if (
       window.confirm(
         t("confirmOrderConfirmation", "orderDetails") ||
-          `Are you sure you want to confirm order #${order.orderNumber}?`,
+          `Are you sure you want to confirm order #${order.orderNumber}?\n\nThis action will change the order status to "Confirmed".`,
       )
     ) {
       updateOrderStatus(STATUSES.CONFIRMED);
     }
   };
 
-  // ✅ زر إلغاء الطلب (لحالة confirmed فقط) - منطق الزر القديم
+  // ✅ زر إلغاء الطلب
   const handleCancelOrder = () => {
-    if (order.orderStatus !== STATUSES.CONFIRMED) return;
+    if (order.orderStatus === STATUSES.CANCELED) {
+      alert(
+        t("orderAlreadyCanceled", "orderDetails") ||
+          "Order is already canceled",
+      );
+      return;
+    }
 
     if (
       window.confirm(
         t("cancelOrderConfirmation", "orderDetails") ||
-          `Are you sure you want to cancel order #${order.orderNumber}?`,
+          `Are you sure you want to cancel order #${order.orderNumber}?\n\nThis action will change the order status to "Canceled".`,
       )
     ) {
       updateOrderStatus(STATUSES.CANCELED);
+    }
+  };
+
+  // ✅ دالة إنشاء الفاتورة
+  const handleGenerateInvoice = async () => {
+    if (!order) return;
+
+    if (
+      window.confirm(
+        t("generateInvoiceConfirmation", "orderDetails") ||
+          `Are you sure you want to generate invoice for order #${order.orderNumber}?`,
+      )
+    ) {
+      setGeneratingInvoice(true);
+      try {
+        const invoiceData = {
+          order_id: order.id,
+          invoice_number: `INV-${Date.now()}`,
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
+          notes:
+            order.customerNotes ||
+            "Thank you for your purchase. Please make payment before the due date.",
+        };
+
+        console.log("Sending invoice data:", invoiceData);
+        const response = await api.post("/generateinvoice", invoiceData);
+
+        if (response.status === 200 || response.status === 201) {
+          alert(
+            t("invoiceGenerated", "orderDetails") ||
+              "Invoice generated successfully!",
+          );
+        }
+      } catch (err) {
+        console.error("Error generating invoice:", err);
+        alert(
+          t("failedToGenerateInvoice", "orderDetails") ||
+            "Failed to generate invoice: " +
+              (err.response?.data?.message || err.message),
+        );
+      } finally {
+        setGeneratingInvoice(false);
+      }
     }
   };
 
@@ -430,10 +485,6 @@ const OrderDetails = () => {
       style: "currency",
       currency: currency,
     }).format(amount);
-  };
-
-  const handlePrintInvoice = () => {
-    window.print();
   };
 
   const handleContactCustomer = () => {
@@ -581,13 +632,27 @@ const OrderDetails = () => {
             <RefreshCw size={18} />
             <span>{t("refresh", "common") || "Refresh"}</span>
           </button>
-          <button
-            onClick={handlePrintInvoice}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2"
-          >
-            <Printer size={20} />
-            <span>{t("printInvoice", "orderDetails")}</span>
-          </button>
+
+          {/* ✅ زر Generate Invoice - يظهر فقط عندما تكون الحالة CONFIRMED */}
+          {order.orderStatus === STATUSES.CONFIRMED && (
+            <button
+              onClick={handleGenerateInvoice}
+              disabled={generatingInvoice}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {generatingInvoice ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <FileText size={20} />
+                  <span>Generate Invoice</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -626,16 +691,35 @@ const OrderDetails = () => {
                     className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
                   >
                     <div className="flex items-center space-x-4 flex-1">
-                      <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                        <img
-                          src={item.image}
-                          alt={item.product}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = getDefaultImage();
-                          }}
-                        />
+                      {/* عرض صورة المنتج أو أيقونة */}
+                      <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        {item.hasImage ? (
+                          <img
+                            src={item.image}
+                            alt={item.product}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                              e.target.parentElement.innerHTML = `
+                                <div class="w-full h-full flex items-center justify-center">
+                                  <div class="text-center">
+                                    <svg class="w-8 h-8 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <p class="text-xs text-gray-500 mt-1">No Image</p>
+                                  </div>
+                                </div>
+                              `;
+                            }}
+                          />
+                        ) : (
+                          <div className="text-center">
+                            <ImageIcon className="w-8 h-8 text-gray-400 mx-auto" />
+                            <p className="text-xs text-gray-500 mt-1">
+                              {t("noImage", "common") || "No Image"}
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -911,87 +995,92 @@ const OrderDetails = () => {
                 <span className="font-medium">{paymentMethod.text}</span>
               </div>
 
-              {/* ✅ أزرار تغيير الحالة - منطق الزر القديم */}
-              <div className="pt-4 border-t border-gray-200">
-                {/* زر Confirm - يظهر فقط للحالة PENDING */}
-                {order.orderStatus === STATUSES.PENDING && (
-                  <button
-                    onClick={handleConfirmOrder}
-                    disabled={updatingStatus}
-                    className={`w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
-                      updatingStatus
-                        ? "bg-green-200 text-green-800 cursor-not-allowed"
-                        : "bg-green-600 text-white hover:bg-green-700"
-                    }`}
-                  >
-                    {updatingStatus ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>
-                          {t("confirming", "orderDetails") || "Confirming..."}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Check size={18} />
-                        <span>
-                          {t("confirmOrder", "orderDetails") || "Confirm Order"}
-                        </span>
-                      </>
-                    )}
-                  </button>
-                )}
+              {/* أزرار تغيير الحالة */}
+              <div className="pt-4 border-t border-gray-200 space-y-3">
+                {/* زر Confirm - يظهر إذا لم تكن الحالة CONFIRMED أو CANCELED */}
+                {order.orderStatus !== STATUSES.CONFIRMED &&
+                  order.orderStatus !== STATUSES.CANCELED && (
+                    <button
+                      onClick={handleConfirmOrder}
+                      disabled={updatingStatus}
+                      className={`w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
+                        updatingStatus
+                          ? "bg-green-200 text-green-800 cursor-not-allowed"
+                          : "bg-green-600 text-white hover:bg-green-700"
+                      }`}
+                    >
+                      {updatingStatus ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>
+                            {t("confirming", "orderDetails") || "Confirming..."}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Check size={18} />
+                          <span>
+                            {t("confirmOrder", "orderDetails") ||
+                              "Confirm Order"}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  )}
 
-                {/* زر Cancel - يظهر فقط للحالة CONFIRMED */}
-                {order.orderStatus === STATUSES.CONFIRMED && (
-                  <button
-                    onClick={handleCancelOrder}
-                    disabled={updatingStatus}
-                    className={`w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
-                      updatingStatus
-                        ? "bg-red-200 text-red-800 cursor-not-allowed"
-                        : "bg-red-600 text-white hover:bg-red-700"
-                    }`}
-                  >
-                    {updatingStatus ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>
-                          {t("cancelling", "orderDetails") || "Cancelling..."}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <X size={18} />
-                        <span>
-                          {t("cancelOrder", "orderDetails") || "Cancel Order"}
-                        </span>
-                      </>
-                    )}
-                  </button>
-                )}
+                {/* زر Cancel - يظهر إذا لم تكن الحالة CANCELED وليست PENDING */}
+                {order.orderStatus !== STATUSES.CANCELED &&
+                  order.orderStatus !== STATUSES.PENDING && (
+                    <button
+                      onClick={handleCancelOrder}
+                      disabled={updatingStatus}
+                      className={`w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
+                        updatingStatus
+                          ? "bg-red-200 text-red-800 cursor-not-allowed"
+                          : "bg-red-600 text-white hover:bg-red-700"
+                      }`}
+                    >
+                      {updatingStatus ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>
+                            {t("cancelling", "orderDetails") || "Cancelling..."}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <X size={18} />
+                          <span>
+                            {t("cancelOrder", "orderDetails") || "Cancel Order"}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  )}
 
-                {/* رسائل مساعدة */}
-                {order.orderStatus === STATUSES.PENDING && (
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    {t("pendingOrderHelp", "orderDetails") ||
-                      "This order is awaiting confirmation"}
-                  </p>
-                )}
+                {/* رسائل مساعدة ديناميكية */}
+                <div className="text-center">
+                  {order.orderStatus === STATUSES.PENDING && (
+                    <p className="text-xs text-gray-500">
+                      {t("pendingOrderHelp", "orderDetails") ||
+                        "This order is awaiting confirmation. Click 'Confirm Order' to proceed."}
+                    </p>
+                  )}
 
-                {order.orderStatus === STATUSES.CONFIRMED && (
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    {t("confirmedOrderHelp", "orderDetails") ||
-                      "This order has been confirmed and can be canceled if needed"}
-                  </p>
-                )}
+                  {order.orderStatus === STATUSES.CONFIRMED && (
+                    <p className="text-xs text-gray-500">
+                      {t("confirmedOrderHelp", "orderDetails") ||
+                        "Order confirmed. You can cancel it if needed or generate an invoice."}
+                    </p>
+                  )}
 
-                {order.orderStatus === STATUSES.CANCELED && (
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    {t("canceledOrderHelp", "orderDetails") ||
-                      "This order has been canceled"}
-                  </p>
-                )}
+                  {order.orderStatus === STATUSES.CANCELED && (
+                    <p className="text-xs text-gray-500">
+                      {t("canceledOrderHelp", "orderDetails") ||
+                        "This order has been canceled. No further actions available."}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1103,13 +1192,26 @@ const OrderDetails = () => {
         </button>
 
         <div className="flex space-x-3">
-          <button
-            onClick={handlePrintInvoice}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2"
-          >
-            <Printer size={20} />
-            <span>{t("printInvoice", "orderDetails")}</span>
-          </button>
+          {/* زر Generate Invoice في الأسفل أيضًا - يظهر فقط للحالة CONFIRMED */}
+          {order.orderStatus === STATUSES.CONFIRMED && (
+            <button
+              onClick={handleGenerateInvoice}
+              disabled={generatingInvoice}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {generatingInvoice ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <FileText size={20} />
+                  <span>Generate Invoice</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>

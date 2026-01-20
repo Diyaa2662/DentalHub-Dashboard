@@ -13,7 +13,6 @@ import {
   X,
   LogOut,
   FileText,
-  Truck,
   ChevronRight,
   FolderTree,
   Building,
@@ -21,6 +20,7 @@ import {
   TrendingUp,
   Users2,
   Receipt,
+  CreditCard, // ✅ أيقونة جديدة للمدفوعات
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -30,6 +30,7 @@ const Sidebar = () => {
     sales: true,
     inventory: true,
     suppliersInvoices: true,
+    payment: true, // ✅ حالة جديدة لقسم المدفوعات
     team: true,
     reports: true,
   });
@@ -124,25 +125,38 @@ const Sidebar = () => {
         },
       ],
     },
-    {
-      id: "team",
-      label: t("teamAdministration", "navigation"),
-      icon: <Users2 size={20} />,
-      items: [
-        {
-          id: "employees",
-          label: t("employees", "navigation"),
-          icon: <Briefcase size={18} />,
-          path: "/employees",
-        },
-        {
-          id: "settings",
-          label: t("settings", "navigation") || t("settings", "common"),
-          icon: <Settings size={18} />,
-          path: "/settings",
-        },
-      ],
-    },
+    // {
+    //   id: "payment",
+    //   label: t("payment", "navigation") || "Payment",
+    //   icon: <CreditCard size={20} />,
+    //   items: [
+    //     {
+    //       id: "payments",
+    //       label: t("payments", "navigation") || "Payments",
+    //       icon: <CreditCard size={18} />,
+    //       path: "/payments",
+    //     },
+    //   ],
+    // },
+    // {
+    //   id: "team",
+    //   label: t("teamAdministration", "navigation"),
+    //   icon: <Users2 size={20} />,
+    //   items: [
+    //     {
+    //       id: "employees",
+    //       label: t("employees", "navigation"),
+    //       icon: <Briefcase size={18} />,
+    //       path: "/employees",
+    //     },
+    //     {
+    //       id: "settings",
+    //       label: t("settings", "navigation") || t("settings", "common"),
+    //       icon: <Settings size={18} />,
+    //       path: "/settings",
+    //     },
+    //   ],
+    // },
     {
       id: "reports",
       label: t("reportsAnalytics", "navigation"),

@@ -33,5 +33,7 @@
   "reportsAnalytics": "Reports & Analytics",
   "suppliersInvoices": "Suppliers & Invoices",
   "supplierInvoices": "Supplier Invoices",
-  "supplierInvoicesManagement": "Supplier Invoices Management"
+  "supplierInvoicesManagement": "Supplier Invoices Management",
+  "payment": "Payment",
+  "payments": "Payments"
 }

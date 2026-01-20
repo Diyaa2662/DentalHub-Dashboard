@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+/* eslint-disable no-case-declarations */
+import React, { useState, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import {
   Chart,
@@ -24,44 +25,235 @@ import {
   DollarSign,
   Users,
   Package,
-  MapPin,
   Activity,
   Calendar,
 } from "lucide-react";
+import api from "../../services/api";
+import SelectBox from "devextreme-react/select-box";
 
 const Analytics = () => {
   const { t } = useLanguage();
+  const [loading, setLoading] = useState(true);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedTimePeriod, setSelectedTimePeriod] = useState("month");
+  const [dateRange, setDateRange] = useState({
+    from: "2025-01-01",
+    to: "2026-01-25",
+  });
 
-  // استخدام useMemo لتوليد البيانات مرة واحدة
-  const growthData = useMemo(() => {
-    return [
-      { location: "New York", orders: 125, revenue: 45000, growth: 15 },
-      { location: "Los Angeles", orders: 98, revenue: 38000, growth: 12 },
-      { location: "Chicago", orders: 87, revenue: 32000, growth: 18 },
-      { location: "Houston", orders: 76, revenue: 28000, growth: 8 },
-      { location: "Miami", orders: 65, revenue: 24000, growth: 22 },
+  // State for API data
+  const [topCardsData, setTopCardsData] = useState({});
+  const [monthlyProfitData, setMonthlyProfitData] = useState([]);
+  const [productCategoriesData, setProductCategoriesData] = useState({
+    data: [],
+    total_number_of_products: 0,
+  });
+
+  // Time periods for selector
+  const timePeriods = [
+    { id: "today", label: t("today", "analytics") },
+    { id: "week", label: t("thisWeek", "analytics") },
+    { id: "month", label: t("thisMonth", "analytics") },
+    { id: "quarter", label: t("thisQuarter", "analytics") },
+    { id: "year", label: t("thisYear", "analytics") },
+    { id: "custom", label: t("customRange", "analytics") },
+  ];
+
+  // Available years for selection
+  const availableYears = [2022, 2023, 2024, 2025, 2026];
+
+  // Helper functions for API calls
+  const fetchTopCardsData = async (dateRange) => {
+    try {
+      const response = await api.post("/topcards", dateRange);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching top cards data:", error);
+      throw error;
+    }
+  };
+
+  const fetchMonthlyProfitData = async (year) => {
+    try {
+      const response = await api.post("/monthlyprofit", { year });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching monthly profit data:", error);
+      throw error;
+    }
+  };
+
+  const fetchProductCategoriesData = async () => {
+    try {
+      const response = await api.get("/productspercategory");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching product categories data:", error);
+      throw error;
+    }
+  };
+
+  // Fetch all analytics data
+  useEffect(() => {
+    const fetchAnalyticsData = async () => {
+      setLoading(true);
+      try {
+        // Fetch all data in parallel
+        const [topCards, monthlyProfit, productCategories] = await Promise.all([
+          fetchTopCardsData(dateRange),
+          fetchMonthlyProfitData(selectedYear),
+          fetchProductCategoriesData(),
+        ]);
+
+        setTopCardsData(topCards || {});
+        setMonthlyProfitData(monthlyProfit?.monthly_profit || []);
+        setProductCategoriesData(
+          productCategories || { data: [], total_number_of_products: 0 },
+        );
+      } catch (error) {
+        console.error("Error fetching analytics data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalyticsData();
+  }, [selectedYear, dateRange]);
+
+  const handleYearChange = (e) => {
+    setSelectedYear(e.value);
+  };
+
+  const handleTimePeriodChange = (periodId) => {
+    setSelectedTimePeriod(periodId);
+    // Update date range based on selected period
+    const today = new Date();
+    let fromDate, toDate;
+
+    switch (periodId) {
+      case "today":
+        fromDate = today.toISOString().split("T")[0];
+        toDate = today.toISOString().split("T")[0];
+        break;
+      case "week":
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        fromDate = weekAgo.toISOString().split("T")[0];
+        toDate = today.toISOString().split("T")[0];
+        break;
+      case "month":
+        const monthAgo = new Date(today);
+        monthAgo.setMonth(today.getMonth() - 1);
+        fromDate = monthAgo.toISOString().split("T")[0];
+        toDate = today.toISOString().split("T")[0];
+        break;
+      case "quarter":
+        const quarterAgo = new Date(today);
+        quarterAgo.setMonth(today.getMonth() - 3);
+        fromDate = quarterAgo.toISOString().split("T")[0];
+        toDate = today.toISOString().split("T")[0];
+        break;
+      case "year":
+        const yearAgo = new Date(today);
+        yearAgo.setFullYear(today.getFullYear() - 1);
+        fromDate = yearAgo.toISOString().split("T")[0];
+        toDate = today.toISOString().split("T")[0];
+        break;
+      default:
+        // For custom range, keep existing dates
+        return;
+    }
+
+    setDateRange({ from: fromDate, to: toDate });
+  };
+
+  // Calculate conversion rate
+  const calculateConversionRate = () => {
+    const totalCustomers = topCardsData["number of customers"] || 0;
+    const payingCustomers = topCardsData["number of paying customers"] || 0;
+
+    if (totalCustomers === 0) return 0;
+    return Math.round((payingCustomers / totalCustomers) * 100);
+  };
+
+  // Format monthly profit data for chart
+  const formatMonthlyProfitData = () => {
+    if (!monthlyProfitData || monthlyProfitData.length === 0) return [];
+
+    const monthNames = [
+      t("jan", "analytics"),
+      t("feb", "analytics"),
+      t("mar", "analytics"),
+      t("apr", "analytics"),
+      t("may", "analytics"),
+      t("jun", "analytics"),
+      t("jul", "analytics"),
+      t("aug", "analytics"),
+      t("sep", "analytics"),
+      t("oct", "analytics"),
+      t("nov", "analytics"),
+      t("dec", "analytics"),
     ];
-  }, []);
 
-  // بيانات الرسم البياني للإيرادات
-  const revenueData = [
-    { month: t("jan", "analytics") || "Jan", revenue: 12000, profit: 8000 },
-    { month: t("feb", "analytics") || "Feb", revenue: 15000, profit: 10000 },
-    { month: t("mar", "analytics") || "Mar", revenue: 18000, profit: 12000 },
-    { month: t("apr", "analytics") || "Apr", revenue: 14000, profit: 9000 },
-    { month: t("may", "analytics") || "May", revenue: 22000, profit: 15000 },
-    { month: t("jun", "analytics") || "Jun", revenue: 25000, profit: 17000 },
-    { month: t("jul", "analytics") || "Jul", revenue: 28000, profit: 19000 },
-  ];
+    return monthlyProfitData.map((item) => ({
+      month: monthNames[item.month - 1] || `Month ${item.month}`,
+      revenue: item.total_revanue || 0,
+      profit: item.total_profit || 0,
+    }));
+  };
 
-  // بيانات فئات المنتجات
-  const categoryData = [
-    { category: t("equipment", "products"), value: 35, color: "#3b82f6" },
-    { category: t("imaging", "products"), value: 25, color: "#8b5cf6" },
-    { category: t("surgical", "products"), value: 20, color: "#10b981" },
-    { category: t("restorative", "products"), value: 15, color: "#f59e0b" },
-    { category: t("hygiene", "products"), value: 5, color: "#ef4444" },
-  ];
+  // Format product categories data for pie chart
+  const formatProductCategoriesData = () => {
+    if (!productCategoriesData.data || productCategoriesData.data.length === 0)
+      return [];
+
+    const colors = [
+      "#3b82f6",
+      "#8b5cf6",
+      "#10b981",
+      "#f59e0b",
+      "#ef4444",
+      "#06b6d4",
+      "#84cc16",
+    ];
+
+    return productCategoriesData.data
+      .filter((item) => item.number_of_products > 0)
+      .map((item, index) => {
+        const percentage =
+          productCategoriesData.total_number_of_products > 0
+            ? Math.round(
+                (item.number_of_products /
+                  productCategoriesData.total_number_of_products) *
+                  100,
+              )
+            : 0;
+
+        return {
+          category: item.category || `Category ${index + 1}`,
+          value: percentage,
+          color: colors[index % colors.length],
+          count: item.number_of_products,
+        };
+      });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-dental-blue border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <p className="mt-4 text-gray-600">
+          {t("loading", "common") || "Loading analytics data..."}
+        </p>
+      </div>
+    );
+  }
+
+  const formattedMonthlyData = formatMonthlyProfitData();
+  const formattedCategoriesData = formatProductCategoriesData();
+  const conversionRate = calculateConversionRate();
 
   return (
     <div className="space-y-6">
@@ -80,34 +272,50 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">
-                {t("totalRevenue", "dashboard")}
+                {t("totalRevenue", "analytics")}
               </p>
-              <p className="text-2xl font-bold text-gray-800">$156,000</p>
+              <p className="text-2xl font-bold text-gray-800">
+                ${(topCardsData["Total Revanue"] || 0).toLocaleString()}
+              </p>
             </div>
             <div className="p-3 bg-blue-50 rounded-lg">
               <DollarSign className="text-dental-blue" size={24} />
             </div>
           </div>
-          <p className="text-sm text-green-600 mt-2">
-            ↑ 18.5% {t("fromLastQuarter", "analytics")}
-          </p>
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">
-                {t("newCustomers", "analytics")}
+                {t("totalProfit", "analytics")}
               </p>
-              <p className="text-2xl font-bold text-gray-800">245</p>
+              <p
+                className={`text-2xl font-bold ${(topCardsData["Total Profit"] || 0) >= 0 ? "text-green-600" : "text-red-600"}`}
+              >
+                ${(topCardsData["Total Profit"] || 0).toLocaleString()}
+              </p>
             </div>
             <div className="p-3 bg-green-50 rounded-lg">
-              <Users className="text-green-500" size={24} />
+              <TrendingUp className="text-green-500" size={24} />
             </div>
           </div>
-          <p className="text-sm text-green-600 mt-2">
-            ↑ 12.3% {t("fromLastQuarter", "analytics")}
-          </p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">
+                {t("totalCustomerOrders", "analytics")}
+              </p>
+              <p className="text-2xl font-bold text-gray-800">
+                {topCardsData["Total Customer Orders"] || 0}
+              </p>
+            </div>
+            <div className="p-3 bg-purple-50 rounded-lg">
+              <Package className="text-purple-500" size={24} />
+            </div>
+          </div>
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-gray-200">
@@ -116,38 +324,59 @@ const Analytics = () => {
               <p className="text-sm text-gray-600">
                 {t("productsSold", "analytics")}
               </p>
-              <p className="text-2xl font-bold text-gray-800">1,845</p>
+              <p className="text-2xl font-bold text-gray-800">
+                {topCardsData["Products Sold"] || 0}
+              </p>
             </div>
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <Package className="text-purple-500" size={24} />
+            <div className="p-3 bg-orange-50 rounded-lg">
+              <Users className="text-orange-500" size={24} />
             </div>
           </div>
-          <p className="text-sm text-green-600 mt-2">
-            ↑ 8.7% {t("fromLastQuarter", "analytics")}
+        </div>
+      </div>
+
+      {/* Customer Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-800">
+              {t("newUsers", "analytics")}
+            </h3>
+            <Users className="text-blue-500" size={20} />
+          </div>
+          <p className="text-3xl font-bold text-gray-800">
+            {topCardsData["New Users"] || 0}
           </p>
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">
-                {t("avgOrderValue", "orders")}
-              </p>
-              <p className="text-2xl font-bold text-gray-800">$845</p>
-            </div>
-            <div className="p-3 bg-orange-50 rounded-lg">
-              <TrendingUp className="text-orange-500" size={24} />
-            </div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-800">
+              {t("numberOfCustomers", "analytics")}
+            </h3>
+            <Users className="text-green-500" size={20} />
           </div>
-          <p className="text-sm text-green-600 mt-2">
-            ↑ 5.3% {t("fromLastQuarter", "analytics")}
+          <p className="text-3xl font-bold text-gray-800">
+            {topCardsData["number of customers"] || 0}
+          </p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-800">
+              {t("payingCustomers", "analytics")}
+            </h3>
+            <Users className="text-purple-500" size={20} />
+          </div>
+          <p className="text-3xl font-bold text-gray-800">
+            {topCardsData["number of paying customers"] || 0}
           </p>
         </div>
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
+        {/* Revenue & Profit Chart */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -155,38 +384,60 @@ const Analytics = () => {
                 {t("revenueProfit", "analytics")}
               </h3>
               <p className="text-sm text-gray-600">
-                {t("monthlyPerformance", "dashboard")}
+                {t("monthlyRevenueTrends", "analytics")}
               </p>
             </div>
-            <BarChart3 className="text-dental-blue" size={24} />
+            <div className="flex items-center space-x-4">
+              <div className="flex flex-col items-end">
+                <SelectBox
+                  items={availableYears}
+                  value={selectedYear}
+                  onValueChanged={handleYearChange}
+                  width={120}
+                  searchEnabled={false}
+                />
+                <label className="text-xs text-gray-500 mt-1">
+                  {t("selectYear", "common")}
+                </label>
+              </div>
+              <BarChart3 className="text-dental-blue" size={24} />
+            </div>
           </div>
-          <Chart
-            id="revenueChart"
-            dataSource={revenueData}
-            palette="Soft Pastel"
-          >
-            <CommonSeriesSettings argumentField="month" type="spline" />
-            <Series
-              valueField="revenue"
-              name={t("revenue", "products") + " ($)"}
-            />
-            <Series
-              valueField="profit"
-              name={t("profit", "analytics") + " ($)"}
-            />
-            <ArgumentAxis>
-              <Grid visible={true} />
-            </ArgumentAxis>
-            <ValueAxis>
-              <Grid visible={true} />
-            </ValueAxis>
-            <Legend verticalAlignment="bottom" horizontalAlignment="center" />
-            <Tooltip enabled={true} />
-            <Title text={t("monthlyRevenueTrends", "analytics")} />
-          </Chart>
+          {formattedMonthlyData.length > 0 ? (
+            <Chart
+              id="revenueChart"
+              dataSource={formattedMonthlyData}
+              palette="Soft Pastel"
+            >
+              <CommonSeriesSettings argumentField="month" type="line" />
+              <Series
+                valueField="revenue"
+                name={t("revenue", "analytics") + " ($)"}
+              />
+              <Series
+                valueField="profit"
+                name={t("profit", "analytics") + " ($)"}
+              />
+              <ArgumentAxis>
+                <Grid visible={true} />
+              </ArgumentAxis>
+              <ValueAxis>
+                <Grid visible={true} />
+              </ValueAxis>
+              <Legend verticalAlignment="bottom" horizontalAlignment="center" />
+              <Tooltip enabled={true} />
+              <Title
+                text={`${t("monthlyRevenueTrends", "analytics")} - ${selectedYear}`}
+              />
+            </Chart>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              {t("noDataAvailable", "common") || "No data available"}
+            </div>
+          )}
         </div>
 
-        {/* Categories Pie Chart */}
+        {/* Product Categories Pie Chart */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -199,122 +450,78 @@ const Analytics = () => {
             </div>
             <Package className="text-dental-purple" size={24} />
           </div>
-          <PieChart
-            id="pieChart"
-            dataSource={categoryData}
-            palette="Bright"
-            size={{
-              width: 400,
-              height: 300,
-            }}
-          >
-            <PieSeries
-              argumentField="category"
-              valueField="value"
-              type="doughnut"
-            >
-              <Label visible={true}>
-                <Connector visible={true} />
-              </Label>
-            </PieSeries>
-            <Legend visible={false} />
-            <Tooltip enabled={true} />
-          </PieChart>
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-2">
-            {categoryData.map((item, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: item.color }}
+          {formattedCategoriesData.length > 0 ? (
+            <>
+              <PieChart
+                id="pieChart"
+                dataSource={formattedCategoriesData}
+                palette="Bright"
+                size={{
+                  width: 400,
+                  height: 300,
+                }}
+              >
+                <PieSeries
+                  argumentField="category"
+                  valueField="value"
+                  type="doughnut"
+                >
+                  <Label visible={true}>
+                    <Connector visible={true} />
+                  </Label>
+                </PieSeries>
+                <Legend visible={false} />
+                <Tooltip
+                  enabled={true}
+                  customizeTooltip={(e) => {
+                    return {
+                      text: `${e.argument}: ${e.valueText}% (${e.point.data.count} products)`,
+                    };
+                  }}
                 />
-                <div>
-                  <p className="text-xs font-medium">{item.category}</p>
-                  <p className="text-xs text-gray-600">{item.value}%</p>
-                </div>
+              </PieChart>
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+                {formattedCategoriesData.map((item, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <div className="flex-1">
+                      <p className="text-xs font-medium truncate">
+                        {item.category}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {item.value}% ({item.count} {t("units", "dashboard")})
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              {t("noDataAvailable", "common") || "No data available"}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Locations Table */}
+      {/* Conversion Rate */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-800">
-              {t("topLocations", "analytics")}
-            </h3>
-            <p className="text-sm text-gray-600">
-              {t("ordersByRegion", "analytics")}
-            </p>
-          </div>
-          <MapPin className="text-dental-teal" size={24} />
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  {t("location", "customers")}
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  {t("orders", "navigation")}
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  {t("revenue", "products")}
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  {t("avgOrderValue", "orders")}
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">
-                  {t("growth", "customers")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {growthData.map((item, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-gray-100 hover:bg-gray-50"
-                >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center">
-                      <MapPin size={16} className="text-gray-400 mr-2" />
-                      {item.location}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 font-medium">{item.orders}</td>
-                  <td className="py-3 px-4 font-medium text-green-600">
-                    ${item.revenue.toLocaleString()}
-                  </td>
-                  <td className="py-3 px-4">
-                    ${Math.round(item.revenue / item.orders).toLocaleString()}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center">
-                      <TrendingUp size={16} className="text-green-500 mr-1" />
-                      <span className="text-green-600 font-medium">
-                        ↑ {item.growth}%
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">
               {t("conversionRate", "analytics")}
             </h3>
-            <Activity className="text-blue-500" size={20} />
+            <p className="text-sm text-gray-600">
+              {t("visitorToCustomer", "analytics")}
+            </p>
           </div>
-          <div className="text-center">
+          <Activity className="text-dental-blue" size={24} />
+        </div>
+        <div className="flex flex-col md:flex-row items-center justify-between">
+          <div className="text-center mb-6 md:mb-0">
             <div className="inline-block relative">
               <svg className="w-32 h-32">
                 <circle
@@ -336,112 +543,45 @@ const Analytics = () => {
                   cx="64"
                   cy="64"
                   strokeDasharray={`${3.14 * 56 * 2}`}
-                  strokeDashoffset={`${3.14 * 56 * 2 * (1 - 0.68)}`}
+                  strokeDashoffset={`${3.14 * 56 * 2 * (1 - conversionRate / 100)}`}
                   transform="rotate(-90 64 64)"
                 />
               </svg>
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                <span className="text-2xl font-bold text-gray-800">68%</span>
+                <span className="text-2xl font-bold text-gray-800">
+                  {conversionRate}%
+                </span>
                 <p className="text-sm text-gray-600">
-                  {t("rate", "analytics")}
+                  {t("conversion", "analytics")}
                 </p>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mt-4">
-              {t("visitorToCustomer", "analytics")}
-            </p>
           </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">
-              {t("customerRetention", "analytics")}
-            </h3>
-            <Users className="text-purple-500" size={20} />
-          </div>
-          <div className="text-center">
-            <div className="inline-block relative">
-              <svg className="w-32 h-32">
-                <circle
-                  className="text-gray-200"
-                  strokeWidth="8"
-                  stroke="currentColor"
-                  fill="transparent"
-                  r="56"
-                  cx="64"
-                  cy="64"
-                />
-                <circle
-                  className="text-purple-500"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  stroke="currentColor"
-                  fill="transparent"
-                  r="56"
-                  cx="64"
-                  cy="64"
-                  strokeDasharray={`${3.14 * 56 * 2}`}
-                  strokeDashoffset={`${3.14 * 56 * 2 * (1 - 0.82)}`}
-                  transform="rotate(-90 64 64)"
-                />
-              </svg>
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                <span className="text-2xl font-bold text-gray-800">82%</span>
-                <p className="text-sm text-gray-600">
-                  {t("retention", "analytics")}
-                </p>
-              </div>
+          <div className="md:ml-8">
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                {t("numberOfCustomers", "analytics")}
+              </p>
+              <p className="text-xl font-bold text-gray-800">
+                {topCardsData["number of customers"] || 0}
+              </p>
             </div>
-            <p className="text-sm text-gray-600 mt-4">
-              {t("repeatCustomers", "analytics")}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-800">
-              {t("inventoryTurnover", "analytics")}
-            </h3>
-            <Package className="text-orange-500" size={20} />
-          </div>
-          <div className="text-center">
-            <div className="inline-block relative">
-              <svg className="w-32 h-32">
-                <circle
-                  className="text-gray-200"
-                  strokeWidth="8"
-                  stroke="currentColor"
-                  fill="transparent"
-                  r="56"
-                  cx="64"
-                  cy="64"
-                />
-                <circle
-                  className="text-orange-500"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  stroke="currentColor"
-                  fill="transparent"
-                  r="56"
-                  cx="64"
-                  cy="64"
-                  strokeDasharray={`${3.14 * 56 * 2}`}
-                  strokeDashoffset={`${3.14 * 56 * 2 * (1 - 0.45)}`}
-                  transform="rotate(-90 64 64)"
-                />
-              </svg>
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                <span className="text-2xl font-bold text-gray-800">4.5x</span>
-                <p className="text-sm text-gray-600">
-                  {t("annual", "analytics")}
-                </p>
-              </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                {t("payingCustomers", "analytics")}
+              </p>
+              <p className="text-xl font-bold text-gray-800">
+                {topCardsData["number of paying customers"] || 0}
+              </p>
             </div>
-            <p className="text-sm text-gray-600 mt-4">
-              {t("stockRotation", "analytics")}
-            </p>
+            <div>
+              <p className="text-sm text-gray-600">
+                {t("conversionRate", "analytics")}
+              </p>
+              <p className="text-xl font-bold text-gray-800">
+                {conversionRate}%
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -460,21 +600,52 @@ const Analytics = () => {
           <Calendar className="text-dental-blue" size={24} />
         </div>
         <div className="flex flex-wrap gap-2">
-          {[
-            { id: "today", label: t("today", "analytics") },
-            { id: "week", label: t("thisWeek", "analytics") },
-            { id: "month", label: t("thisMonth", "analytics") },
-            { id: "quarter", label: t("thisQuarter", "analytics") },
-            { id: "year", label: t("thisYear", "analytics") },
-            { id: "custom", label: t("customRange", "analytics") },
-          ].map((period) => (
+          {timePeriods.map((period) => (
             <button
               key={period.id}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+              className={`px-4 py-2 rounded-lg transition font-medium ${
+                selectedTimePeriod === period.id
+                  ? "bg-dental-blue text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+              onClick={() => handleTimePeriodChange(period.id)}
             >
               {period.label}
             </button>
           ))}
+        </div>
+        {selectedTimePeriod === "custom" && (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                From Date
+              </label>
+              <input
+                type="date"
+                value={dateRange.from}
+                onChange={(e) =>
+                  setDateRange({ ...dateRange, from: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                To Date
+              </label>
+              <input
+                type="date"
+                value={dateRange.to}
+                onChange={(e) =>
+                  setDateRange({ ...dateRange, to: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+          </div>
+        )}
+        <div className="mt-4 text-sm text-gray-600">
+          {t("currentPeriod", "analytics")}: {dateRange.from} to {dateRange.to}
         </div>
       </div>
     </div>

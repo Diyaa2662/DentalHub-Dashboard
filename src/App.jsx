@@ -28,6 +28,10 @@ import PurchaseOrderDetails from "./components/pages/procurement/PurchaseOrderDe
 import AddPurchaseOrder from "./components/pages/procurement/AddPurchaseOrder";
 import EditPurchaseOrder from "./components/pages/procurement/EditPurchaseOrder";
 import SupplierInvoices from "./components/pages/procurement/SupplierInvoices";
+import SupplierInvoiceDetails from "./components/pages/procurement/SupplierInvoiceDetails";
+import Payments from "./components/pages/Payments";
+import AddPayment from "./components/pages/AddPayment";
+import AddSupplierInvoice from "./components/pages/procurement/AddSupplierInvoice";
 import Employees from "./components/pages/Employees";
 import EditProduct from "./components/pages/EditProduct";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -126,6 +130,20 @@ function App() {
               path="/procurement/supplier-invoices"
               element={<SupplierInvoices />}
             />
+
+            <Route
+              path="/procurement/supplier-invoices/:id"
+              element={<SupplierInvoiceDetails />}
+            />
+
+            <Route
+              path="/procurement/supplier-invoices/add"
+              element={<AddSupplierInvoice />}
+            />
+
+            <Route path="/payments" element={<Payments />} />
+
+            <Route path="/payments/add" element={<AddPayment />} />
           </Route>
           {/* ============================================ */}
           {/* نهاية المسارات المحمية */}

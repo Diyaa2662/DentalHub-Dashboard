@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLanguage } from "../../../contexts/LanguageContext";
+import api from "../../../services/api";
 import {
   ArrowLeft,
   Save,
@@ -11,324 +12,268 @@ import {
   FileText,
   Building,
   ShoppingCart,
-  ChevronDown,
   Percent,
   RotateCcw,
   Info,
-  Calendar,
   CheckCircle,
-  Clock,
-  Truck,
-  XCircle,
-  Tag,
+  PackageIcon,
+  AlertCircle,
+  RefreshCw,
+  Hash,
+  Lock,
+  AlertTriangle,
+  Ban,
 } from "lucide-react";
 
 const EditPurchaseOrder = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [showProductSuggestions, setShowProductSuggestions] = useState({});
 
-  // حالة البيانات الأصلية للمقارنة
+  // حالة البيانات الأصلية
   const [originalData, setOriginalData] = useState(null);
-
-  // حالة بيانات طلب الشراء للتعديل
-  const [formData, setFormData] = useState({
-    supplierName: "",
-    supplierEmail: "",
-    supplierPhone: "",
-    notes: "",
-    paymentMethod: "credit_card",
-    paymentTerms: "Net 30",
-  });
-
-  // حالة عناصر الطلب
-  const [orderItems, setOrderItems] = useState([
-    {
-      id: 1,
-      product: "",
-      quantity: 1,
-      unitPrice: 0,
-      taxRate: 15,
-    },
-  ]);
-
-  // حالة PO Number (غير قابل للتعديل)
-  const [poNumber, setPoNumber] = useState("");
-
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [orderStatus, setOrderStatus] = useState("");
+  const [orderLocked, setOrderLocked] = useState(false);
 
-  // قائمة الموردين
-  const [suppliers] = useState([
-    {
-      id: 1,
-      name: "Dental Equipment Co.",
-      email: "contact@dentalequip.com",
-      phone: "+1-555-123-4567",
-    },
-    {
-      id: 2,
-      name: "MediDental Supplies",
-      email: "sales@medidental.com",
-      phone: "+1-555-987-6543",
-    },
-    {
-      id: 3,
-      name: "DentalTech Solutions",
-      email: "info@dentaltech.com",
-      phone: "+1-555-456-7890",
-    },
-    {
-      id: 4,
-      name: "Oral Care Distributors",
-      email: "orders@oralcare.com",
-      phone: "+1-555-321-0987",
-    },
-  ]);
+  // بيانات الطلب
+  const [purchaseOrder, setPurchaseOrder] = useState({
+    supplier_id: "",
+    notes: "",
+    payment_method: "Bank Transfer",
+    currency: "USD",
+  });
 
-  // قائمة المنتجات
-  const [products] = useState([
-    { id: 1, name: "Advanced Dental Chair", price: 4500, stock: 12 },
-    { id: 2, name: "Dental X-Ray Unit", price: 3200, stock: 8 },
-    { id: 3, name: "Sterilization Equipment", price: 950, stock: 15 },
-    { id: 4, name: "Dental Handpiece", price: 350, stock: 25 },
-    { id: 5, name: "Dental Composite", price: 85, stock: 50 },
-    { id: 6, name: "Dental Anesthesia Kit", price: 120, stock: 30 },
-  ]);
+  // عناصر الطلب
+  const [orderItems, setOrderItems] = useState([]);
 
-  // ✅ محاكاة جلب بيانات طلب الشراء من API
+  // المنتجات المتاحة
+  const [products, setProducts] = useState([]);
+  // eslint-disable-next-line no-unused-vars
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
+  // الموردون المتاحون
+  const [suppliers, setSuppliers] = useState([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+
+  // جلب بيانات الطلب الحالية
   useEffect(() => {
-    const fetchPurchaseOrder = () => {
-      setLoading(true);
-
-      // بيانات وهمية لطلب الشراء (بديل لـ API)
-      setTimeout(() => {
-        const mockPurchaseOrder = {
-          id: parseInt(id),
-          poNumber: "PO-2024-001",
-          supplierName: "Dental Equipment Co.",
-          supplierEmail: "john@dentalequip.com",
-          supplierPhone: "+1-555-123-4567",
-          notes: "Urgent order for new clinic setup",
-          paymentMethod: "credit_card",
-          paymentTerms: "Net 30",
-          orderStatus: "pending",
-          paymentStatus: "pending",
-          items: [
-            {
-              id: 1,
-              product: "Advanced Dental Chair",
-              quantity: 1,
-              unitPrice: 4500,
-              taxRate: 15,
-              subTotal: 4500,
-              taxAmount: 675,
-            },
-            {
-              id: 2,
-              product: "Dental X-Ray Unit",
-              quantity: 1,
-              unitPrice: 3200,
-              taxRate: 15,
-              subTotal: 3200,
-              taxAmount: 480,
-            },
-          ],
-        };
-
-        setOriginalData(mockPurchaseOrder);
-        setFormData({
-          supplierName: mockPurchaseOrder.supplierName,
-          supplierEmail: mockPurchaseOrder.supplierEmail,
-          supplierPhone: mockPurchaseOrder.supplierPhone,
-          notes: mockPurchaseOrder.notes,
-          paymentMethod: mockPurchaseOrder.paymentMethod,
-          paymentTerms: mockPurchaseOrder.paymentTerms,
-        });
-        setOrderItems(mockPurchaseOrder.items);
-        setPoNumber(mockPurchaseOrder.poNumber);
-        setLoading(false);
-      }, 800);
-    };
-
-    fetchPurchaseOrder();
+    fetchPurchaseOrderDetails();
+    fetchProducts();
+    fetchSuppliers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // ✅ تتبع التغييرات لمقارنة مع البيانات الأصلية
-  useEffect(() => {
-    if (originalData) {
-      // eslint-disable-next-line no-unused-vars
-      const currentData = {
-        ...formData,
-        items: orderItems,
+  // جلب بيانات الطلب
+  const fetchPurchaseOrderDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.get(`/supplierorders/${id}`);
+      const orderData = response.data?.order;
+      const relatedProducts = response.data?.related_products || [];
+
+      if (!orderData) {
+        throw new Error("Order data not found");
+      }
+
+      // ✅ التحقق من حالة الطلب
+      const status = orderData.status?.toLowerCase() || "";
+      setOrderStatus(status);
+
+      // ✅ إذا كان الطلب confirmed أو delivered أو shipped - منع التعديل
+      const lockedStatuses = ["confirmed", "delivered", "shipped", "completed"];
+      const isLocked = lockedStatuses.includes(status);
+      setOrderLocked(isLocked);
+
+      // حفظ البيانات الأصلية
+      const originalOrder = {
+        supplier_id: orderData.supplier_id,
+        notes: orderData.notes || "",
+        payment_method: orderData.payment_method || "Bank Transfer",
+        currency: orderData.currency || "USD",
       };
 
-      // مقارنة باستبعاد الحقول المحسوبة (subTotal, taxAmount)
-      const isChanged =
-        JSON.stringify({
-          ...formData,
-          items: orderItems.map((item) => ({
-            product: item.product,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            taxRate: item.taxRate,
-          })),
-        }) !==
-        JSON.stringify({
-          supplierName: originalData.supplierName,
-          supplierEmail: originalData.supplierEmail,
-          supplierPhone: originalData.supplierPhone,
-          notes: originalData.notes,
-          paymentMethod: originalData.paymentMethod,
-          paymentTerms: originalData.paymentTerms,
-          items: originalData.items.map((item) => ({
-            product: item.product,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            taxRate: item.taxRate,
-          })),
-        });
+      const originalItems = relatedProducts.map((product) => ({
+        id: product.id,
+        product_id: product.id,
+        product: product.name || product.s_name || `Product ${product.id}`,
+        sku: product.sku || `SKU-${product.id}`,
+        quantity: product.pivot?.quantity || 1,
+        unit_cost_price: parseFloat(product.pivot?.unit_cost_price) || 0,
+        tax_rate: parseFloat(product.pivot?.tax_rate) || 0,
+        tax_amount: parseFloat(product.pivot?.tax_amount) || 0,
+        subtotal: parseFloat(product.pivot?.subtotal) || 0,
+        current_stock: product.stock_quantity || 0,
+      }));
 
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOriginalData({
+        ...originalOrder,
+        items: originalItems,
+      });
+
+      setPurchaseOrder(originalOrder);
+      setOrderItems(originalItems);
+    } catch (err) {
+      console.error("Error fetching purchase order details:", err);
+      setError(
+        t("fetchOrderDetailsError", "procurement") ||
+          "Failed to load purchase order details",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // جلب المنتجات من API
+  const fetchProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const response = await api.get("/products");
+      setProducts(response.data?.data || []);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  // جلب الموردين من API
+  const fetchSuppliers = async () => {
+    try {
+      setLoadingSuppliers(true);
+      const response = await api.get("/suppliers");
+      setSuppliers(response.data?.data || []);
+    } catch (err) {
+      console.error("Error fetching suppliers:", err);
+    } finally {
+      setLoadingSuppliers(false);
+    }
+  };
+
+  // تتبع التغييرات
+  useEffect(() => {
+    if (originalData) {
+      const isChanged =
+        JSON.stringify(purchaseOrder) !==
+          JSON.stringify({
+            supplier_id: originalData.supplier_id,
+            notes: originalData.notes,
+            payment_method: originalData.payment_method,
+            currency: originalData.currency,
+          }) ||
+        JSON.stringify(
+          orderItems.map((item) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            unit_cost_price: item.unit_cost_price,
+            tax_rate: item.tax_rate,
+          })),
+        ) !==
+          JSON.stringify(
+            originalData.items.map((item) => ({
+              product_id: item.product_id,
+              quantity: item.quantity,
+              unit_cost_price: item.unit_cost_price,
+              tax_rate: item.tax_rate,
+            })),
+          );
+
       setHasChanges(isChanged);
     }
-  }, [formData, orderItems, originalData]);
+  }, [purchaseOrder, orderItems, originalData]);
 
-  // معالجة تغيير الحقول النصية
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
+  // معالجة تغيير بيانات الطلب
+  const handleOrderChange = (field, value) => {
+    if (orderLocked) return;
+    setPurchaseOrder((prev) => ({
       ...prev,
-      [name]: value,
+      [field]: value,
     }));
   };
 
-  // معالجة تغيير عنصر الطلب (مع taxRate)
-  const handleItemChange = (id, field, value) => {
-    setOrderItems(
-      orderItems.map((item) => {
-        if (item.id === id) {
-          const updatedItem = { ...item, [field]: value };
+  // معالجة تغيير عنصر الطلب
+  const handleItemChange = (index, field, value) => {
+    if (orderLocked) return;
 
-          // حساب Subtotal و Tax
-          if (
-            field === "quantity" ||
-            field === "unitPrice" ||
-            field === "taxRate"
-          ) {
-            const subtotal = updatedItem.quantity * updatedItem.unitPrice;
-            const taxAmount = subtotal * (updatedItem.taxRate / 100);
-            updatedItem.subTotal = subtotal;
-            updatedItem.taxAmount = taxAmount;
-          }
+    const updatedItems = [...orderItems];
 
-          return updatedItem;
-        }
-        return item;
-      })
-    );
-
-    // ✅ إذا كان التغيير في حقل المنتج، افتح القائمة
-    if (field === "product" && value) {
-      setShowProductSuggestions((prev) => ({
-        ...prev,
-        [id]: true,
-      }));
-    } else if (field === "product" && !value) {
-      // ✅ إذا تم مسح المنتج، أغلق القائمة
-      setShowProductSuggestions((prev) => ({
-        ...prev,
-        [id]: false,
-      }));
+    if (field === "product_id") {
+      const product = products.find((p) => p.id === parseInt(value));
+      if (product) {
+        updatedItems[index] = {
+          ...updatedItems[index],
+          product_id: product.id,
+          product: product.name || product.s_name,
+          sku: product.sku,
+          unit_cost_price: parseFloat(product.cost) || 0,
+          current_stock: product.stock_quantity || 0,
+          [field]: parseInt(value),
+        };
+      }
+    } else if (field === "quantity") {
+      updatedItems[index] = {
+        ...updatedItems[index],
+        [field]: parseInt(value) || 1,
+      };
+    } else if (field === "tax_rate") {
+      updatedItems[index] = {
+        ...updatedItems[index],
+        [field]: parseFloat(value) || 0,
+      };
     }
+
+    // إعادة حساب subtotal و tax_amount
+    const item = updatedItems[index];
+    const subtotal = item.quantity * item.unit_cost_price;
+    const taxAmount = subtotal * (item.tax_rate / 100);
+    updatedItems[index].subtotal = subtotal;
+    updatedItems[index].tax_amount = taxAmount;
+
+    setOrderItems(updatedItems);
   };
 
-  // إضافة عنصر جديد للطلب
+  // إضافة عنصر جديد
   const addOrderItem = () => {
-    const newId =
-      orderItems.length > 0
-        ? Math.max(...orderItems.map((item) => item.id)) + 1
-        : 1;
-    setOrderItems([
-      ...orderItems,
-      {
-        id: newId,
-        product: "",
-        quantity: 1,
-        unitPrice: 0,
-        taxRate: 15, // القيمة الافتراضية
-        subTotal: 0,
-        taxAmount: 0,
-      },
-    ]);
-
-    // ✅ إغلاق القائمة للعنصر الجديد
-    setShowProductSuggestions((prev) => ({
-      ...prev,
-      [newId]: false,
-    }));
+    if (orderLocked) return;
+    const newItem = {
+      id: `new-${Date.now()}`,
+      product_id: "",
+      product: "",
+      sku: "",
+      quantity: 1,
+      unit_cost_price: 0,
+      tax_rate: 0,
+      tax_amount: 0,
+      subtotal: 0,
+      current_stock: 0,
+    };
+    setOrderItems([...orderItems, newItem]);
   };
 
-  // حذف عنصر من الطلب
-  const removeOrderItem = (id) => {
+  // حذف عنصر
+  const removeOrderItem = (index) => {
+    if (orderLocked) return;
     if (orderItems.length > 1) {
-      setOrderItems(orderItems.filter((item) => item.id !== id));
+      const updatedItems = orderItems.filter((_, i) => i !== index);
+      setOrderItems(updatedItems);
     }
   };
 
-  // اختيار مورد من القائمة
-  const selectSupplier = (supplier) => {
-    setFormData({
-      ...formData,
-      supplierName: supplier.name,
-      supplierEmail: supplier.email,
-      supplierPhone: supplier.phone,
-    });
-  };
-
-  // ✅ دالة اختيار منتج مع إغلاق القائمة
-  const selectProduct = (itemId, product) => {
-    setOrderItems(
-      orderItems.map((item) => {
-        if (item.id === itemId) {
-          const updatedItem = {
-            ...item,
-            product: product.name,
-            unitPrice: product.price,
-          };
-
-          // إعادة الحساب
-          const subtotal = updatedItem.quantity * updatedItem.unitPrice;
-          const taxAmount = subtotal * (updatedItem.taxRate / 100);
-          updatedItem.subTotal = subtotal;
-          updatedItem.taxAmount = taxAmount;
-
-          return updatedItem;
-        }
-        return item;
-      })
-    );
-
-    // ✅ إغلاق قائمة المنتجات لهذا العنصر
-    setShowProductSuggestions((prev) => ({
-      ...prev,
-      [itemId]: false,
-    }));
-  };
-
-  // ✅ إعادة تعيين النموذج للبيانات الأصلية
+  // إعادة التعيين للبيانات الأصلية
   const resetForm = () => {
+    if (orderLocked) return;
     if (originalData) {
-      setFormData({
-        supplierName: originalData.supplierName,
-        supplierEmail: originalData.supplierEmail,
-        supplierPhone: originalData.supplierPhone,
+      setPurchaseOrder({
+        supplier_id: originalData.supplier_id,
         notes: originalData.notes,
-        paymentMethod: originalData.paymentMethod,
-        paymentTerms: originalData.paymentTerms,
+        payment_method: originalData.payment_method,
+        currency: originalData.currency,
       });
       setOrderItems(originalData.items);
     }
@@ -337,19 +282,20 @@ const EditPurchaseOrder = () => {
   // حساب الإجماليات
   const calculateTotals = () => {
     const subtotal = orderItems.reduce(
-      (sum, item) => sum + (item.subTotal || 0),
-      0
+      (sum, item) => sum + (item.subtotal || 0),
+      0,
     );
-    const tax = orderItems.reduce(
-      (sum, item) => sum + (item.taxAmount || 0),
-      0
+    const taxAmount = orderItems.reduce(
+      (sum, item) => sum + (item.tax_amount || 0),
+      0,
     );
-    const totalAmount = subtotal + tax;
+    const totalAmount = subtotal + taxAmount;
 
     return {
       subtotal,
-      tax,
+      taxAmount,
       totalAmount,
+      numberOfItems: orderItems.reduce((sum, item) => sum + item.quantity, 0),
     };
   };
 
@@ -359,77 +305,296 @@ const EditPurchaseOrder = () => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: purchaseOrder.currency || "USD",
     }).format(amount);
   };
 
-  // ✅ حفظ التعديلات
-  const handleSave = (e) => {
+  // حفظ التعديلات - كل الendpoints هي POST
+  const handleSave = async (e) => {
     e.preventDefault();
 
-    // التحقق من البيانات المطلوبة
-    if (!formData.supplierName) {
+    // ✅ التحقق من حالة الطلب
+    if (orderLocked) {
       alert(
-        t("supplierNameRequired", "procurement") || "Supplier name is required"
+        t("orderCannotBeEdited", "procurement") ||
+          "This order cannot be edited because it is already confirmed/delivered.",
       );
       return;
     }
 
-    if (orderItems.some((item) => !item.product || item.unitPrice <= 0)) {
+    // التحقق من البيانات
+    if (!purchaseOrder.supplier_id) {
+      alert(t("supplierRequired", "procurement") || "Please select a supplier");
+      return;
+    }
+
+    if (orderItems.some((item) => !item.product_id || item.quantity <= 0)) {
       alert(
         t("validItemsRequired", "procurement") ||
-          "Please add valid items with prices"
+          "Please add valid items with quantities",
       );
       return;
     }
 
     setUpdating(true);
 
-    // محاكاة إرسال البيانات إلى الخادم للتحديث
-    setTimeout(() => {
-      const updatedPurchaseOrder = {
-        ...formData,
-        items: orderItems.map((item) => ({
-          ...item,
-          currentStock:
-            products.find((p) => p.name === item.product)?.stock || 0,
-          image: `https://images.unsplash.com/photo-${Math.floor(
-            Math.random() * 1000
-          )}?w=400&auto=format&fit=crop`,
-        })),
-        ...totals,
-        poNumber: poNumber,
-        orderStatus: "pending",
-        paymentStatus: "pending",
-      };
+    try {
+      // 1. تحديث رأس الطلب - POST
+      const headerResponse = await api.post(
+        `/updatesupplierorderheaders/${id}`,
+        {
+          supplier_id: purchaseOrder.supplier_id,
+          notes: purchaseOrder.notes,
+          payment_method: purchaseOrder.payment_method,
+          currency: purchaseOrder.currency,
+          subtotal: totals.subtotal,
+          tax_amount: totals.taxAmount,
+          total_amount: totals.totalAmount,
+          number_of_items: totals.numberOfItems,
+        },
+      );
 
-      console.log("Updated Purchase Order:", updatedPurchaseOrder);
-      setUpdating(false);
+      // ✅ التحقق من استجابة الـ API
+      if (
+        headerResponse.data?.message?.includes("cannot be edited") ||
+        headerResponse.data?.error
+      ) {
+        throw new Error(
+          headerResponse.data.message ||
+            headerResponse.data.error ||
+            "Order cannot be edited",
+        );
+      }
+
+      // 2. تحديث العناصر
+      // أولا: حذف العناصر القديمة (إلا إذا كانت موجودة في الجديدة) - POST
+      for (const originalItem of originalData.items) {
+        const stillExists = orderItems.some(
+          (item) =>
+            item.product_id === originalItem.product_id &&
+            !item.id?.toString().startsWith("new-"),
+        );
+
+        if (!stillExists) {
+          const removeResponse = await api.post(
+            `/removeitemfromsupplierorder/${id}`,
+            {
+              product_id: originalItem.product_id,
+            },
+          );
+
+          // ✅ التحقق من استجابة الـ API
+          if (
+            removeResponse.data?.error ||
+            removeResponse.data?.message?.includes("cannot")
+          ) {
+            throw new Error(
+              removeResponse.data.message ||
+                removeResponse.data.error ||
+                "Cannot remove item",
+            );
+          }
+        }
+      }
+
+      // ثانيا: إضافة/تحديث العناصر الجديدة - POST
+      for (const item of orderItems) {
+        if (item.id?.toString().startsWith("new-")) {
+          // عنصر جديد
+          const addResponse = await api.post(`/additemtosupplierorder/${id}`, {
+            product_id: item.product_id,
+            quantity: item.quantity,
+            unit_cost_price: item.unit_cost_price,
+            tax_rate: item.tax_rate,
+          });
+
+          // ✅ التحقق من استجابة الـ API
+          if (
+            addResponse.data?.error ||
+            addResponse.data?.message?.includes("cannot")
+          ) {
+            throw new Error(
+              addResponse.data.message ||
+                addResponse.data.error ||
+                "Cannot add item",
+            );
+          }
+        } else {
+          // تحديث عنصر موجود (حذف وإضافة جديد)
+          const originalItem = originalData.items.find(
+            (oi) => oi.product_id === item.product_id,
+          );
+
+          if (
+            originalItem &&
+            (originalItem.quantity !== item.quantity ||
+              originalItem.unit_cost_price !== item.unit_cost_price ||
+              originalItem.tax_rate !== item.tax_rate)
+          ) {
+            // حذف وإضافة جديد (للتحديث) - POST
+            const removeResponse = await api.post(
+              `/removeitemfromsupplierorder/${id}`,
+              {
+                product_id: item.product_id,
+              },
+            );
+
+            // ✅ التحقق من استجابة الـ API
+            if (
+              removeResponse.data?.error ||
+              removeResponse.data?.message?.includes("cannot")
+            ) {
+              throw new Error(
+                removeResponse.data.message ||
+                  removeResponse.data.error ||
+                  "Cannot update item",
+              );
+            }
+
+            const addResponse = await api.post(
+              `/additemtosupplierorder/${id}`,
+              {
+                product_id: item.product_id,
+                quantity: item.quantity,
+                unit_cost_price: item.unit_cost_price,
+                tax_rate: item.tax_rate,
+              },
+            );
+
+            // ✅ التحقق من استجابة الـ API
+            if (
+              addResponse.data?.error ||
+              addResponse.data?.message?.includes("cannot")
+            ) {
+              throw new Error(
+                addResponse.data.message ||
+                  addResponse.data.error ||
+                  "Cannot update item",
+              );
+            }
+          }
+        }
+      }
+
       setSuccess(true);
 
-      // تحديث البيانات الأصلية بعد التعديل الناجح
-      setOriginalData(updatedPurchaseOrder);
+      // تحديث البيانات الأصلية
+      const updatedOriginalData = {
+        supplier_id: purchaseOrder.supplier_id,
+        notes: purchaseOrder.notes,
+        payment_method: purchaseOrder.payment_method,
+        currency: purchaseOrder.currency,
+        items: orderItems.map((item) => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          unit_cost_price: item.unit_cost_price,
+          tax_rate: item.tax_rate,
+          tax_amount: item.tax_amount,
+          subtotal: item.subtotal,
+        })),
+      };
+
+      setOriginalData(updatedOriginalData);
       setHasChanges(false);
-    }, 1500);
+    } catch (err) {
+      console.error("Error updating purchase order:", err);
+
+      // ✅ معالجة الأخطاء المختلفة
+      let errorMessage =
+        t("updateError", "procurement") || "Failed to update purchase order.";
+
+      if (err.response?.data) {
+        const apiError = err.response.data;
+        if (
+          apiError.message?.includes("cannot be edited") ||
+          apiError.message?.includes("confirmed")
+        ) {
+          errorMessage =
+            t("orderCannotBeEdited", "procurement") ||
+            "This order cannot be edited because it is already confirmed/delivered.";
+          setOrderLocked(true);
+        } else if (apiError.message) {
+          errorMessage = apiError.message;
+        } else if (apiError.error) {
+          errorMessage = apiError.error;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      alert(errorMessage);
+    } finally {
+      setUpdating(false);
+    }
   };
 
-  // ✅ إلغاء والعودة
+  // إلغاء والعودة
   const handleCancel = () => {
     navigate("/procurement/purchase-orders");
   };
 
-  // ✅ الذهاب لصفحة التفاصيل
-  const goToDetails = () => {
-    navigate(`/procurement/purchase-orders/${id}`);
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dental-blue"></div>
-        <span className="ml-4 text-gray-600">
-          Loading purchase order data...
-        </span>
+      <div className="space-y-6 p-6">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate("/procurement/purchase-orders")}
+            className="p-2 hover:bg-gray-100 rounded-lg transition"
+          >
+            <ArrowLeft size={24} className="text-gray-600" />
+          </button>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {t("editPurchaseOrder", "procurement") || "Edit Purchase Order"}
+          </h1>
+        </div>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dental-blue mx-auto"></div>
+            <p className="mt-4 text-gray-600">
+              {t("loadingOrderDetails", "procurement") ||
+                "Loading order details..."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate("/procurement/purchase-orders")}
+            className="p-2 hover:bg-gray-100 rounded-lg transition"
+          >
+            <ArrowLeft size={24} className="text-gray-600" />
+          </button>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {t("editPurchaseOrder", "procurement") || "Edit Purchase Order"}
+          </h1>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <AlertCircle className="text-red-500 mx-auto mb-4" size={48} />
+          <h3 className="text-lg font-semibold text-red-800 mb-2">
+            {t("errorLoadingOrder", "procurement") || "Error Loading Order"}
+          </h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => navigate("/procurement/purchase-orders")}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition mr-2"
+          >
+            {t("backToOrders", "procurement") || "Back to Orders"}
+          </button>
+          <button
+            onClick={fetchPurchaseOrderDetails}
+            className="px-4 py-2 bg-dental-blue text-white rounded-lg hover:bg-blue-600 transition"
+          >
+            <RefreshCw size={18} className="inline mr-2" />
+            {t("tryAgain", "common") || "Try Again"}
+          </button>
+        </div>
       </div>
     );
   }
@@ -449,31 +614,62 @@ const EditPurchaseOrder = () => {
             <h1 className="text-2xl font-bold text-gray-800">
               {t("editPurchaseOrder", "procurement") || "Edit Purchase Order"}
             </h1>
-            <div className="flex items-center space-x-4 mt-1">
+            <div className="flex items-center space-x-4 mt-1 flex-wrap gap-2">
+              <div className="flex items-center space-x-2">
+                <Hash size={14} className="text-gray-400" />
+                <p className="text-gray-600 font-medium">
+                  {t("purchaseOrder", "procurement") || "PO"} #{id}
+                </p>
+              </div>
+              <span className="text-gray-500">•</span>
               <p className="text-gray-600">
-                {t("editingPurchaseOrder", "procurement") || "Editing"}{" "}
-                {poNumber} • {formData.supplierName}
+                {suppliers.find(
+                  (s) => s.id === parseInt(purchaseOrder.supplier_id),
+                )?.name || "Unknown Supplier"}
               </p>
-              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                ID: {id}
+              <span className="text-gray-500">•</span>
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  orderLocked
+                    ? "bg-red-100 text-red-800 border border-red-200"
+                    : "bg-green-100 text-green-800 border border-green-200"
+                }`}
+              >
+                {orderLocked ? (
+                  <>
+                    <Ban size={14} className="inline mr-1" />
+                    {orderStatus?.charAt(0).toUpperCase() +
+                      orderStatus?.slice(1)}
+                  </>
+                ) : (
+                  orderStatus?.charAt(0).toUpperCase() + orderStatus?.slice(1)
+                )}
               </span>
             </div>
           </div>
         </div>
-
-        <div className="flex space-x-3">
-          <button
-            onClick={goToDetails}
-            className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition flex items-center space-x-2"
-          >
-            <Info size={18} />
-            <span>{t("viewDetails", "procurement") || "View Details"}</span>
-          </button>
-        </div>
       </div>
 
+      {/* Order Locked Warning */}
+      {orderLocked && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center space-x-3">
+            <AlertTriangle className="text-red-600" size={24} />
+            <div className="flex-1">
+              <h4 className="font-semibold text-red-800">
+                {t("orderLocked", "procurement") || "Order Locked"}
+              </h4>
+              <p className="text-red-700 text-sm">
+                {t("orderLockedMessage", "procurement") ||
+                  "This order cannot be edited because it has already been confirmed/delivered. You can only view the order details."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Change Indicator */}
-      {hasChanges && (
+      {hasChanges && !orderLocked && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -511,12 +707,6 @@ const EditPurchaseOrder = () => {
             </p>
             <div className="flex justify-center space-x-3">
               <button
-                onClick={goToDetails}
-                className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                {t("viewUpdatedOrder", "procurement") || "View Updated Order"}
-              </button>
-              <button
                 onClick={() => navigate("/procurement/purchase-orders")}
                 className="px-6 py-3 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition"
               >
@@ -532,67 +722,6 @@ const EditPurchaseOrder = () => {
           {/* Left Column - Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSave} className="space-y-6">
-              {/* Purchase Order Info Card */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                      <Tag className="text-blue-500" size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {t("purchaseOrderInformation", "procurement") ||
-                          "Purchase Order Information"}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {t("basicOrderDetails", "procurement") ||
-                          "Basic order details"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* PO Number Display (غير قابل للتعديل) */}
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-600">
-                      {t("purchaseOrderNumber", "procurement") || "PO Number:"}
-                    </span>
-                    <div className="flex items-center px-3 py-1 bg-gray-100 rounded-lg">
-                      <Tag size={16} className="text-gray-500 mr-2" />
-                      <span className="font-bold text-gray-800">
-                        {poNumber}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Order Status:</span>
-                      <span className="ml-2 font-medium text-yellow-600">
-                        Pending
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Payment Status:</span>
-                      <span className="ml-2 font-medium text-yellow-600">
-                        Pending
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Created On:</span>
-                      <span className="ml-2 font-medium">2024-01-15</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Last Updated:</span>
-                      <span className="ml-2 font-medium">
-                        {new Date().toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Order Items Section */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -602,38 +731,42 @@ const EditPurchaseOrder = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-800">
-                        {t("orderItems", "orderDetails") || "Order Items"}
+                        {t("orderedItems", "procurement") || "Ordered Items"}
                       </h3>
                       <p className="text-sm text-gray-600">
-                        {t("updateOrderItems", "procurement") ||
-                          "Update order items and quantities"}
+                        {orderItems.length}{" "}
+                        {t("items", "procurement") || "items"}
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={addOrderItem}
-                    className="px-4 py-2 bg-blue-50 text-dental-blue rounded-lg hover:bg-blue-100 transition flex items-center space-x-2"
-                  >
-                    <Plus size={20} />
-                    <span>{t("addItem", "procurement") || "Add Item"}</span>
-                  </button>
+                  {!orderLocked && (
+                    <button
+                      type="button"
+                      onClick={addOrderItem}
+                      className="px-4 py-2 bg-blue-50 text-dental-blue rounded-lg hover:bg-blue-100 transition flex items-center space-x-2"
+                    >
+                      <Plus size={20} />
+                      <span>{t("addItem", "procurement") || "Add Item"}</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-4">
-                  {orderItems.map((item) => (
+                  {orderItems.map((item, index) => (
                     <div
-                      key={item.id}
-                      className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                      key={item.id || index}
+                      className={`border border-gray-200 rounded-lg p-4 ${
+                        orderLocked ? "bg-gray-100" : "bg-gray-50"
+                      }`}
                     >
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="font-medium text-gray-800">
-                          {t("item", "procurement") || "Item"} #{item.id}
+                          {t("item", "procurement") || "Item"} #{index + 1}
                         </h4>
-                        {orderItems.length > 1 && (
+                        {orderItems.length > 1 && !orderLocked && (
                           <button
                             type="button"
-                            onClick={() => removeOrderItem(item.id)}
+                            onClick={() => removeOrderItem(index)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
                           >
                             <Trash2 size={18} />
@@ -645,83 +778,41 @@ const EditPurchaseOrder = () => {
                         {/* Product Selection */}
                         <div className="relative">
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {t("product", "orderDetails") || "Product"} *
+                            {t("product", "procurement") || "Product"} *
                           </label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              value={item.product}
-                              onChange={(e) =>
-                                handleItemChange(
-                                  item.id,
-                                  "product",
-                                  e.target.value
-                                )
-                              }
-                              onFocus={() => {
-                                if (item.product) {
-                                  setShowProductSuggestions((prev) => ({
-                                    ...prev,
-                                    [item.id]: true,
-                                  }));
-                                }
-                              }}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              placeholder={
-                                t("selectProduct", "procurement") ||
-                                "Select product"
-                              }
-                              required
-                            />
-                            <div className="absolute right-3 top-2.5">
-                              <ChevronDown
-                                size={20}
-                                className="text-gray-400"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Product Suggestions - تظهر فقط إذا كانت الحالة true */}
-                          {showProductSuggestions[item.id] && item.product && (
-                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                              {products
-                                .filter((p) =>
-                                  p.name
-                                    .toLowerCase()
-                                    .includes(item.product.toLowerCase())
-                                )
-                                .map((product) => (
-                                  <div
-                                    key={product.id}
-                                    onClick={() =>
-                                      selectProduct(item.id, product)
-                                    }
-                                    className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                  >
-                                    <div className="flex justify-between items-center">
-                                      <span className="font-medium">
-                                        {product.name}
-                                      </span>
-                                      <span className="text-blue-600 font-bold">
-                                        {formatCurrency(product.price)}
-                                      </span>
-                                    </div>
-                                    <div className="text-sm text-gray-500 mt-1">
-                                      <span>
-                                        {t("stock", "procurement") || "Stock"}:{" "}
-                                        {product.stock}
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          )}
+                          <select
+                            value={item.product_id}
+                            onChange={(e) =>
+                              handleItemChange(
+                                index,
+                                "product_id",
+                                e.target.value,
+                              )
+                            }
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              orderLocked
+                                ? "bg-gray-200 cursor-not-allowed"
+                                : ""
+                            }`}
+                            required
+                            disabled={orderLocked}
+                          >
+                            <option value="">
+                              {t("selectProduct", "procurement") ||
+                                "Select Product"}
+                            </option>
+                            {products.map((product) => (
+                              <option key={product.id} value={product.id}>
+                                {product.name || product.s_name}
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         {/* Quantity */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {t("quantity", "orderDetails") || "Quantity"} *
+                            {t("quantity", "procurement") || "Quantity"} *
                           </label>
                           <input
                             type="number"
@@ -729,20 +820,28 @@ const EditPurchaseOrder = () => {
                             value={item.quantity}
                             onChange={(e) =>
                               handleItemChange(
-                                item.id,
+                                index,
                                 "quantity",
-                                parseInt(e.target.value) || 1
+                                e.target.value,
                               )
                             }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                              orderLocked
+                                ? "bg-gray-200 cursor-not-allowed"
+                                : ""
+                            }`}
                             required
+                            disabled={orderLocked}
                           />
                         </div>
 
-                        {/* Unit Price */}
+                        {/* Unit Cost - غير قابل للتعديل */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {t("unitPrice", "procurement") || "Unit Price"} *
+                            {t("unitCost", "procurement") || "Unit Cost"} *
+                            <span className="ml-1 text-xs text-gray-500">
+                              (Auto)
+                            </span>
                           </label>
                           <div className="relative">
                             <div className="absolute left-3 top-2.5 text-gray-500">
@@ -752,18 +851,20 @@ const EditPurchaseOrder = () => {
                               type="number"
                               min="0"
                               step="0.01"
-                              value={item.unitPrice}
-                              onChange={(e) =>
-                                handleItemChange(
-                                  item.id,
-                                  "unitPrice",
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              required
+                              value={item.unit_cost_price}
+                              readOnly
+                              className={`w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg ${
+                                orderLocked ? "bg-gray-200" : "bg-gray-100"
+                              } cursor-not-allowed`}
                             />
+                            <div className="absolute right-3 top-2.5 text-gray-400">
+                              <Lock size={18} />
+                            </div>
                           </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {t("costPriceAuto", "procurement") ||
+                              "Cost price from product"}
+                          </p>
                         </div>
 
                         {/* Tax Rate */}
@@ -780,15 +881,20 @@ const EditPurchaseOrder = () => {
                               min="0"
                               max="100"
                               step="0.1"
-                              value={item.taxRate}
+                              value={item.tax_rate}
                               onChange={(e) =>
                                 handleItemChange(
-                                  item.id,
-                                  "taxRate",
-                                  parseFloat(e.target.value) || 0
+                                  index,
+                                  "tax_rate",
+                                  e.target.value,
                                 )
                               }
-                              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className={`w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                orderLocked
+                                  ? "bg-gray-200 cursor-not-allowed"
+                                  : ""
+                              }`}
+                              disabled={orderLocked}
                             />
                           </div>
                         </div>
@@ -796,21 +902,33 @@ const EditPurchaseOrder = () => {
 
                       {/* Item Summary */}
                       {item.product && (
-                        <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
+                        <div
+                          className={`mt-4 p-3 rounded-lg border ${
+                            orderLocked
+                              ? "bg-gray-100 border-gray-300"
+                              : "bg-white border-gray-200"
+                          }`}
+                        >
                           <div className="flex justify-between items-center">
                             <div className="space-y-1">
                               <p className="font-medium text-gray-800">
                                 {item.product}
                               </p>
-                              <div className="flex space-x-4 text-sm text-gray-600">
+                              <div className="flex space-x-4 text-sm text-gray-600 flex-wrap gap-2">
+                                <span className="bg-blue-50 px-2 py-1 rounded">
+                                  {t("sku", "procurement") || "SKU"}: {item.sku}
+                                </span>
                                 <span>
                                   {t("quantity", "procurement") || "Qty"}:{" "}
                                   {item.quantity}
                                 </span>
-                                <span>× {formatCurrency(item.unitPrice)}</span>
+                                <span>
+                                  {t("stock", "procurement") || "Stock"}:{" "}
+                                  {item.current_stock}
+                                </span>
                                 <span>
                                   {t("taxRate", "procurement") || "Tax Rate"}:{" "}
-                                  {item.taxRate}%
+                                  {item.tax_rate}%
                                 </span>
                               </div>
                             </div>
@@ -819,11 +937,15 @@ const EditPurchaseOrder = () => {
                                 {t("subtotal", "procurement") || "Subtotal"}
                               </p>
                               <p className="font-bold text-lg text-blue-600">
-                                {formatCurrency(item.subTotal || 0)}
+                                {formatCurrency(item.subtotal || 0)}
                               </p>
                               <p className="text-xs text-gray-500">
                                 {t("tax", "procurement") || "Tax"}:{" "}
-                                {formatCurrency(item.taxAmount || 0)}
+                                {formatCurrency(item.tax_amount || 0)}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {t("unitCost", "procurement") || "Unit Cost"}:{" "}
+                                {formatCurrency(item.unit_cost_price || 0)}
                               </p>
                             </div>
                           </div>
@@ -851,76 +973,81 @@ const EditPurchaseOrder = () => {
                   </div>
                 </div>
                 <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleFormChange}
+                  value={purchaseOrder.notes}
+                  onChange={(e) => handleOrderChange("notes", e.target.value)}
                   rows="4"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    orderLocked ? "bg-gray-200 cursor-not-allowed" : ""
+                  }`}
                   placeholder={
-                    t("enterNotesHere", "procurement") ||
-                    "Enter any special instructions or notes here..."
+                    orderLocked
+                      ? t("orderLockedCannotEdit", "procurement") ||
+                        "Order is locked and cannot be edited"
+                      : t("enterNotesHere", "procurement") ||
+                        "Enter any special instructions or notes here..."
                   }
+                  disabled={orderLocked}
                 />
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-between items-center pt-6">
-                <div className="flex space-x-3">
+              {!orderLocked && (
+                <div className="flex justify-between items-center pt-6">
+                  <div className="flex space-x-3">
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+                    >
+                      {t("cancel", "common") || "Cancel"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      disabled={!hasChanges}
+                      className={`
+                        px-4 py-2 border border-gray-300 rounded-lg font-medium transition flex items-center space-x-2
+                        ${
+                          hasChanges
+                            ? "text-gray-700 hover:bg-gray-50"
+                            : "text-gray-400 cursor-not-allowed"
+                        }
+                      `}
+                    >
+                      <RotateCcw size={18} />
+                      <span>{t("reset", "common") || "Reset"}</span>
+                    </button>
+                  </div>
+
                   <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
-                  >
-                    {t("cancel", "common") || "Cancel"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    disabled={!hasChanges}
+                    type="submit"
+                    disabled={updating || !hasChanges}
                     className={`
-                      px-4 py-2 border border-gray-300 rounded-lg font-medium transition flex items-center space-x-2
+                      px-6 py-2 rounded-lg font-medium transition flex items-center justify-center
                       ${
-                        hasChanges
-                          ? "text-gray-700 hover:bg-gray-50"
-                          : "text-gray-400 cursor-not-allowed"
+                        updating || !hasChanges
+                          ? "bg-gray-400 cursor-not-allowed text-white"
+                          : "bg-dental-blue text-white hover:bg-blue-600"
                       }
                     `}
                   >
-                    <RotateCcw size={18} />
-                    <span>{t("reset", "common") || "Reset"}</span>
+                    {updating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        {t("updating", "procurement") || "Updating..."}
+                      </>
+                    ) : (
+                      <>
+                        <Save size={20} className="mr-2" />
+                        <span>
+                          {t("updatePurchaseOrder", "procurement") ||
+                            "Update Purchase Order"}
+                        </span>
+                      </>
+                    )}
                   </button>
                 </div>
-
-                <button
-                  type="submit"
-                  disabled={
-                    updating || !formData.supplierName.trim() || !hasChanges
-                  }
-                  className={`
-                    px-6 py-2 rounded-lg font-medium transition flex items-center justify-center
-                    ${
-                      updating || !formData.supplierName.trim() || !hasChanges
-                        ? "bg-gray-400 cursor-not-allowed text-white"
-                        : "bg-dental-blue text-white hover:bg-blue-600"
-                    }
-                  `}
-                >
-                  {updating ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      {t("updating", "procurement") || "Updating..."}
-                    </>
-                  ) : (
-                    <>
-                      <Save size={20} className="mr-2" />
-                      <span>
-                        {t("updatePurchaseOrder", "procurement") ||
-                          "Update Purchase Order"}
-                      </span>
-                    </>
-                  )}
-                </button>
-              </div>
+              )}
             </form>
           </div>
 
@@ -945,88 +1072,91 @@ const EditPurchaseOrder = () => {
               </div>
 
               <div className="space-y-4">
-                {/* Supplier Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t("selectSupplier", "procurement") || "Select Supplier"} *
                   </label>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                  <select
+                    value={purchaseOrder.supplier_id}
+                    onChange={(e) =>
+                      handleOrderChange("supplier_id", e.target.value)
+                    }
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      orderLocked ? "bg-gray-200 cursor-not-allowed" : ""
+                    }`}
+                    required
+                    disabled={orderLocked || loadingSuppliers}
+                  >
+                    <option value="">
+                      {t("selectSupplier", "procurement") || "Select Supplier"}
+                    </option>
                     {suppliers.map((supplier) => (
-                      <div
-                        key={supplier.id}
-                        onClick={() => selectSupplier(supplier)}
-                        className={`p-3 border rounded-lg cursor-pointer transition ${
-                          formData.supplierName === supplier.name
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium text-gray-800">
-                              {supplier.name}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {supplier.email}
-                            </p>
-                          </div>
-                          {formData.supplierName === supplier.name && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          )}
-                        </div>
-                      </div>
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </option>
                     ))}
-                  </div>
+                  </select>
+                  {loadingSuppliers && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      {t("loadingSuppliers", "procurement") ||
+                        "Loading suppliers..."}
+                    </p>
+                  )}
                 </div>
 
-                {/* Manual Supplier Input */}
-                <div className="pt-4 border-t border-gray-200">
-                  <h4 className="font-medium text-gray-800 mb-3">
-                    {t("orEnterManually", "procurement") || "Or Enter Manually"}
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t("supplierName", "procurement") || "Supplier Name"} *
-                      </label>
-                      <input
-                        type="text"
-                        name="supplierName"
-                        value={formData.supplierName}
-                        onChange={handleFormChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t("email", "procurement") || "Email"}
-                        </label>
-                        <input
-                          type="email"
-                          name="supplierEmail"
-                          value={formData.supplierEmail}
-                          onChange={handleFormChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
+                {/* Selected Supplier Info */}
+                {purchaseOrder.supplier_id && (
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 className="font-medium text-gray-800 mb-2">
+                      {t("selectedSupplier", "procurement") ||
+                        "Selected Supplier"}
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">
+                          {t("supplierId", "procurement") || "Supplier ID"}:
+                        </span>
+                        <span className="font-medium">
+                          {purchaseOrder.supplier_id}
+                        </span>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t("phone", "procurement") || "Phone"}
-                        </label>
-                        <input
-                          type="tel"
-                          name="supplierPhone"
-                          value={formData.supplierPhone}
-                          onChange={handleFormChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
+                      {suppliers.find(
+                        (s) => s.id === parseInt(purchaseOrder.supplier_id),
+                      )?.email && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">
+                            {t("email", "procurement") || "Email"}:
+                          </span>
+                          <span className="font-medium">
+                            {
+                              suppliers.find(
+                                (s) =>
+                                  s.id === parseInt(purchaseOrder.supplier_id),
+                              )?.email
+                            }
+                          </span>
+                        </div>
+                      )}
+                      {suppliers.find(
+                        (s) => s.id === parseInt(purchaseOrder.supplier_id),
+                      )?.phone && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">
+                            {t("phone", "procurement") || "Phone"}:
+                          </span>
+                          <span className="font-medium">
+                            {
+                              suppliers.find(
+                                (s) =>
+                                  s.id === parseInt(purchaseOrder.supplier_id),
+                              )?.phone
+                            }
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -1053,19 +1183,23 @@ const EditPurchaseOrder = () => {
                     {t("paymentMethod", "procurement") || "Payment Method"} *
                   </label>
                   <select
-                    name="paymentMethod"
-                    value={formData.paymentMethod}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={purchaseOrder.payment_method}
+                    onChange={(e) =>
+                      handleOrderChange("payment_method", e.target.value)
+                    }
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      orderLocked ? "bg-gray-200 cursor-not-allowed" : ""
+                    }`}
                     required
+                    disabled={orderLocked}
                   >
-                    <option value="credit_card">
-                      {t("creditCard", "procurement") || "Credit Card"}
-                    </option>
-                    <option value="bank_transfer">
+                    <option value="Bank Transfer">
                       {t("bankTransfer", "procurement") || "Bank Transfer"}
                     </option>
-                    <option value="cash">
+                    <option value="Credit Card">
+                      {t("creditCard", "procurement") || "Credit Card"}
+                    </option>
+                    <option value="Cash">
                       {t("cash", "procurement") || "Cash"}
                     </option>
                   </select>
@@ -1073,18 +1207,22 @@ const EditPurchaseOrder = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("paymentTerms", "procurement") || "Payment Terms"} *
+                    {t("currency", "procurement") || "Currency"} *
                   </label>
                   <select
-                    name="paymentTerms"
-                    value={formData.paymentTerms}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={purchaseOrder.currency}
+                    onChange={(e) =>
+                      handleOrderChange("currency", e.target.value)
+                    }
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      orderLocked ? "bg-gray-200 cursor-not-allowed" : ""
+                    }`}
                     required
+                    disabled={orderLocked}
                   >
-                    <option value="Net 15">Net 15</option>
-                    <option value="Net 30">Net 30</option>
-                    <option value="Net 60">Net 60</option>
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - British Pound</option>
                   </select>
                 </div>
               </div>
@@ -1108,18 +1246,36 @@ const EditPurchaseOrder = () => {
               </div>
 
               <div className="space-y-3">
-                <div className="flex justify-between items-center py-4 border-t border-gray-200">
+                <div className="flex justify-between items-center py-3">
+                  <p className="text-gray-700">
+                    {t("subtotal", "procurement") || "Subtotal"}
+                  </p>
+                  <p className="font-medium text-gray-800">
+                    {formatCurrency(totals.subtotal)}
+                  </p>
+                </div>
+
+                <div className="flex justify-between items-center py-3 border-t border-gray-200">
+                  <p className="text-gray-700">
+                    {t("taxAmount", "procurement") || "Tax Amount"}
+                  </p>
+                  <p className="font-medium text-red-600">
+                    {formatCurrency(totals.taxAmount)}
+                  </p>
+                </div>
+
+                <div className="flex justify-between items-center py-4 border-t border-gray-200 font-bold">
                   <div>
-                    <p className="text-lg font-bold text-gray-800">
+                    <p className="text-lg text-gray-800">
                       {t("totalAmount", "procurement") || "Total Amount"}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {t("includesTaxes", "procurement") ||
-                        "Includes all taxes"}
+                      {t("currency", "procurement") || "Currency"}:{" "}
+                      {purchaseOrder.currency}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-800">
+                    <p className="text-2xl text-gray-800">
                       {formatCurrency(totals.totalAmount)}
                     </p>
                     <p className="text-sm text-gray-600">
@@ -1129,15 +1285,17 @@ const EditPurchaseOrder = () => {
                 </div>
               </div>
 
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center space-x-2 text-sm text-blue-700">
-                  <Info size={16} />
-                  <span>
-                    {t("changesWillUpdate", "procurement") ||
-                      "Changes will update the total amount automatically"}
-                  </span>
+              {!orderLocked && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center space-x-2 text-sm text-blue-700">
+                    <Info size={16} />
+                    <span>
+                      {t("changesWillUpdate", "procurement") ||
+                        "Changes will update the total amount automatically"}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

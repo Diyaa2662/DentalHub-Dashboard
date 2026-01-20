@@ -1,0 +1,50 @@
+/* تنسيق الصفوف المحذوفة */
+.deleted-row {
+  position: relative;
+  opacity: 0.7;
+  background-color: #f9fafb !important;
+}
+
+.deleted-row:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.deleted-row::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 12px; /* تعديل حسب التباعد */
+  right: 12px; /* تعديل حسب التباعد */
+  height: 1px;
+  background-color: #fca5a5;
+  transform: translateY(-50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* تأكد أن النص يظهر فوق الخط */
+.deleted-row .dx-datagrid-content .dx-datagrid-table .dx-row > td {
+  position: relative;
+  z-index: 2;
+  background-color: transparent !important;
+}
+
+/* تغيير ألوان النص في الصف المحذوف */
+.deleted-row .dx-datagrid-text-content {
+  color: #6b7280 !important; /* gray-500 */
+}
+
+/* خيار أبسط بدون الخط (إذا واجهت مشاكل مع الخط) */
+/*
+.deleted-row {
+  opacity: 0.6;
+  background-color: #f9fafb !important;
+  text-decoration: line-through;
+  text-decoration-color: #fca5a5;
+  text-decoration-thickness: 2px;
+}
+
+.deleted-row:hover {
+  background-color: #f3f4f6 !important;
+}
+*/

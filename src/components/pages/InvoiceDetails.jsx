@@ -11,14 +11,12 @@ import {
   Clock,
   AlertCircle,
   Printer,
-  Download,
   ArrowLeft,
   Mail,
   Phone,
   MapPin,
   Tag,
   Percent,
-  FileEdit,
   RefreshCw,
   Package,
   ShoppingCart,
@@ -36,6 +34,7 @@ const InvoiceDetails = () => {
   const [loading, setLoading] = useState(true);
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [loadingCustomer, setLoadingCustomer] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false); // ✅ حالة جديدة لتغيير الحالة
   const [error, setError] = useState(null);
 
   // ✅ جلب بيانات الفاتورة
@@ -227,22 +226,96 @@ const InvoiceDetails = () => {
     }
   };
 
+  // ✅ دالة تغيير حالة الفاتورة
+  const handleChangeInvoiceStatus = async (newStatus) => {
+    if (!invoiceData || changingStatus) return;
+
+    if (
+      window.confirm(
+        `${t("changeInvoiceStatusConfirmation", "invoices") || "Are you sure you want to change invoice status to"} ${newStatus}?`,
+      )
+    ) {
+      setChangingStatus(true);
+      try {
+        const response = await api.post(
+          `/changestatusinvoice/${invoiceData.id}`,
+          {
+            status: newStatus,
+          },
+        );
+
+        console.log("API Response for status change:", response.data);
+
+        if (response.status === 200 || response.status === 201) {
+          // تحديث حالة الفاتورة محلياً
+          const updatedInvoice = {
+            ...invoiceData,
+            paymentStatus: newStatus === "paid" ? "paid" : "unpaid",
+            statusText: newStatus === "paid" ? "Paid" : "Pending",
+            originalPaymentStatus: newStatus,
+            isPaid: newStatus === "paid",
+            isPending: newStatus === "unpaid",
+          };
+
+          setInvoiceData(updatedInvoice);
+
+          // إعادة تحميل البيانات من الخادم
+          setTimeout(() => {
+            fetchInvoiceDetails();
+          }, 500);
+
+          alert(
+            t("invoiceStatusUpdated", "invoices") ||
+              `Invoice status successfully updated to ${newStatus === "paid" ? "Paid" : "Pending"}`,
+          );
+        } else {
+          throw new Error(`Unexpected response status: ${response.status}`);
+        }
+      } catch (err) {
+        console.error("Error changing invoice status:", err);
+
+        let errorMessage =
+          t("failedToChangeInvoiceStatus", "invoices") ||
+          "Failed to change invoice status";
+
+        if (err.response) {
+          errorMessage += `: ${err.response.data?.message || err.response.statusText}`;
+        } else if (err.request) {
+          errorMessage += ": No response from server";
+        } else {
+          errorMessage += `: ${err.message}`;
+        }
+
+        alert(errorMessage);
+      } finally {
+        setChangingStatus(false);
+      }
+    }
+  };
+
+  // ✅ الحصول على إعدادات الحالة
   const getStatusConfig = (status) => {
     const configs = {
       paid: {
         color: "bg-green-100 text-green-800 border-green-200",
         icon: <CheckCircle size={16} />,
         text: t("paid", "invoices") || "Paid",
+        buttonColor: "bg-green-600 hover:bg-green-700",
+        buttonText: t("paid", "invoices") || "Paid",
       },
       pending: {
         color: "bg-yellow-100 text-yellow-800 border-yellow-200",
         icon: <Clock size={16} />,
         text: t("pending", "common") || "Pending",
+        buttonColor: "bg-yellow-600 hover:bg-yellow-700",
+        buttonText: t("pending", "common") || "Pending",
       },
       overdue: {
         color: "bg-red-100 text-red-800 border-red-200",
         icon: <AlertCircle size={16} />,
         text: t("overdue", "invoices") || "Overdue",
+        buttonColor: "bg-red-600 hover:bg-red-700",
+        buttonText: t("overdue", "invoices") || "Overdue",
       },
     };
     return configs[status] || configs.pending;
@@ -250,16 +323,6 @@ const InvoiceDetails = () => {
 
   const handlePrintInvoice = () => {
     window.print();
-  };
-
-  const handleDownloadInvoice = () => {
-    alert(
-      `${t("downloadingInvoice", "invoices")} ${invoiceData?.invoiceNumber}`,
-    );
-  };
-
-  const handleEditInvoice = () => {
-    navigate(`/invoices/edit/${id}`);
   };
 
   const handleBack = () => {
@@ -411,27 +474,11 @@ const InvoiceDetails = () => {
           </button>
 
           <button
-            onClick={handleEditInvoice}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center space-x-2"
-          >
-            <FileEdit size={20} />
-            <span>{t("edit", "common") || "Edit"}</span>
-          </button>
-
-          <button
             onClick={handlePrintInvoice}
             className="px-4 py-2 bg-blue-50 text-dental-blue rounded-lg font-medium hover:bg-blue-100 transition flex items-center space-x-2"
           >
             <Printer size={20} />
             <span>{t("print", "common") || "Print"}</span>
-          </button>
-
-          <button
-            onClick={handleDownloadInvoice}
-            className="px-4 py-2 bg-green-50 text-green-600 rounded-lg font-medium hover:bg-green-100 transition flex items-center space-x-2"
-          >
-            <Download size={20} />
-            <span>{t("download", "common") || "Download"}</span>
           </button>
         </div>
       </div>
@@ -796,58 +843,81 @@ const InvoiceDetails = () => {
             </div>
           </div>
 
-          {/* Quick Actions */}
+          {/* ✅ تغيير حالة الفاتورة - بدلاً من Quick Actions */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              {t("quickActions", "invoices") || "Quick Actions"}
+              {t("changeInvoiceStatus", "invoices") || "Change Invoice Status"}
             </h3>
 
             <div className="space-y-3">
+              {/* زر Mark as Paid - يظهر فقط إذا لم تكن الحالة Paid */}
               {!invoiceData.isPaid && (
-                <>
-                  <button
-                    onClick={() => alert("Send reminder email")}
-                    className="w-full px-4 py-3 bg-blue-50 text-dental-blue rounded-lg font-medium hover:bg-blue-100 transition flex items-center justify-center space-x-2"
-                  >
-                    <Mail size={20} />
-                    <span>
-                      {t("sendReminder", "invoices") || "Send Reminder"}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => alert("Mark as paid")}
-                    className="w-full px-4 py-3 bg-green-50 text-green-600 rounded-lg font-medium hover:bg-green-100 transition flex items-center justify-center space-x-2"
-                  >
-                    <CheckCircle size={20} />
-                    <span>{t("markAsPaid", "invoices") || "Mark as Paid"}</span>
-                  </button>
-
-                  <button
-                    onClick={() => alert("Add payment")}
-                    className="w-full px-4 py-3 bg-purple-50 text-purple-600 rounded-lg font-medium hover:bg-purple-100 transition flex items-center justify-center space-x-2"
-                  >
-                    <DollarSign size={20} />
-                    <span>{t("addPayment", "invoices") || "Add Payment"}</span>
-                  </button>
-                </>
+                <button
+                  onClick={() => handleChangeInvoiceStatus("paid")}
+                  disabled={changingStatus}
+                  className={`w-full px-4 py-3 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
+                    changingStatus
+                      ? "bg-green-200 text-green-800 cursor-not-allowed"
+                      : "bg-green-600 text-white hover:bg-green-700"
+                  }`}
+                >
+                  {changingStatus ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>
+                        {t("changingStatus", "invoices") ||
+                          "Changing status..."}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={20} />
+                      <span>
+                        {t("markAsPaid", "invoices") || "Mark as Paid"}
+                      </span>
+                    </>
+                  )}
+                </button>
               )}
 
+              {/* زر Mark as Unpaid - يظهر فقط إذا كانت الحالة Paid */}
               {invoiceData.isPaid && (
-                <div className="text-center py-4">
-                  <CheckCircle
-                    size={32}
-                    className="text-green-500 mx-auto mb-2"
-                  />
-                  <p className="text-green-600 font-medium">
-                    {t("paid", "invoices") || "Paid"}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {t("invoicePaid", "invoices") ||
-                      "This invoice has been paid"}
-                  </p>
-                </div>
+                <button
+                  onClick={() => handleChangeInvoiceStatus("unpaid")}
+                  disabled={changingStatus}
+                  className={`w-full px-4 py-3 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
+                    changingStatus
+                      ? "bg-yellow-200 text-yellow-800 cursor-not-allowed"
+                      : "bg-yellow-600 text-white hover:bg-yellow-700"
+                  }`}
+                >
+                  {changingStatus ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>
+                        {t("changingStatus", "invoices") ||
+                          "Changing status..."}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock size={20} />
+                      <span>
+                        {t("markAsUnpaid", "invoices") || "Mark as Unpaid"}
+                      </span>
+                    </>
+                  )}
+                </button>
               )}
+
+              {/* رسالة مساعدة */}
+              <p className="text-xs text-gray-500 text-center">
+                {invoiceData.isPaid
+                  ? t("invoicePaidHelp", "invoices") ||
+                    "Invoice is marked as paid. You can change it to unpaid if needed."
+                  : t("invoiceUnpaidHelp", "invoices") ||
+                    "Invoice is currently unpaid. Mark it as paid when payment is received."}
+              </p>
             </div>
           </div>
         </div>

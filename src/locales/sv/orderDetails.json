@@ -76,5 +76,10 @@
   "invalidStatus": "Ogiltig status",
   "pendingOrderHelp": "Denna order väntar på bekräftelse",
   "confirmedOrderHelp": "Denna order har bekräftats och kan avbrytas om det behövs",
-  "canceledOrderHelp": "Denna order har avbrutits"
+  "canceledOrderHelp": "Denna order har avbrutits",
+  "noImage": "Ingen bild",
+  "confirmingOrder": "Bekräftar order...",
+  "cancellingOrder": "Avbryter order...",
+  "orderAlreadyConfirmed": "Ordern är redan bekräftad",
+  "orderAlreadyCanceled": "Ordern är redan avbruten"
 }

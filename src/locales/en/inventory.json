@@ -36,5 +36,14 @@
   "incomingStock": "Incoming Stock",
   "outgoingStock": "Outgoing Stock",
   "returns": "Returns",
-  "totalMovements": "Total Movements"
+  "totalMovements": "Total Movements",
+  "loadingInventory": "Loading inventory data...",
+  "failedToLoadInventory": "Failed to load inventory data",
+  "errorLoadingInventory": "Error Loading Inventory",
+  "noMovements": "No Movements",
+  "noMovementsDescription": "No inventory movements found",
+  "movementsFound": "movements found",
+  "productId": "Product ID",
+  "units": "units",
+  "relatedTo": "Related To"
 }

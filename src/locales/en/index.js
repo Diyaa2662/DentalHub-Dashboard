@@ -16,6 +16,7 @@ import procurement from "./procurement.json";
 import employees from "./employees.json";
 import categories from "./categories.json";
 import editProduct from "./editProduct.json";
+import payments from "./payments.json";
 
 export default {
   common,
@@ -36,4 +37,5 @@ export default {
   procurement,
   employees,
   categories,
+  payments
 };

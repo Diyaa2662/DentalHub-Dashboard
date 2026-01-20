@@ -34,5 +34,17 @@
   "saveRating": "Save Rating",
   "customer": "Customer",
   "failedToUpdateRating": "Failed to update rating",
-  "ratingUpdated": "Rating updated successfully"
+  "ratingUpdated": "Rating updated successfully",
+  "active": "Active",
+  "blocked": "Blocked",
+  "status": "Status",
+  "address": "Address",
+  "confirmUnblockCustomer": "Are you sure you want to unblock customer",
+  "customerUnblocked": "Customer unblocked",
+  "unblockCustomer": "Unblock Customer",
+  "failedToBlockCustomer": "Failed to block customer",
+  "failedToUnblockCustomer": "Failed to unblock customer",
+  "fromLastMonth": "from last month",
+  "avgOrderValue": "Average Order Value",
+  "avgOrderGrowth": "Avg. Order Growth"
 }

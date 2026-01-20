@@ -14,10 +14,8 @@ import {
 import {
   FileText,
   Plus,
-  Download,
   Eye,
   Edit,
-  Trash2,
   Calendar,
   Truck,
   DollarSign,
@@ -44,6 +42,7 @@ const PurchaseOrders = () => {
     totalAmount: 0,
     pendingOrders: 0,
     deliveredOrders: 0,
+    cancelledOrders: 0,
   });
 
   useEffect(() => {
@@ -51,24 +50,44 @@ const PurchaseOrders = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ✅ دالة لتحويل حالة الـ API إلى حالة داخلية موحدة
+  const normalizeStatus = (apiStatus) => {
+    if (!apiStatus) return "pending";
+
+    const statusLower = apiStatus.toLowerCase();
+
+    if (statusLower.includes("confirm")) {
+      return "confirmed";
+    } else if (statusLower.includes("cancel")) {
+      return "cancelled";
+    } else if (statusLower.includes("ship")) {
+      return "shipped";
+    } else if (statusLower.includes("deliver")) {
+      return "delivered";
+    } else if (statusLower.includes("pending")) {
+      return "pending";
+    }
+
+    return "pending";
+  };
+
   const fetchPurchaseOrders = async () => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await api.get("/supplierorders");
-
       const apiData = response.data?.data || [];
 
-      // eslint-disable-next-line no-unused-vars
-      const formattedData = apiData.map((order, index) => ({
+      const formattedData = apiData.map((order) => ({
         id: order.id,
         poNumber: order.supplier_order_number || `PO-${order.id}`,
         supplier: order.supplier || "Unknown Supplier",
         orderDate: order.order_date || order.created_at?.split("T")[0] || "N/A",
         totalAmount: parseFloat(order.total_amount) || 0,
         itemsOrdered: order.number_of_items || 0,
-        status: mapApiStatus(order.status || "pending"),
+        status: normalizeStatus(order.status || "pending"), // ✅ استخدام normalizeStatus
+        originalStatus: order.status, // حفظ الحالة الأصلية
         paymentMethod: order.payment_method || "Unknown",
         originalData: order,
       }));
@@ -79,7 +98,7 @@ const PurchaseOrders = () => {
       console.error("Error fetching purchase orders:", err);
       setError(
         t("fetchPurchaseOrdersError", "procurement") ||
-          "Failed to load purchase orders"
+          "Failed to load purchase orders",
       );
       setPurchaseOrdersData([]);
       setStats({
@@ -87,35 +106,27 @@ const PurchaseOrders = () => {
         totalAmount: 0,
         pendingOrders: 0,
         deliveredOrders: 0,
+        cancelledOrders: 0,
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const mapApiStatus = (apiStatus) => {
-    const statusMap = {
-      pending: "pending",
-      confirmed: "confirmed",
-      shipped: "shipped",
-      delivered: "delivered",
-      cancelled: "cancelled",
-    };
-
-    return statusMap[apiStatus.toLowerCase()] || "pending";
-  };
-
   const calculateStats = (data) => {
     const totalOrders = data.length;
     const totalAmount = data.reduce(
       (sum, order) => sum + (order.totalAmount || 0),
-      0
+      0,
     );
     const pendingOrders = data.filter(
-      (order) => order.status === "pending"
+      (order) => order.status === "pending",
     ).length;
     const deliveredOrders = data.filter(
-      (order) => order.status === "delivered"
+      (order) => order.status === "delivered",
+    ).length;
+    const cancelledOrders = data.filter(
+      (order) => order.status === "cancelled",
     ).length;
 
     setStats({
@@ -123,6 +134,7 @@ const PurchaseOrders = () => {
       totalAmount,
       pendingOrders,
       deliveredOrders,
+      cancelledOrders,
     });
   };
 
@@ -217,7 +229,7 @@ const PurchaseOrders = () => {
         {getStatusIcon(data.data.status)}
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-            data.data.status
+            data.data.status,
           )}`}
         >
           {getStatusText(data.data.status)}
@@ -245,6 +257,7 @@ const PurchaseOrders = () => {
     );
   };
 
+  // ✅ خلية الإجراءات المعدلة (بدون زر الحذف)
   const actionCellRender = (data) => {
     return (
       <div className="flex items-center space-x-3">
@@ -266,48 +279,8 @@ const PurchaseOrders = () => {
         >
           <Edit size={18} />
         </button>
-        <button
-          className="text-red-600 hover:text-red-800 transition"
-          title={t("delete", "common") || "Delete"}
-          onClick={() => handleDeleteOrder(data.data.id, data.data.poNumber)}
-        >
-          <Trash2 size={18} />
-        </button>
       </div>
     );
-  };
-
-  const handleDeleteOrder = async (id, poNumber) => {
-    if (
-      window.confirm(
-        `${
-          t("confirmDeletePurchaseOrder", "procurement") ||
-          "Delete purchase order"
-        } #${poNumber}?`
-      )
-    ) {
-      try {
-        await api.delete(`/supplierorders/${id}`);
-        setPurchaseOrdersData((prev) =>
-          prev.filter((order) => order.id !== id)
-        );
-        calculateStats(purchaseOrdersData.filter((order) => order.id !== id));
-
-        alert(
-          `${
-            t("purchaseOrderDeleted", "procurement") ||
-            "Purchase order deleted successfully"
-          }: ${poNumber}`
-        );
-      } catch (err) {
-        console.error("Error deleting order:", err);
-        alert(
-          err.response?.data?.message ||
-            t("deleteOrderError", "procurement") ||
-            "Failed to delete purchase order"
-        );
-      }
-    }
   };
 
   const handleAddPurchaseOrder = () => {
@@ -411,7 +384,7 @@ const PurchaseOrders = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -472,6 +445,22 @@ const PurchaseOrders = () => {
             </div>
             <div className="p-2 bg-green-50 rounded-lg">
               <CheckCircle className="text-green-600" size={24} />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">
+                {t("cancelled", "procurement") || "Cancelled"}
+              </p>
+              <p className="text-2xl font-bold text-gray-800">
+                {stats.cancelledOrders}
+              </p>
+            </div>
+            <div className="p-2 bg-red-50 rounded-lg">
+              <XCircle className="text-red-600" size={24} />
             </div>
           </div>
         </div>
@@ -601,7 +590,7 @@ const PurchaseOrders = () => {
 
             <Column
               caption={t("actions", "procurement") || "Actions"}
-              width={120}
+              width={100}
               alignment="center"
               cellRender={actionCellRender}
             />

@@ -13,16 +13,12 @@ import {
 } from "devextreme-react/data-grid";
 import {
   FileText,
-  Download,
   Eye,
-  Printer,
   Plus,
   DollarSign,
-  User,
   CheckCircle,
   Clock,
   AlertCircle,
-  Calendar,
   Edit,
   Trash2,
   RefreshCw,
@@ -217,20 +213,8 @@ const Invoices = () => {
     fetchInvoices();
   };
 
-  const handlePrintInvoice = (invoiceId) => {
-    alert(`${t("printingInvoice", "invoices")} ${invoiceId}`);
-  };
-
-  const handleDownloadInvoice = (invoiceId) => {
-    alert(`${t("downloadingInvoice", "invoices")} ${invoiceId}`);
-  };
-
   const handleViewInvoice = (invoiceId) => {
     navigate(`/invoices/${invoiceId}`);
-  };
-
-  const handleEditInvoice = (invoiceId) => {
-    alert(`${t("editingInvoice", "invoices")} ${invoiceId}`);
   };
 
   const handleDeleteInvoice = async (invoiceId, invoiceNumber) => {
@@ -369,7 +353,7 @@ const Invoices = () => {
     );
   };
 
-  // ✅ عرض خلية الإجراءات
+  // ✅ عرض خلية الإجراءات (فقط العين والسلة)
   const actionCellRender = (data) => {
     return (
       <div className="flex space-x-2 justify-center">
@@ -379,27 +363,6 @@ const Invoices = () => {
           title={t("view", "common") || "View"}
         >
           <Eye size={16} />
-        </button>
-        <button
-          onClick={() => handleEditInvoice(data.data.id)}
-          className="p-1.5 text-gray-600 hover:bg-gray-50 rounded transition"
-          title={t("edit", "common") || "Edit"}
-        >
-          <Edit size={16} />
-        </button>
-        <button
-          onClick={() => handlePrintInvoice(data.data.id)}
-          className="p-1.5 text-purple-600 hover:bg-purple-50 rounded transition"
-          title={t("print", "common") || "Print"}
-        >
-          <Printer size={16} />
-        </button>
-        <button
-          onClick={() => handleDownloadInvoice(data.data.id)}
-          className="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
-          title={t("download", "common") || "Download"}
-        >
-          <Download size={16} />
         </button>
         <button
           onClick={() =>
