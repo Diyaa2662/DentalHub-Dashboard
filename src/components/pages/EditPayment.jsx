@@ -1,12 +1,11 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
 import api from "../../services/api";
 import {
   ArrowLeft,
   Save,
-  Plus,
   Calendar,
   DollarSign,
   CreditCard,
@@ -26,7 +25,8 @@ import {
   Info,
 } from "lucide-react";
 
-const AddPayment = () => {
+const EditPayment = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useLanguage();
 
@@ -43,13 +43,76 @@ const AddPayment = () => {
     notes: "",
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [invoiceExists, setInvoiceExists] = useState(null);
   const [isCheckingInvoice, setIsCheckingInvoice] = useState(false);
+  const [originalPayment, setOriginalPayment] = useState(null);
+
+  useEffect(() => {
+    if (id) {
+      fetchPayment();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const fetchPayment = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.get(`/payments/${id}`);
+      console.log("Fetched payment for editing:", response.data);
+
+      const paymentData = response.data?.data;
+      if (paymentData) {
+        setOriginalPayment(paymentData);
+
+        // تحويل البيانات من API إلى تنسيق النموذج
+        const formattedData = {
+          invoice_type: paymentData.invoice_type || "customer_invoice",
+          invoice_id: paymentData.invoice_id
+            ? paymentData.invoice_id.toString()
+            : "",
+          status: paymentData.status || "pending",
+          payment_date:
+            paymentData.payment_date || new Date().toISOString().split("T")[0],
+          payment_method: paymentData.payment_method || "credit_card",
+          currency: paymentData.currency || "USD",
+          transaction_id: paymentData.transaction_id || "",
+          amount: paymentData.amount ? paymentData.amount.toString() : "",
+          notes: paymentData.notes || "",
+        };
+
+        setPaymentData(formattedData);
+
+        // التحقق من وجود الفاتورة إذا كان هناك invoice_id
+        if (formattedData.invoice_id && formattedData.invoice_type) {
+          checkInvoiceExists(
+            formattedData.invoice_id,
+            formattedData.invoice_type,
+          );
+        }
+      } else {
+        setError(
+          t("paymentNotFound", "payments") ||
+            "Payment not found or invalid data",
+        );
+      }
+    } catch (err) {
+      console.error("Error fetching payment:", err);
+      setError(
+        err.response?.data?.message ||
+          t("loadPaymentFailed", "payments") ||
+          "Failed to load payment. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ✅ التحقق من وجود الفاتورة
   const checkInvoiceExists = async (invoiceId, invoiceType) => {
@@ -197,9 +260,15 @@ const AddPayment = () => {
     // التحقق من أن الحقول الرقمية تحتوي على أرقام فقط
     const numericFields = ["invoice_id", "amount"];
     if (numericFields.includes(name) && value !== "") {
-      // السماح فقط بالأرقام
-      const numericValue = value.replace(/[^0-9]/g, "");
-      setPaymentData((prev) => ({ ...prev, [name]: numericValue }));
+      // السماح فقط بالأرقام والنقطة للمبلغ
+      if (name === "amount") {
+        const numericValue = value.replace(/[^0-9.]/g, "");
+        setPaymentData((prev) => ({ ...prev, [name]: numericValue }));
+      } else {
+        // السماح فقط بالأرقام للـ ID
+        const numericValue = value.replace(/[^0-9]/g, "");
+        setPaymentData((prev) => ({ ...prev, [name]: numericValue }));
+      }
     } else {
       setPaymentData((prev) => ({ ...prev, [name]: value }));
     }
@@ -231,7 +300,7 @@ const AddPayment = () => {
     setPaymentData((prev) => ({ ...prev, transaction_id: transactionId }));
   };
 
-  // ✅ إرسال الدفعة
+  // ✅ إرسال الدفعة المعدلة
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -258,45 +327,54 @@ const AddPayment = () => {
         notes: paymentData.notes || "",
       };
 
-      console.log("Submitting payment data:", submitData);
+      console.log("Updating payment data:", submitData);
 
-      const response = await api.post("/createpayment", submitData);
-      console.log("Payment created response:", response.data);
+      const response = await api.post(`/updatepayment/${id}`, submitData);
+      console.log("Payment updated response:", response.data);
 
       setSuccess(true);
 
       // إعادة التوجيه بعد ثانيتين
       setTimeout(() => {
-        navigate("/payments");
+        navigate(`/payments/${id}`);
       }, 2000);
     } catch (err) {
-      console.error("Error creating payment:", err);
+      console.error("Error updating payment:", err);
       setError(
         err.response?.data?.message ||
-          t("createPaymentError", "payments") ||
-          "Failed to create payment. Please check your data and try again.",
+          t("updatePaymentError", "payments") ||
+          "Failed to update payment. Please check your data and try again.",
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ✅ إعادة التعيين
+  // ✅ إعادة التعيين إلى القيم الأصلية
   const handleReset = () => {
-    setPaymentData({
-      invoice_type: "customer_invoice",
-      invoice_id: "",
-      status: "pending",
-      payment_date: new Date().toISOString().split("T")[0],
-      payment_method: "credit_card",
-      currency: "USD",
-      transaction_id: "",
-      amount: "",
-      notes: "",
-    });
+    if (originalPayment) {
+      const formattedData = {
+        invoice_type: originalPayment.invoice_type || "customer_invoice",
+        invoice_id: originalPayment.invoice_id
+          ? originalPayment.invoice_id.toString()
+          : "",
+        status: originalPayment.status || "pending",
+        payment_date:
+          originalPayment.payment_date ||
+          new Date().toISOString().split("T")[0],
+        payment_method: originalPayment.payment_method || "credit_card",
+        currency: originalPayment.currency || "USD",
+        transaction_id: originalPayment.transaction_id || "",
+        amount: originalPayment.amount ? originalPayment.amount.toString() : "",
+        notes: originalPayment.notes || "",
+      };
+      setPaymentData(formattedData);
+    }
     setValidationErrors({});
     setError(null);
-    setInvoiceExists(null);
+    if (paymentData.invoice_id && paymentData.invoice_type) {
+      checkInvoiceExists(paymentData.invoice_id, paymentData.invoice_type);
+    }
   };
 
   // ✅ الحصول على أيقونة الحالة
@@ -323,11 +401,12 @@ const AddPayment = () => {
   // ✅ الحصول على نص طريقة الدفع
   const getPaymentMethodText = (method) => {
     const methods = {
+      credit_card: t("creditCard", "payments") || "Credit Card",
       paypal: "PayPal",
-      credit_card: "Credit Card",
-      bank_transfer: "Bank Transfer",
-      cash: "Cash",
-      other: "Other",
+      bank_transfer: t("bankTransfer", "payments") || "Bank Transfer",
+      cash: t("cash", "payments") || "Cash",
+      stripe: "Stripe",
+      other: t("other", "payments") || "Other",
     };
     return methods[method] || method || "Unknown";
   };
@@ -338,21 +417,65 @@ const AddPayment = () => {
       <div className="p-6 space-y-6">
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => navigate("/payments")}
+            onClick={() => navigate(`/payments/${id}`)}
             className="p-2 hover:bg-gray-100 rounded-lg transition"
           >
             <ArrowLeft size={24} className="text-gray-600" />
           </button>
           <h1 className="text-2xl font-bold text-gray-800">
-            {t("addPayment", "payments") || "Add Payment"}
+            {t("editPayment", "payments") || "Edit Payment"}
           </h1>
         </div>
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dental-blue mx-auto"></div>
             <p className="mt-4 text-gray-600">
-              {t("loading", "common") || "Loading..."}
+              {t("loading", "common") || "Loading payment details..."}
             </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !paymentData) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate("/payments")}
+            className="p-2 hover:bg-gray-100 rounded-lg transition"
+          >
+            <ArrowLeft size={24} className="text-gray-600" />
+          </button>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {t("editPayment", "payments") || "Edit Payment"}
+          </h1>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center">
+            <AlertCircle className="text-red-600 mr-3" size={24} />
+            <div>
+              <h3 className="font-bold text-red-800">
+                {t("error", "common") || "Error"}
+              </h3>
+              <p className="text-red-700">{error}</p>
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-4">
+            <button
+              onClick={() => navigate("/payments")}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition"
+            >
+              {t("backToPayments", "payments") || "Back to Payments"}
+            </button>
+            <button
+              onClick={fetchPayment}
+              className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center space-x-2"
+            >
+              <RefreshCw size={18} />
+              <span>{t("tryAgain", "common") || "Try Again"}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -365,18 +488,18 @@ const AddPayment = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => navigate("/payments")}
+            onClick={() => navigate(`/payments/${id}`)}
             className="p-2 hover:bg-gray-100 rounded-lg transition"
           >
             <ArrowLeft size={24} className="text-gray-600" />
           </button>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              {t("addPayment", "payments") || "Add Payment"}
+              {t("editPayment", "payments") || "Edit Payment"}
             </h1>
             <p className="text-gray-600">
-              {t("addPaymentDescription", "payments") ||
-                "Add a new payment record to the system"}
+              {t("editPaymentDescription", "payments") ||
+                `Edit payment record #${id}`}
             </p>
           </div>
         </div>
@@ -386,7 +509,7 @@ const AddPayment = () => {
             onClick={handleReset}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2"
           >
-            <span>{t("reset", "common") || "Reset"}</span>
+            <span>{t("reset", "common") || "Reset to Original"}</span>
           </button>
         </div>
       </div>
@@ -398,12 +521,12 @@ const AddPayment = () => {
             <CheckCircle className="text-green-600 mr-3" size={24} />
             <div>
               <h3 className="font-bold text-green-800">
-                {t("paymentCreatedSuccess", "payments") ||
-                  "Payment Created Successfully!"}
+                {t("paymentUpdatedSuccess", "payments") ||
+                  "Payment Updated Successfully!"}
               </h3>
               <p className="text-green-700">
-                {t("redirectingToPayments", "payments") ||
-                  "Redirecting to payments list..."}
+                {t("redirectingToDetails", "payments") ||
+                  "Redirecting to payment details..."}
               </p>
             </div>
           </div>
@@ -442,8 +565,8 @@ const AddPayment = () => {
                       "Payment Information"}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    {t("enterPaymentDetails", "payments") ||
-                      "Enter payment details"}
+                    {t("editPaymentDetails", "payments") ||
+                      "Edit payment details"}
                   </p>
                 </div>
               </div>
@@ -532,6 +655,9 @@ const AddPayment = () => {
                     </option>
                     <option value="cash">
                       {t("cash", "payments") || "Cash"}
+                    </option>
+                    <option value="stripe">
+                      {t("stripe", "payments") || "Stripe"}
                     </option>
                     <option value="other">
                       {t("other", "payments") || "Other"}
@@ -794,6 +920,64 @@ const AddPayment = () => {
                 />
               </div>
             </div>
+
+            {/* معلومات الدفعة الأصلية */}
+            {originalPayment && (
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 bg-gray-100 rounded-lg">
+                    <Info className="text-gray-600" size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {t("originalPaymentInfo", "payments") ||
+                        "Original Payment Information"}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {t("createdOn", "payments") || "Created on"}{" "}
+                      {new Date(
+                        originalPayment.created_at,
+                      ).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-600">
+                      {t("originalAmount", "payments") || "Original Amount"}:
+                    </span>
+                    <span className="ml-2 font-medium">
+                      {originalPayment.amount} {originalPayment.currency}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">
+                      {t("originalStatus", "payments") || "Original Status"}:
+                    </span>
+                    <span className="ml-2 font-medium">
+                      {getStatusText(originalPayment.status)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">
+                      {t("originalMethod", "payments") || "Original Method"}:
+                    </span>
+                    <span className="ml-2 font-medium">
+                      {getPaymentMethodText(originalPayment.payment_method)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">
+                      {t("originalInvoice", "payments") || "Original Invoice"}:
+                    </span>
+                    <span className="ml-2 font-medium">
+                      #{originalPayment.invoice_id}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -819,7 +1003,7 @@ const AddPayment = () => {
           <div className="flex space-x-3">
             <button
               type="button"
-              onClick={() => navigate("/payments")}
+              onClick={() => navigate(`/payments/${id}`)}
               className="px-6 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition"
             >
               {t("cancel", "common") || "Cancel"}
@@ -836,13 +1020,13 @@ const AddPayment = () => {
               {submitting ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>{t("saving", "payments") || "Saving..."}</span>
+                  <span>{t("updating", "payments") || "Updating..."}</span>
                 </>
               ) : (
                 <>
                   <Save size={20} />
                   <span>
-                    {t("createPayment", "payments") || "Create Payment"}
+                    {t("updatePayment", "payments") || "Update Payment"}
                   </span>
                 </>
               )}
@@ -854,4 +1038,4 @@ const AddPayment = () => {
   );
 };
 
-export default AddPayment;
+export default EditPayment;

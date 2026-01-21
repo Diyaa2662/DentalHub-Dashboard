@@ -368,7 +368,7 @@ const Payments = () => {
       )
     ) {
       try {
-        await api.delete(`/payments/${id}`);
+        await api.delete(`/deletepayment/${id}`);
         alert(
           t("paymentDeletedSuccess", "payments") ||
             "Payment deleted successfully!",

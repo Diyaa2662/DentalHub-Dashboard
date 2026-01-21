@@ -31,6 +31,8 @@ import SupplierInvoices from "./components/pages/procurement/SupplierInvoices";
 import SupplierInvoiceDetails from "./components/pages/procurement/SupplierInvoiceDetails";
 import Payments from "./components/pages/Payments";
 import AddPayment from "./components/pages/AddPayment";
+import PaymentDetails from "./components/pages/PaymentDetails";
+import EditPayment from "./components/pages/EditPayment";
 import AddSupplierInvoice from "./components/pages/procurement/AddSupplierInvoice";
 import Employees from "./components/pages/Employees";
 import EditProduct from "./components/pages/EditProduct";
@@ -144,6 +146,10 @@ function App() {
             <Route path="/payments" element={<Payments />} />
 
             <Route path="/payments/add" element={<AddPayment />} />
+
+            <Route path="/payments/:id" element={<PaymentDetails />} />
+
+            <Route path="/payments/edit/:id" element={<EditPayment />} />
           </Route>
           {/* ============================================ */}
           {/* نهاية المسارات المحمية */}

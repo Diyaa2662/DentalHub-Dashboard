@@ -125,19 +125,19 @@ const Sidebar = () => {
         },
       ],
     },
-    // {
-    //   id: "payment",
-    //   label: t("payment", "navigation") || "Payment",
-    //   icon: <CreditCard size={20} />,
-    //   items: [
-    //     {
-    //       id: "payments",
-    //       label: t("payments", "navigation") || "Payments",
-    //       icon: <CreditCard size={18} />,
-    //       path: "/payments",
-    //     },
-    //   ],
-    // },
+    {
+      id: "payment",
+      label: t("payment", "navigation") || "Payment",
+      icon: <CreditCard size={20} />,
+      items: [
+        {
+          id: "payments",
+          label: t("payments", "navigation") || "Payments",
+          icon: <CreditCard size={18} />,
+          path: "/payments",
+        },
+      ],
+    },
     // {
     //   id: "team",
     //   label: t("teamAdministration", "navigation"),
