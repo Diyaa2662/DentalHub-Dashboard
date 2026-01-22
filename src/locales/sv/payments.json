@@ -176,5 +176,11 @@
   "updating": "Uppdaterar...",
   "updatePayment": "Uppdatera betalning",
   "resetToOriginal": "Återställ till original",
-  "loadPaymentFailed": "Kunde inte ladda betalning. Försök igen."
+  "loadPaymentFailed": "Kunde inte ladda betalning. Försök igen.",
+  "readOnly": "Skrivskyddad",
+  "linkedEntitiesReadOnly": "Länkade enheter kan inte ändras",
+  "invoiceDetails": "Fakturadetaljer",
+  "invoiceDate": "Fakturadatum",
+  "important": "Viktigt",
+  "linkedEntitiesCannotBeModified": "Länkad faktura kan inte ändras. För att ändra fakturan, skapa en ny betalning."
 }

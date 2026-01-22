@@ -337,5 +337,9 @@
   "showAllProducts": "Visa Alla Produkter",
   "noFilteredProducts": "Inga produkter matchar filtret",
   "tryDifferentFilter": "Prova ett annat filter",
-  "clickToShowTotal": "Klicka för att visa totalt antal produkter"
+  "clickToShowTotal": "Klicka för att visa totalt antal produkter",
+  "clickToFilterDeleted": "Klicka för att filtrera raderade produkter",
+  "deleted": "Raderade",
+  "deletedProducts": "Raderade Produkter",
+  "showingDeletedProducts": "✓ Visar raderade produkter"
 }

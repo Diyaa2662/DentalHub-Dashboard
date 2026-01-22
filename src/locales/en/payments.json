@@ -176,5 +176,11 @@
   "updating": "Updating...",
   "updatePayment": "Update Payment",
   "resetToOriginal": "Reset to Original",
-  "loadPaymentFailed": "Failed to load payment. Please try again."
+  "loadPaymentFailed": "Failed to load payment. Please try again.",
+  "readOnly": "Read Only",
+  "linkedEntitiesReadOnly": "Linked entities cannot be modified",
+  "invoiceDetails": "Invoice Details",
+  "invoiceDate": "Invoice Date",
+  "important": "Important",
+  "linkedEntitiesCannotBeModified": "Linked invoice cannot be modified. To change the invoice, create a new payment."
 }

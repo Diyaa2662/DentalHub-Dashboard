@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
+import api from "../../services/api";
 import {
   LayoutDashboard,
   Package,
@@ -178,11 +179,26 @@ const Sidebar = () => {
     },
   ];
 
-  const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await api.post("/logout");
+
+      // مسح بيانات المستخدم من localStorage
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("isAuthenticated");
+      navigate("/login");
+    } catch (err) {
+      console.error("Logout error:", err);
+      // حتى لو فشل الـ API، ننظف localStorage ونعيد التوجيه
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("isAuthenticated");
+      navigate("/login");
+    } finally {
+      // إعادة تحميل الصفحة لضمان تحديث الحالة
+      window.location.reload();
+    }
   };
 
   return (
@@ -201,7 +217,7 @@ const Sidebar = () => {
         bg-white border-r border-gray-200 flex flex-col
       `}
       >
-        <div className="p-6 border-b border-gray-200">
+        <div className="px-6 py-5 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-dental-blue rounded-lg">
               <Activity className="text-white" size={24} />
@@ -312,13 +328,68 @@ const Sidebar = () => {
           {/* معلومات المستخدم */}
           <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-dental-blue to-dental-teal flex items-center justify-center">
-              <span className="text-white font-bold">AD</span>
+              <span className="text-white font-bold">
+                {(() => {
+                  // جلب بيانات المستخدم من localStorage
+                  try {
+                    const userData = localStorage.getItem("user");
+                    if (userData) {
+                      const user = JSON.parse(userData);
+                      // الحصول على الأحرف الأولى من الاسم
+                      if (user.name && user.name.trim()) {
+                        const nameParts = user.name.trim().split(" ");
+                        if (nameParts.length > 0) {
+                          // أخذ الحرف الأول من الاسم الأول والثاني إن وجد
+                          return (
+                            nameParts[0].charAt(0).toUpperCase() +
+                            (nameParts[1]
+                              ? nameParts[1].charAt(0).toUpperCase()
+                              : "")
+                          );
+                        }
+                      }
+                    }
+                  } catch (err) {
+                    console.error("Error getting user initials:", err);
+                  }
+                  // القيمة الافتراضية إذا لم توجد بيانات
+                  return "AD";
+                })()}
+              </span>
             </div>
-            <div className="flex-1">
-              <p className="font-medium text-gray-800">
-                {t("adminUser", "navigation") || "المدير"}
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-gray-800 truncate">
+                {(() => {
+                  // جلب اسم المستخدم من localStorage
+                  try {
+                    const userData = localStorage.getItem("user");
+                    if (userData) {
+                      const user = JSON.parse(userData);
+                      return (
+                        user.name || t("adminUser", "navigation") || "Admin"
+                      );
+                    }
+                  } catch (err) {
+                    console.error("Error getting user name:", err);
+                  }
+                  return t("adminUser", "navigation") || "Admin";
+                })()}
               </p>
-              <p className="text-sm text-gray-500">admin@dentalhub.com</p>
+              <p className="text-sm text-gray-500 truncate">
+                {(() => {
+                  // جلب إيميل المستخدم من localStorage
+                  try {
+                    const userData = localStorage.getItem("user");
+                    if (userData) {
+                      const user = JSON.parse(userData);
+                      return user.email || "admin@dentalhub.com";
+                    }
+                  } catch (err) {
+                    console.error("Error getting user email:", err);
+                  }
+                  return "admin@dentalhub.com";
+                })()}
+              </p>
             </div>
           </div>
 

@@ -337,5 +337,9 @@
   "showAllProducts": "Show All Products",
   "noFilteredProducts": "No products match the filter",
   "tryDifferentFilter": "Try selecting a different filter",
-  "clickToShowTotal": "Click to show total products"
+  "clickToShowTotal": "Click to show total products",
+  "clickToFilterDeleted": "Click to filter deleted products",
+  "deleted": "Deleted",
+  "deletedProducts": "Deleted Products",
+  "showingDeletedProducts": "✓ Showing deleted products"
 }

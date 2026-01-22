@@ -23,6 +23,8 @@ import {
   ShoppingCart,
   AlertTriangle,
   Info,
+  Lock,
+  Eye,
 } from "lucide-react";
 
 const EditPayment = () => {
@@ -49,8 +51,8 @@ const EditPayment = () => {
   const [success, setSuccess] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const [invoiceExists, setInvoiceExists] = useState(null);
-  const [isCheckingInvoice, setIsCheckingInvoice] = useState(false);
   const [originalPayment, setOriginalPayment] = useState(null);
+  const [invoiceDetails, setInvoiceDetails] = useState(null);
 
   useEffect(() => {
     if (id) {
@@ -89,12 +91,9 @@ const EditPayment = () => {
 
         setPaymentData(formattedData);
 
-        // التحقق من وجود الفاتورة إذا كان هناك invoice_id
-        if (formattedData.invoice_id && formattedData.invoice_type) {
-          checkInvoiceExists(
-            formattedData.invoice_id,
-            formattedData.invoice_type,
-          );
+        // جلب تفاصيل الفاتورة المرتبطة
+        if (paymentData.invoice_id && paymentData.invoice_type) {
+          fetchInvoiceDetails(paymentData.invoice_id, paymentData.invoice_type);
         }
       } else {
         setError(
@@ -114,28 +113,9 @@ const EditPayment = () => {
     }
   };
 
-  // ✅ التحقق من وجود الفاتورة
-  const checkInvoiceExists = async (invoiceId, invoiceType) => {
-    if (!invoiceId) {
-      setInvoiceExists(null);
-      return;
-    }
-
+  // ✅ جلب تفاصيل الفاتورة
+  const fetchInvoiceDetails = async (invoiceId, invoiceType) => {
     try {
-      setIsCheckingInvoice(true);
-      const id = parseInt(invoiceId);
-      if (isNaN(id) || id <= 0) {
-        setInvoiceExists({
-          exists: false,
-          message:
-            t("invalidInvoiceId", "payments") ||
-            "Invoice ID must be a positive number",
-        });
-        setIsCheckingInvoice(false);
-        return;
-      }
-
-      // بناء على نوع الفاتورة، نستخدم endpoint مختلف
       let endpoint = "";
       if (invoiceType === "customer_invoice") {
         endpoint = `/invoices/${invoiceId}`;
@@ -143,21 +123,13 @@ const EditPayment = () => {
         endpoint = `/supplierinvoices/${invoiceId}`;
       }
 
-      if (!endpoint) {
-        setInvoiceExists({
-          exists: false,
-          message:
-            t("selectInvoiceTypeFirst", "payments") ||
-            "Please select invoice type first",
-        });
-        setIsCheckingInvoice(false);
-        return;
-      }
+      if (!endpoint) return;
 
       const response = await api.get(endpoint);
       const invoiceData = response.data?.invoice || response.data?.data;
 
       if (invoiceData) {
+        setInvoiceDetails(invoiceData);
         setInvoiceExists({
           exists: true,
           message:
@@ -176,15 +148,13 @@ const EditPayment = () => {
         });
       }
     } catch (err) {
-      console.error("Error checking invoice:", err);
+      console.error("Error fetching invoice details:", err);
       setInvoiceExists({
         exists: false,
         message:
           t("invoiceNotFound", "payments", { id: invoiceId }) ||
           `Invoice #${invoiceId} not found`,
       });
-    } finally {
-      setIsCheckingInvoice(false);
     }
   };
 
@@ -216,39 +186,6 @@ const EditPayment = () => {
       errors.status = t("statusRequired", "payments") || "Status is required";
     }
 
-    if (!paymentData.invoice_type) {
-      errors.invoice_type =
-        t("invoiceTypeRequired", "payments") || "Invoice type is required";
-    }
-
-    // التحقق من أن الأرقام هي أرقام صحيحة موجبة
-    const numericFields = ["invoice_id"];
-    numericFields.forEach((field) => {
-      if (paymentData[field]) {
-        const value = parseInt(paymentData[field]);
-        if (isNaN(value) || value <= 0) {
-          errors[field] =
-            t("positiveNumberRequired", "payments") ||
-            "Must be a positive number";
-        }
-      }
-    });
-
-    // التحقق من وجود الفاتورة (إذا تم إدخال ID)
-    if (paymentData.invoice_id) {
-      if (!paymentData.invoice_type) {
-        errors.invoice_type =
-          t("invoiceTypeRequired", "payments") ||
-          "Invoice type is required when providing invoice ID";
-      } else if (invoiceExists && !invoiceExists.exists) {
-        errors.invoice_id = invoiceExists.message;
-      } else if (!invoiceExists && paymentData.invoice_id) {
-        errors.invoice_id =
-          t("pleaseCheckInvoiceId", "payments") ||
-          "Please check if invoice ID exists";
-      }
-    }
-
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -258,17 +195,11 @@ const EditPayment = () => {
     const { name, value } = e.target;
 
     // التحقق من أن الحقول الرقمية تحتوي على أرقام فقط
-    const numericFields = ["invoice_id", "amount"];
+    const numericFields = ["amount"];
     if (numericFields.includes(name) && value !== "") {
       // السماح فقط بالأرقام والنقطة للمبلغ
-      if (name === "amount") {
-        const numericValue = value.replace(/[^0-9.]/g, "");
-        setPaymentData((prev) => ({ ...prev, [name]: numericValue }));
-      } else {
-        // السماح فقط بالأرقام للـ ID
-        const numericValue = value.replace(/[^0-9]/g, "");
-        setPaymentData((prev) => ({ ...prev, [name]: numericValue }));
-      }
+      const numericValue = value.replace(/[^0-9.]/g, "");
+      setPaymentData((prev) => ({ ...prev, [name]: numericValue }));
     } else {
       setPaymentData((prev) => ({ ...prev, [name]: value }));
     }
@@ -276,19 +207,6 @@ const EditPayment = () => {
     // حذف رسالة الخطأ لهذا الحقل عند التغيير
     if (validationErrors[name]) {
       setValidationErrors((prev) => ({ ...prev, [name]: "" }));
-    }
-
-    // عند تغيير نوع الفاتورة، نتحقق من وجود الفاتورة إذا كان هناك ID
-    if (name === "invoice_type" && paymentData.invoice_id) {
-      setTimeout(() => checkInvoiceExists(paymentData.invoice_id, value), 500);
-    }
-  };
-
-  // ✅ عند تغيير قيمة Invoice ID، نتحقق من وجودها
-  const handleInvoiceIdBlur = () => {
-    const { invoice_id, invoice_type } = paymentData;
-    if (invoice_id && invoice_type) {
-      checkInvoiceExists(invoice_id, invoice_type);
     }
   };
 
@@ -314,22 +232,26 @@ const EditPayment = () => {
     try {
       // تحضير البيانات للإرسال
       const submitData = {
-        invoice_type: paymentData.invoice_type,
-        invoice_id: paymentData.invoice_id
-          ? parseInt(paymentData.invoice_id)
-          : null,
+        // حافظ على نفس invoice_type و invoice_id الأصليين
+        invoice_type: originalPayment?.invoice_type || paymentData.invoice_type,
+        invoice_id:
+          originalPayment?.invoice_id ||
+          (paymentData.invoice_id ? parseInt(paymentData.invoice_id) : null),
         status: paymentData.status,
         payment_date: paymentData.payment_date,
         payment_method: paymentData.payment_method,
         currency: paymentData.currency,
-        transaction_id: paymentData.transaction_id || `TRX-${Date.now()}`,
+        transaction_id:
+          paymentData.transaction_id ||
+          originalPayment?.transaction_id ||
+          `TRX-${Date.now()}`,
         amount: parseFloat(paymentData.amount),
         notes: paymentData.notes || "",
       };
 
       console.log("Updating payment data:", submitData);
 
-      const response = await api.post(`/updatepayment/${id}`, submitData);
+      const response = await api.put(`/updatepayment/${id}`, submitData);
       console.log("Payment updated response:", response.data);
 
       setSuccess(true);
@@ -372,9 +294,6 @@ const EditPayment = () => {
     }
     setValidationErrors({});
     setError(null);
-    if (paymentData.invoice_id && paymentData.invoice_type) {
-      checkInvoiceExists(paymentData.invoice_id, paymentData.invoice_type);
-    }
   };
 
   // ✅ الحصول على أيقونة الحالة
@@ -409,6 +328,12 @@ const EditPayment = () => {
       other: t("other", "payments") || "Other",
     };
     return methods[method] || method || "Unknown";
+  };
+
+  const getInvoiceTypeText = (type) => {
+    return type === "customer_invoice"
+      ? t("customerInvoice", "payments") || "Customer Invoice"
+      : t("supplierInvoice", "payments") || "Supplier Invoice";
   };
 
   // ✅ حالة التحميل
@@ -791,7 +716,7 @@ const EditPayment = () => {
 
           {/* العمود الأيمن: معلومات الكيانات المرتبطة */}
           <div className="space-y-6">
-            {/* معلومات الكيانات */}
+            {/* معلومات الكيانات المرتبطة (للعرض فقط) */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center space-x-3 mb-6">
                 <div className="p-2 bg-green-50 rounded-lg">
@@ -801,47 +726,45 @@ const EditPayment = () => {
                   <h3 className="text-lg font-semibold text-gray-800">
                     {t("relatedEntities", "payments") || "Related Entities"}
                   </h3>
-                  <p className="text-sm text-gray-600">
-                    {t("linkPaymentToInvoice", "payments") ||
-                      "Link payment to invoice (Required fields)"}
-                  </p>
+                  <div className="flex items-center space-x-2">
+                    <Lock size={14} className="text-gray-500" />
+                    <p className="text-sm text-gray-600">
+                      {t("linkedEntitiesReadOnly", "payments") ||
+                        "Linked entities cannot be modified"}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               <div className="space-y-4">
-                {/* نوع الفاتورة */}
+                {/* نوع الفاتورة (للعرض فقط) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t("invoiceType", "payments")} *
+                    {t("invoiceType", "payments")}
+                    <span className="ml-2 text-xs text-gray-500">
+                      ({t("readOnly", "payments") || "Read Only"})
+                    </span>
                   </label>
-                  <select
-                    name="invoice_type"
-                    value={paymentData.invoice_type}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      validationErrors.invoice_type
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
-                  >
-                    <option value="customer_invoice">
-                      {t("customerInvoice", "payments") || "Customer Invoice"}
-                    </option>
-                    <option value="supplier_invoice">
-                      {t("supplierInvoice", "payments") || "Supplier Invoice"}
-                    </option>
-                  </select>
-                  {validationErrors.invoice_type && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {validationErrors.invoice_type}
-                    </p>
-                  )}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <FileText size={16} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      value={getInvoiceTypeText(paymentData.invoice_type)}
+                      readOnly
+                      className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                    />
+                  </div>
                 </div>
 
-                {/* ID الفاتورة */}
+                {/* ID الفاتورة (للعرض فقط) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t("invoiceId", "payments")} *
+                    {t("invoiceId", "payments")}
+                    <span className="ml-2 text-xs text-gray-500">
+                      ({t("readOnly", "payments") || "Read Only"})
+                    </span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -849,40 +772,74 @@ const EditPayment = () => {
                     </div>
                     <input
                       type="text"
-                      name="invoice_id"
                       value={paymentData.invoice_id}
-                      onChange={handleInputChange}
-                      onBlur={handleInvoiceIdBlur}
-                      className={`w-full pl-10 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        validationErrors.invoice_id
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
-                      placeholder={
-                        t("enterInvoiceId", "payments") || "Enter invoice ID"
-                      }
-                      required
+                      readOnly
+                      className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
                     />
-                    {isCheckingInvoice && (
-                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                      </div>
-                    )}
                   </div>
-                  {validationErrors.invoice_id ? (
-                    <p className="mt-1 text-sm text-red-600">
-                      {validationErrors.invoice_id}
+                  {invoiceExists && (
+                    <p
+                      className={`mt-1 text-sm ${invoiceExists.exists ? "text-green-600" : "text-red-600"}`}
+                    >
+                      {invoiceExists.message}
                     </p>
-                  ) : (
-                    invoiceExists && (
-                      <p
-                        className={`mt-1 text-sm ${invoiceExists.exists ? "text-green-600" : "text-red-600"}`}
-                      >
-                        {invoiceExists.message}
-                      </p>
-                    )
                   )}
                 </div>
+
+                {/* تفاصيل الفاتورة الإضافية */}
+                {invoiceDetails && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Eye size={14} className="text-blue-500" />
+                      <span className="text-sm font-medium text-gray-700">
+                        {t("invoiceDetails", "payments") || "Invoice Details"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {invoiceDetails.invoice_number && (
+                        <div>
+                          <span className="text-gray-600">
+                            {t("invoiceNumber", "payments")}:
+                          </span>
+                          <span className="ml-2 font-medium">
+                            {invoiceDetails.invoice_number}
+                          </span>
+                        </div>
+                      )}
+                      {invoiceDetails.total_amount && (
+                        <div>
+                          <span className="text-gray-600">
+                            {t("invoiceAmount", "payments")}:
+                          </span>
+                          <span className="ml-2 font-medium">
+                            {invoiceDetails.total_amount}{" "}
+                            {invoiceDetails.currency || paymentData.currency}
+                          </span>
+                        </div>
+                      )}
+                      {invoiceDetails.status && (
+                        <div>
+                          <span className="text-gray-600">
+                            {t("invoiceStatus", "payments")}:
+                          </span>
+                          <span className="ml-2 font-medium capitalize">
+                            {invoiceDetails.status}
+                          </span>
+                        </div>
+                      )}
+                      {invoiceDetails.date && (
+                        <div>
+                          <span className="text-gray-600">
+                            {t("invoiceDate", "payments") || "Invoice Date"}:
+                          </span>
+                          <span className="ml-2 font-medium">
+                            {new Date(invoiceDetails.date).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -993,10 +950,10 @@ const EditPayment = () => {
             </p>
             <p>
               <span className="font-medium">
-                {t("invoiceIdCheck", "payments") || "Invoice ID Check"}:
+                {t("important", "payments") || "Important"}:
               </span>{" "}
-              {t("invoiceIdCheckDescription", "payments") ||
-                "System will verify if the invoice exists before submitting"}
+              {t("linkedEntitiesCannotBeModified", "payments") ||
+                "Linked invoice cannot be modified. To change the invoice, create a new payment."}
             </p>
           </div>
 
