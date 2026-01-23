@@ -54,7 +54,6 @@ const Invoices = () => {
       const response = await api.get("/invoices");
       const apiData = response.data?.data;
 
-      console.log("📦 Invoices API Response:", apiData);
 
       if (Array.isArray(apiData)) {
         if (apiData.length === 0) {

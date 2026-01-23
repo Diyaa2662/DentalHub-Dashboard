@@ -327,6 +327,9 @@ const Inventory = () => {
               showBorders={true}
               columnAutoWidth={true}
               height={500}
+              showColumnLines={true}
+              showRowLines={true}
+              rowAlternationEnabled={true}
               allowColumnResizing={true}
               allowColumnReordering={true}
               columnResizingMode="widget"
@@ -436,7 +439,7 @@ const Inventory = () => {
                 caption={t("inStock", "inventory")}
                 width={"auto"}
                 alignment="left"
-                allowGrouping={true}
+                allowGrouping={false}
                 cellRender={({ data }) => (
                   <div className="flex items-center justify-between">
                     <div
@@ -478,6 +481,7 @@ const Inventory = () => {
                 caption={t("notes", "procurement") || "Notes"}
                 width={"auto"}
                 alignment="left"
+                allowGrouping={false}
                 cellRender={({ data }) => (
                   <div className="text-sm text-gray-600">
                     {data.notes || "-"}

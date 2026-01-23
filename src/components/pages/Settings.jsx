@@ -164,12 +164,10 @@ const Settings = () => {
     setSuccess(null);
 
     try {
-      const response = await api.post("/updateuser", {
+      await api.post("/updateuser", {
         name: profileData.name,
         email: profileData.email,
       });
-
-      console.log("Profile update response:", response.data);
 
       // التحقق إذا تغير الإيميل (بشكل صحيح)
       const userData = localStorage.getItem("user");
@@ -191,12 +189,6 @@ const Settings = () => {
 
       // إظهار رسالة النجاح
       if (emailChanged) {
-        console.log(
-          "Email changed from:",
-          oldUser.email,
-          "to:",
-          profileData.email,
-        );
         setSuccess(
           t("profileUpdatedRelogin", "settings") ||
             "Profile updated successfully! Logging out in 2 seconds...",
@@ -212,7 +204,6 @@ const Settings = () => {
           handleLogout();
         }, 2000);
       } else {
-        console.log("Email not changed or not valid comparison");
         setSuccess(
           t("profileUpdatedSuccess", "settings") ||
             "Profile updated successfully!",
@@ -250,9 +241,7 @@ const Settings = () => {
     setSuccess(null);
 
     try {
-      const response = await api.post("/resetpassword", passwordData);
-
-      console.log("Password change response:", response.data);
+      await api.post("/resetpassword", passwordData);
 
       setSuccess(
         t("passwordChangedRelogin", "settings") ||

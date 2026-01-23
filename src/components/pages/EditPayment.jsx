@@ -67,7 +67,6 @@ const EditPayment = () => {
       setError(null);
 
       const response = await api.get(`/payments/${id}`);
-      console.log("Fetched payment for editing:", response.data);
 
       const paymentData = response.data?.data;
       if (paymentData) {
@@ -249,10 +248,7 @@ const EditPayment = () => {
         notes: paymentData.notes || "",
       };
 
-      console.log("Updating payment data:", submitData);
-
       const response = await api.put(`/updatepayment/${id}`, submitData);
-      console.log("Payment updated response:", response.data);
 
       setSuccess(true);
 

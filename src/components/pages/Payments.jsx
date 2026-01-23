@@ -8,7 +8,7 @@ import {
   SearchPanel,
   Paging,
   Pager,
-  FilterRow,
+  GroupPanel,
   LoadPanel,
   HeaderFilter,
 } from "devextreme-react/data-grid";
@@ -863,6 +863,7 @@ const Payments = () => {
             columnAutoWidth={true}
             height={500}
             allowColumnResizing={true}
+            allowColumnReordering={true}
             columnResizingMode="widget"
             showColumnLines={true}
             showRowLines={true}
@@ -876,6 +877,14 @@ const Payments = () => {
               }
             />
             <HeaderFilter visible={true} />
+            <GroupPanel
+              visible={true}
+              emptyPanelText={
+                t("dragColumnHereToGroup", "products") ||
+                "Drag a column header here to group by that column"
+              }
+              allowColumnDragging={true}
+            />
             <Paging defaultPageSize={10} />
             <Pager
               showPageSizeSelector={true}
@@ -889,6 +898,7 @@ const Payments = () => {
               caption={t("id", "common") || "ID"}
               width="auto"
               alignment="left"
+              allowGrouping={false}
               cellRender={idCellRender}
             />
 
@@ -898,6 +908,7 @@ const Payments = () => {
               caption={t("amount", "payments") || "Amount"}
               width="auto"
               alignment="left"
+              allowGrouping={false}
               cellRender={amountCellRender}
             />
 
@@ -961,6 +972,7 @@ const Payments = () => {
               caption={t("transactionId", "payments") || "Transaction ID"}
               width="auto"
               alignment="left"
+              allowGrouping={false}
               cellRender={transactionCellRender}
             />
 

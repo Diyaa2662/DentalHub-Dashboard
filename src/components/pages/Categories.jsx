@@ -480,6 +480,9 @@ const Categories = () => {
             height={500}
             allowColumnReordering={true}
             wordWrapEnabled={true}
+            showColumnLines={true}
+            showRowLines={true}
+            rowAlternationEnabled={true}
           >
             <HeaderFilter visible={true} />
             <SearchPanel

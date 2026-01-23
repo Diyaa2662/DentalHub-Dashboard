@@ -51,8 +51,6 @@ const InvoiceDetails = () => {
       setOrderItems([]);
       setCustomerInfo(null);
 
-      console.log(`📡 Fetching invoice details for ID: ${id}`);
-
       // 1. جلب معلومات الفاتورة
       const invoiceResponse = await api.get(`/invoices/${id}`);
       const invoice = invoiceResponse.data?.data || invoiceResponse.data;
@@ -60,8 +58,6 @@ const InvoiceDetails = () => {
       if (!invoice) {
         throw new Error("Invoice not found");
       }
-
-      console.log("📦 Invoice data received:", invoice);
 
       // ✅ تحليل حالة الدفع
       const today = new Date();
@@ -112,20 +108,13 @@ const InvoiceDetails = () => {
 
       // 2. إذا كان هناك order_id، جلب المنتجات
       if (invoice.order_id) {
-        console.log(
-          `🛒 Fetching order items for order ID: ${invoice.order_id}`,
-        );
         fetchOrderItems(invoice.order_id);
       } else {
-        console.log("⚠️ No order_id found in invoice");
         setOrderItems([]);
       }
 
       // 3. جلب معلومات الزبون
       if (invoice.user_id) {
-        console.log(
-          `👤 Fetching customer info for user ID: ${invoice.user_id}`,
-        );
         fetchCustomerInfo(invoice.user_id);
       } else {
         setLoading(false);
@@ -148,8 +137,6 @@ const InvoiceDetails = () => {
 
       const response = await api.get(`/customerorders/${orderId}`);
       const orderData = response.data;
-
-      console.log("📦 Order data received:", orderData);
 
       if (orderData.products && Array.isArray(orderData.products)) {
         const items = orderData.products.map((product) => {
@@ -174,10 +161,8 @@ const InvoiceDetails = () => {
           };
         });
 
-        console.log(`✅ Processed ${items.length} order items`);
         setOrderItems(items);
       } else {
-        console.log("⚠️ No products found in order");
         setOrderItems([]);
       }
     } catch (err) {
@@ -243,8 +228,6 @@ const InvoiceDetails = () => {
             payment_status: newStatus,
           },
         );
-
-        console.log("API Response for status change:", response.data);
 
         if (response.status === 200 || response.status === 201) {
           // تحديث حالة الفاتورة محلياً

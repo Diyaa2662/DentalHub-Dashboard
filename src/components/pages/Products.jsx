@@ -68,7 +68,7 @@ const Products = () => {
       const response = await api.get("/products");
 
       const apiData = response.data?.data;
-      console.log("Fetched Products:", apiData);
+
       if (Array.isArray(apiData)) {
         const formattedData = apiData.map((product) => {
           const normalizedStatus = (product.status || "")
@@ -663,6 +663,8 @@ const Products = () => {
               height={500}
               allowColumnReordering={true}
               rowAlternationEnabled={true}
+              showColumnLines={true}
+              showRowLines={true}
               rowClass={(rowData) => {
                 return rowData.isDeleted ? "deleted-row" : "";
               }}

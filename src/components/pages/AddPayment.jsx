@@ -241,10 +241,7 @@ const AddPayment = () => {
         notes: paymentData.notes || "",
       };
 
-      console.log("Submitting payment data:", submitData);
-
       const response = await api.post("/createpayment", submitData);
-      console.log("Payment created response:", response.data);
 
       setSuccess(true);
 

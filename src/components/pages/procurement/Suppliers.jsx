@@ -407,6 +407,9 @@ const Suppliers = () => {
             height={500}
             allowColumnResizing={true}
             allowColumnReordering={true}
+            showColumnLines={true}
+            showRowLines={true}
+            rowAlternationEnabled={true}
             columnResizingMode="widget"
             onRowRemoving={(e) => {
               e.cancel = true;

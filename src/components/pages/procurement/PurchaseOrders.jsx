@@ -491,6 +491,9 @@ const PurchaseOrders = () => {
             showBorders={true}
             columnAutoWidth={true}
             height={500}
+            showColumnLines={true}
+            showRowLines={true}
+            rowAlternationEnabled={true}
             allowColumnResizing={true}
             allowColumnReordering={true}
             columnResizingMode="widget"

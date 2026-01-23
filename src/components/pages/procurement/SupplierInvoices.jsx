@@ -8,7 +8,8 @@ import {
   SearchPanel,
   Paging,
   Pager,
-  FilterRow,
+  HeaderFilter,
+  GroupPanel,
   LoadPanel,
 } from "devextreme-react/data-grid";
 import {
@@ -593,17 +594,27 @@ const SupplierInvoices = () => {
             columnAutoWidth={true}
             height={500}
             allowColumnResizing={true}
+            allowColumnReordering={true}
             columnResizingMode="widget"
             showColumnLines={true}
             showRowLines={true}
             rowAlternationEnabled={true}
           >
             <LoadPanel enabled={false} />
+            <HeaderFilter visible={true} />
             <SearchPanel
               visible={true}
               placeholder={
                 t("searchInvoices", "procurement") || "Search invoices..."
               }
+            />
+            <GroupPanel
+              visible={true}
+              emptyPanelText={
+                t("dragColumnHereToGroup", "products") ||
+                "Drag a column header here to group by that column"
+              }
+              allowColumnDragging={true}
             />
             <Paging defaultPageSize={10} />
             <Pager
@@ -617,6 +628,7 @@ const SupplierInvoices = () => {
               caption={t("id", "common") || "ID"}
               width="auto"
               alignment="left"
+              allowGrouping={false}
               cellRender={idCellRender}
             />
 
@@ -625,6 +637,7 @@ const SupplierInvoices = () => {
               caption={t("invoiceNumber", "procurement") || "Invoice No."}
               width="auto"
               alignment="left"
+              allowGrouping={false}
               cellRender={invoiceCellRender}
             />
 
@@ -657,6 +670,7 @@ const SupplierInvoices = () => {
               caption={t("invoiceAmount", "procurement") || "Amount"}
               width="auto"
               alignment="left"
+              allowGrouping={false}
               cellRender={amountCellRender}
             />
 

@@ -295,13 +295,11 @@ const AddSupplierInvoice = () => {
         notes: invoiceData.notes || "",
       };
 
-      console.log("Submitting invoice data:", submitData);
 
       const response = await api.post(
         "/enforcecreatesupplierinvoice",
         submitData,
       );
-      console.log("Invoice created response:", response.data);
 
       setSuccess(true);
 

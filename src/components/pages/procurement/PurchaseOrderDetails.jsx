@@ -154,7 +154,7 @@ const PurchaseOrderDetails = () => {
       setSupplierError(null);
 
       const response = await api.get(`/supplierorders/${id}`);
-      console.log("Order details response:", response.data);
+
       const orderData = response.data?.order;
       const relatedProducts = response.data?.related_products || [];
 
@@ -289,13 +289,10 @@ const PurchaseOrderDetails = () => {
           notes: `Invoice for purchase order #${purchaseOrder.poNumber}`,
         };
 
-        console.log("Generating invoice with data:", invoiceData);
-
         const response = await api.post(
           "/generatesupplierinvoice",
           invoiceData,
         );
-        console.log("Invoice generation response:", response.data);
 
         alert(
           t("invoiceGeneratedSuccess", "procurement") ||
@@ -441,7 +438,7 @@ const PurchaseOrderDetails = () => {
       setUpdatingStatus(true);
       try {
         const response = await api.post(`/confirmsupplierorder/${id}`);
-        console.log("Confirm order response:", response.data);
+
         alert(
           t("orderConfirmedSuccess", "procurement") ||
             "Order confirmed successfully!",
@@ -471,10 +468,6 @@ const PurchaseOrderDetails = () => {
       setUpdatingStatus(true);
       try {
         const response = await api.post(`/cancelsupplierorder/${id}`);
-
-        // ✅ تسجيل الاستجابة للفحص
-        console.log("Cancel order response:", response.data);
-        console.log("New status in response:", response.data?.order?.status);
 
         alert(
           t("orderCancelledSuccess", "procurement") ||

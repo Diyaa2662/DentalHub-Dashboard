@@ -261,8 +261,6 @@ const SupplierInvoiceDetails = () => {
           payment_status: newStatus,
         });
 
-        console.log("Change status response:", response.data);
-
         alert(
           t("invoiceStatusUpdated", "procurement") ||
             "Invoice status updated successfully!",

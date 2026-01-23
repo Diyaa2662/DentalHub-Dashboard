@@ -60,7 +60,6 @@ const PaymentDetails = () => {
       setError(null);
 
       const response = await api.get(`/payments/${id}`);
-      console.log("Payment details response:", response.data);
 
       const paymentData = response.data?.data;
       if (paymentData) {
