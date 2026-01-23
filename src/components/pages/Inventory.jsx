@@ -48,7 +48,21 @@ const Inventory = () => {
       setError(null);
 
       const response = await api.get("/stockmovments");
-      const movements = response.data?.data || [];
+
+      let movements = [];
+
+      if (Array.isArray(response.data)) {
+        if (response.data.length > 0 && Array.isArray(response.data[0])) {
+          movements = response.data[0];
+        } else if (
+          response.data.length > 0 &&
+          typeof response.data[0] === "object"
+        ) {
+          movements = response.data;
+        }
+      } else if (response.data?.data && Array.isArray(response.data.data)) {
+        movements = response.data.data;
+      }
 
       // ✅ تنسيق البيانات من API
       const formattedData = movements.map((movement) => {
@@ -117,7 +131,9 @@ const Inventory = () => {
     } catch (err) {
       console.error("Error fetching inventory data:", err);
       setError(
-        t("failedToLoadInventory", "inventory") ||
+        err.response?.data?.message ||
+          err.message ||
+          t("failedToLoadInventory", "inventory") ||
           "Failed to load inventory data",
       );
     } finally {
