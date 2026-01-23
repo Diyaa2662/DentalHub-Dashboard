@@ -50,7 +50,7 @@
   "categoryNotFound": "Kategori hittades inte",
   "categoryDeleted": "Kategori borttagen framgångsrikt!",
   "deleteError": "Fel vid borttagning av kategori",
-  "confirmDeleteCategory": "Är du säker på att du vill ta bort kategorin \"{name}\"?",
+  "confirmDeleteCategory": "Är du säker på att du vill ta bort kategorin ",
   "statusUpdateError": "Fel vid uppdatering av status",
   "validationError": "Valideringsfel",
   "updateError": "Misslyckades med att uppdatera kategori",

@@ -23,6 +23,7 @@ import {
   Check,
   X,
   Image as ImageIcon,
+  HelpCircle,
 } from "lucide-react";
 
 const OrderDetails = () => {
@@ -30,8 +31,9 @@ const OrderDetails = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
 
-  // ✅ تعريف الحالات الثابتة (نفس صفحة الطلبات)
+  // ✅ تعريف الحالات الثابتة
   const STATUSES = {
+    UNCHECKED: "unchecked",
     PENDING: "pending",
     CONFIRMED: "confirmed",
     CANCELED: "canceled",
@@ -85,7 +87,7 @@ const OrderDetails = () => {
 
       if (data.order) {
         // ✅ معالجة حالة الطلب من API
-        let orderStatus = STATUSES.PENDING;
+        let orderStatus = STATUSES.UNCHECKED;
 
         if (data.order.status) {
           const statusLower = data.order.status.toLowerCase();
@@ -95,10 +97,12 @@ const OrderDetails = () => {
             orderStatus = STATUSES.CANCELED;
           } else if (statusLower === STATUSES.PENDING) {
             orderStatus = STATUSES.PENDING;
+          } else if (statusLower === STATUSES.UNCHECKED) {
+            orderStatus = STATUSES.UNCHECKED;
           }
         }
 
-        // تحويل بيانات API لتنسيق التطبيق
+        // ✅ تحويل بيانات الطلب الكلي من API
         const formattedOrder = {
           id: data.order.id,
           orderNumber: data.order.order_number,
@@ -116,58 +120,76 @@ const OrderDetails = () => {
           orderStatus: orderStatus,
           originalStatus: data.order.status,
           customerNotes: data.order.notes || "",
-          items: data.products
-            ? await Promise.all(
-                data.products.map(async (product) => {
-                  const pivot = product.pivot;
-                  const subtotal = parseFloat(pivot.subtotal) || 0;
-                  const discountAmount = parseFloat(pivot.discount_amount) || 0;
-                  const taxAmount = parseFloat(pivot.tax_amount) || 0;
-                  const finalPrice = subtotal - discountAmount + taxAmount;
-
-                  let productImage = null;
-                  let hasValidImage = false;
-
-                  if (
-                    product.images &&
-                    product.images.length > 0 &&
-                    product.images[0].url
-                  ) {
-                    const fullImageUrl = getFullImageUrl(product.images[0].url);
-                    hasValidImage = await checkImageExists(fullImageUrl);
-                    if (hasValidImage) {
-                      productImage = fullImageUrl;
-                    }
-                  }
-
-                  return {
-                    id: product.id,
-                    product: product.name || `Product ${product.id}`,
-                    sku: product.sku || `SKU-${product.id}`,
-                    quantity: pivot.quantity || 1,
-                    unitPrice:
-                      parseFloat(pivot.unit_price) ||
-                      parseFloat(product.price) ||
-                      0,
-                    subTotal: subtotal,
-                    discountAmount: discountAmount,
-                    taxAmount: taxAmount,
-                    finalPrice: finalPrice,
-                    currentStock: product.stock_quantity || 0,
-                    status: product.status || "instock",
-                    image: productImage,
-                    hasImage: hasValidImage,
-                    allImages: product.images
-                      ? product.images.map((img) => ({
-                          ...img,
-                          fullUrl: getFullImageUrl(img.url),
-                        }))
-                      : [],
-                  };
-                }),
-              )
-            : [],
+          // ✅ بيانات الطلب الكلي الإضافية
+          numberOfItems: data.order.number_of_items || 0,
+          createdAt: data.order.created_at,
+          updatedAt: data.order.updated_at,
         };
+
+        // ✅ تحويل بيانات المنتجات من API بنفس الطريقة الحالية مع إضافة البيانات الجديدة
+        const formattedItems = data.products
+          ? await Promise.all(
+              data.products.map(async (product) => {
+                const pivot = product.pivot;
+                const subtotal = parseFloat(pivot.subtotal) || 0;
+                const discountAmount = parseFloat(pivot.discount_amount) || 0;
+                const taxAmount = parseFloat(pivot.tax_amount) || 0;
+                const finalPrice = subtotal - discountAmount + taxAmount;
+
+                let productImage = null;
+                let hasValidImage = false;
+
+                if (
+                  product.images &&
+                  product.images.length > 0 &&
+                  product.images[0].url
+                ) {
+                  const fullImageUrl = getFullImageUrl(product.images[0].url);
+                  hasValidImage = await checkImageExists(fullImageUrl);
+                  if (hasValidImage) {
+                    productImage = fullImageUrl;
+                  }
+                }
+
+                return {
+                  id: product.id,
+                  product: product.name || `Product ${product.id}`,
+                  sku: product.sku || `SKU-${product.id}`,
+                  quantity: pivot.quantity || 1,
+                  unitPrice:
+                    parseFloat(pivot.unit_price) ||
+                    parseFloat(product.price) ||
+                    0,
+                  subTotal: subtotal,
+                  discountAmount: discountAmount,
+                  taxAmount: taxAmount,
+                  finalPrice: finalPrice,
+                  currentStock: product.stock_quantity || 0,
+                  status: product.status || "instock",
+                  image: productImage,
+                  hasImage: hasValidImage,
+                  allImages: product.images
+                    ? product.images.map((img) => ({
+                        ...img,
+                        fullUrl: getFullImageUrl(img.url),
+                      }))
+                    : [],
+                  // ✅ إضافة البيانات الجديدة من الـ API
+                  discountPrice: parseFloat(product.discount_price) || 0,
+                  taxRate: parseFloat(pivot.tax_rate) || 0, // هذه هي النسبة المئوية
+                  productPrice: parseFloat(product.price) || 0,
+                  cost: parseFloat(product.cost) || 0,
+                  productRate: parseFloat(product.product_rate) || 0,
+                  categoryId: product.category_id,
+                  description: product.description || "",
+                  sDescription: product.s_description || "",
+                };
+              }),
+            )
+          : [];
+
+        // ✅ إضافة المنتجات إلى بيانات الطلب
+        formattedOrder.items = formattedItems;
 
         setOrder(formattedOrder);
 
@@ -232,6 +254,8 @@ const OrderDetails = () => {
         return <Clock size={16} className="text-yellow-600" />;
       case STATUSES.CANCELED:
         return <XCircle size={16} className="text-red-600" />;
+      case STATUSES.UNCHECKED:
+        return <HelpCircle size={16} className="text-gray-600" />;
       default:
         return <Package size={16} className="text-gray-600" />;
     }
@@ -246,6 +270,8 @@ const OrderDetails = () => {
         return "bg-yellow-100 text-yellow-800 border border-yellow-200";
       case STATUSES.CANCELED:
         return "bg-red-100 text-red-800 border border-red-200";
+      case STATUSES.UNCHECKED:
+        return "bg-gray-100 text-gray-800 border border-gray-200";
       default:
         return "bg-gray-100 text-gray-800 border border-gray-200";
     }
@@ -260,6 +286,8 @@ const OrderDetails = () => {
         return t("pending", "common") || "Pending";
       case STATUSES.CANCELED:
         return t("canceled", "common") || "Canceled";
+      case STATUSES.UNCHECKED:
+        return t("unchecked", "orders") || "Unchecked";
       default:
         return status?.charAt(0).toUpperCase() + status?.slice(1) || "Unknown";
     }
@@ -274,31 +302,29 @@ const OrderDetails = () => {
   const updateOrderStatus = async (newStatus) => {
     if (!order) return;
 
+    if (order.orderStatus === STATUSES.UNCHECKED) {
+      alert(
+        t("cannotChangeUnchecked", "orderDetails") ||
+          "Cannot change status of unchecked orders",
+      );
+      return;
+    }
+
     setUpdatingStatus(true);
     try {
       let endpoint;
-      let actionText;
 
       if (newStatus === STATUSES.CONFIRMED) {
         endpoint = `/confirmcustomerorder/${order.id}`;
-        actionText =
-          t("confirmingOrder", "orderDetails") || "Confirming order...";
       } else if (newStatus === STATUSES.CANCELED) {
         endpoint = `/cancelcustomerorder/${order.id}`;
-        // eslint-disable-next-line no-unused-vars
-        actionText =
-          t("cancellingOrder", "orderDetails") || "Cancelling order...";
       } else {
         alert(t("invalidStatus", "orderDetails") || "Invalid status");
         setUpdatingStatus(false);
         return;
       }
 
-      console.log(`Sending request to: ${endpoint} for order ${order.id}`);
-
       const response = await api.post(endpoint);
-
-      console.log("API Response:", response.data);
 
       if (response.status === 200 || response.status === 201) {
         const updatedOrder = {
@@ -322,18 +348,14 @@ const OrderDetails = () => {
       }
     } catch (err) {
       console.error("Error updating order status:", err);
-
       let errorMessage =
         t("failedToUpdateStatus", "orderDetails") ||
         "Failed to update order status";
 
       if (err.response) {
         errorMessage += `: ${err.response.data?.message || err.response.statusText}`;
-        console.error("Response data:", err.response.data);
-        console.error("Response status:", err.response.status);
       } else if (err.request) {
         errorMessage += ": No response from server";
-        console.error("Request was made but no response received");
       } else {
         errorMessage += `: ${err.message}`;
       }
@@ -346,6 +368,18 @@ const OrderDetails = () => {
 
   // ✅ زر تأكيد الطلب
   const handleConfirmOrder = () => {
+    const canConfirm = [STATUSES.PENDING, STATUSES.CANCELED].includes(
+      order.orderStatus,
+    );
+
+    if (!canConfirm) {
+      alert(
+        t("cannotConfirmCurrentStatus", "orderDetails") ||
+          `Cannot confirm order with status: ${getStatusText(order.orderStatus)}`,
+      );
+      return;
+    }
+
     if (order.orderStatus === STATUSES.CONFIRMED) {
       alert(
         t("orderAlreadyConfirmed", "orderDetails") ||
@@ -354,18 +388,23 @@ const OrderDetails = () => {
       return;
     }
 
-    if (
-      window.confirm(
-        t("confirmOrderConfirmation", "orderDetails") ||
-          `Are you sure you want to confirm order #${order.orderNumber}?\n\nThis action will change the order status to "Confirmed".`,
-      )
-    ) {
+    if (window.confirm(t("confirmOrderConfirmation", "orderDetails"))) {
       updateOrderStatus(STATUSES.CONFIRMED);
     }
   };
 
   // ✅ زر إلغاء الطلب
   const handleCancelOrder = () => {
+    const canCancel = order.orderStatus === STATUSES.CONFIRMED;
+
+    if (!canCancel) {
+      alert(
+        t("cannotCancelCurrentStatus", "orderDetails") ||
+          `Cannot cancel order with status: ${getStatusText(order.orderStatus)}`,
+      );
+      return;
+    }
+
     if (order.orderStatus === STATUSES.CANCELED) {
       alert(
         t("orderAlreadyCanceled", "orderDetails") ||
@@ -388,12 +427,15 @@ const OrderDetails = () => {
   const handleGenerateInvoice = async () => {
     if (!order) return;
 
-    if (
-      window.confirm(
-        t("generateInvoiceConfirmation", "orderDetails") ||
-          `Are you sure you want to generate invoice for order #${order.orderNumber}?`,
-      )
-    ) {
+    if (order.orderStatus !== STATUSES.CONFIRMED) {
+      alert(
+        t("invoiceOnlyConfirmed", "orderDetails") ||
+          "Invoice can only be generated for confirmed orders",
+      );
+      return;
+    }
+
+    if (window.confirm(t("generateInvoiceConfirmation", "orderDetails"))) {
       setGeneratingInvoice(true);
       try {
         const invoiceData = {
@@ -407,7 +449,6 @@ const OrderDetails = () => {
             "Thank you for your purchase. Please make payment before the due date.",
         };
 
-        console.log("Sending invoice data:", invoiceData);
         const response = await api.post("/generateinvoice", invoiceData);
 
         if (response.status === 200 || response.status === 201) {
@@ -463,7 +504,7 @@ const OrderDetails = () => {
         bg: "bg-blue-50",
       },
       not_specified: {
-        text: t("notSpecified", "common") || "Not Specified",
+        text: t("notSpecified", "orderDetails") || "Not Specified",
         icon: <CreditCard size={16} />,
         color: "text-gray-600",
         bg: "bg-gray-50",
@@ -591,6 +632,10 @@ const OrderDetails = () => {
   }
 
   const paymentMethod = getPaymentMethodDisplay(order.paymentMethod);
+  const canShowConfirmButton = [STATUSES.PENDING, STATUSES.CANCELED].includes(
+    order.orderStatus,
+  );
+  const canShowCancelButton = order.orderStatus === STATUSES.CONFIRMED;
 
   return (
     <div className="space-y-6">
@@ -633,7 +678,6 @@ const OrderDetails = () => {
             <span>{t("refresh", "common") || "Refresh"}</span>
           </button>
 
-          {/* ✅ زر Generate Invoice - يظهر فقط عندما تكون الحالة CONFIRMED */}
           {order.orderStatus === STATUSES.CONFIRMED && (
             <button
               onClick={handleGenerateInvoice}
@@ -691,7 +735,6 @@ const OrderDetails = () => {
                     className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
                   >
                     <div className="flex items-center space-x-4 flex-1">
-                      {/* عرض صورة المنتج أو أيقونة */}
                       <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
                         {item.hasImage ? (
                           <img
@@ -723,15 +766,15 @@ const OrderDetails = () => {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-gray-800 text-lg mb-6 truncate">
+                        <p className="font-bold text-gray-800 text-lg mb-2 truncate">
                           {item.product}
                         </p>
                         <p className="text-sm text-gray-500 mb-2">
                           SKU: {item.sku}
                         </p>
 
-                        <div className="text-sm text-gray-700 flex flex-wrap items-center gap-4">
-                          <div className="flex items-center bg-gray-50 px-1 py-1 rounded">
+                        <div className="text-sm text-gray-700 flex flex-wrap items-center gap-3 mb-2">
+                          <div className="flex items-center bg-gray-50 px-2 py-1 rounded">
                             <span className="font-medium mr-1">
                               {t("quantity", "orderDetails")}:
                             </span>
@@ -740,7 +783,7 @@ const OrderDetails = () => {
                             </span>
                           </div>
 
-                          <div className="flex items-center bg-blue-50 px-1 py-1 rounded">
+                          <div className="flex items-center bg-blue-50 px-2 py-1 rounded">
                             <span className="font-medium mr-1">
                               {t("unitPrice", "orderDetails")}:
                             </span>
@@ -749,7 +792,7 @@ const OrderDetails = () => {
                             </span>
                           </div>
 
-                          <div className="flex items-center bg-blue-50 px-1 py-1 rounded">
+                          <div className="flex items-center bg-blue-50 px-2 py-1 rounded">
                             <span className="font-medium mr-1">
                               {t("subtotal", "orderDetails")}:
                             </span>
@@ -757,9 +800,55 @@ const OrderDetails = () => {
                               {formatCurrency(item.subTotal, order.currency)}
                             </span>
                           </div>
+                        </div>
 
+                        {/* ✅ عرض البيانات الإضافية */}
+                        <div className="text-sm text-gray-600 flex flex-wrap items-center gap-3">
+                          {/* عرض tax rate كرقم */}
+                          {item.taxRate > 0 && (
+                            <div className="flex items-center bg-green-50 px-2 py-1 rounded">
+                              <span className="font-medium mr-1">
+                                {t("taxRate", "orderDetails") || "Tax Rate"}:
+                              </span>
+                              <span className="font-medium text-green-700">
+                                {item.taxRate}%
+                              </span>
+                            </div>
+                          )}
+
+                          {/* عرض discount price */}
+                          {item.discountPrice > 0 && (
+                            <div className="flex items-center bg-red-50 px-2 py-1 rounded">
+                              <span className="font-medium mr-1">
+                                {t("discountPrice", "orderDetails") ||
+                                  "Discount Price"}
+                                :
+                              </span>
+                              <span className="font-medium text-red-700">
+                                {formatCurrency(
+                                  item.discountPrice,
+                                  order.currency,
+                                )}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* عرض tax amount */}
+                          {item.taxAmount > 0 && (
+                            <div className="flex items-center bg-green-50 px-2 py-1 rounded">
+                              <span className="font-medium mr-1">
+                                {t("tax", "orderDetails")}:
+                              </span>
+                              <span className="font-medium text-green-700">
+                                +
+                                {formatCurrency(item.taxAmount, order.currency)}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* عرض discount amount */}
                           {item.discountAmount > 0 && (
-                            <div className="flex items-center bg-red-50 px-1 py-1 rounded">
+                            <div className="flex items-center bg-red-50 px-2 py-1 rounded">
                               <span className="font-medium mr-1">
                                 {t("discount", "orderDetails")}:
                               </span>
@@ -769,18 +858,6 @@ const OrderDetails = () => {
                                   item.discountAmount,
                                   order.currency,
                                 )}
-                              </span>
-                            </div>
-                          )}
-
-                          {item.taxAmount > 0 && (
-                            <div className="flex items-center bg-green-50 px-1 py-1 rounded">
-                              <span className="font-medium mr-1">
-                                {t("tax", "orderDetails")}:
-                              </span>
-                              <span className="font-medium text-green-700">
-                                +
-                                {formatCurrency(item.taxAmount, order.currency)}
                               </span>
                             </div>
                           )}
@@ -907,7 +984,6 @@ const OrderDetails = () => {
             </div>
           </div>
 
-          {/* Customer Notes - فقط إذا كانت موجودة */}
           {order.customerNotes && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center space-x-3 mb-4">
@@ -946,7 +1022,6 @@ const OrderDetails = () => {
             </div>
 
             <div className="space-y-4">
-              {/* تاريخ الطلب */}
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
                   <Calendar className="text-gray-500 mr-2" size={18} />
@@ -957,7 +1032,6 @@ const OrderDetails = () => {
                 <span className="font-medium">{order.orderDate}</span>
               </div>
 
-              {/* عدد العناصر */}
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
                   <ShoppingCart className="text-gray-500 mr-2" size={18} />
@@ -968,7 +1042,6 @@ const OrderDetails = () => {
                 <span className="font-medium">{order.items.length}</span>
               </div>
 
-              {/* حالة الطلب */}
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
                   <Clock className="text-gray-500 mr-2" size={18} />
@@ -984,7 +1057,6 @@ const OrderDetails = () => {
                 </span>
               </div>
 
-              {/* طريقة الدفع */}
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
                   {paymentMethod.icon}
@@ -995,71 +1067,73 @@ const OrderDetails = () => {
                 <span className="font-medium">{paymentMethod.text}</span>
               </div>
 
-              {/* أزرار تغيير الحالة */}
               <div className="pt-4 border-t border-gray-200 space-y-3">
-                {/* زر Confirm - يظهر إذا لم تكن الحالة CONFIRMED أو CANCELED */}
-                {order.orderStatus !== STATUSES.CONFIRMED &&
-                  order.orderStatus !== STATUSES.CANCELED && (
-                    <button
-                      onClick={handleConfirmOrder}
-                      disabled={updatingStatus}
-                      className={`w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
-                        updatingStatus
-                          ? "bg-green-200 text-green-800 cursor-not-allowed"
-                          : "bg-green-600 text-white hover:bg-green-700"
-                      }`}
-                    >
-                      {updatingStatus ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          <span>
-                            {t("confirming", "orderDetails") || "Confirming..."}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <Check size={18} />
-                          <span>
-                            {t("confirmOrder", "orderDetails") ||
-                              "Confirm Order"}
-                          </span>
-                        </>
-                      )}
-                    </button>
-                  )}
+                {canShowConfirmButton && (
+                  <button
+                    onClick={handleConfirmOrder}
+                    disabled={
+                      updatingStatus || order.orderStatus === STATUSES.UNCHECKED
+                    }
+                    className={`w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
+                      updatingStatus || order.orderStatus === STATUSES.UNCHECKED
+                        ? "bg-green-200 text-green-800 cursor-not-allowed"
+                        : "bg-green-600 text-white hover:bg-green-700"
+                    }`}
+                  >
+                    {updatingStatus ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>
+                          {t("confirming", "orderDetails") || "Confirming..."}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={18} />
+                        <span>
+                          {t("confirmOrder", "orderDetails") || "Confirm Order"}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                )}
 
-                {/* زر Cancel - يظهر إذا لم تكن الحالة CANCELED وليست PENDING */}
-                {order.orderStatus !== STATUSES.CANCELED &&
-                  order.orderStatus !== STATUSES.PENDING && (
-                    <button
-                      onClick={handleCancelOrder}
-                      disabled={updatingStatus}
-                      className={`w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
-                        updatingStatus
-                          ? "bg-red-200 text-red-800 cursor-not-allowed"
-                          : "bg-red-600 text-white hover:bg-red-700"
-                      }`}
-                    >
-                      {updatingStatus ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          <span>
-                            {t("cancelling", "orderDetails") || "Cancelling..."}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <X size={18} />
-                          <span>
-                            {t("cancelOrder", "orderDetails") || "Cancel Order"}
-                          </span>
-                        </>
-                      )}
-                    </button>
-                  )}
+                {canShowCancelButton && (
+                  <button
+                    onClick={handleCancelOrder}
+                    disabled={updatingStatus}
+                    className={`w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
+                      updatingStatus
+                        ? "bg-red-200 text-red-800 cursor-not-allowed"
+                        : "bg-red-600 text-white hover:bg-red-700"
+                    }`}
+                  >
+                    {updatingStatus ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>
+                          {t("cancelling", "orderDetails") || "Cancelling..."}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <X size={18} />
+                        <span>
+                          {t("cancelOrder", "orderDetails") || "Cancel Order"}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                )}
 
-                {/* رسائل مساعدة ديناميكية */}
                 <div className="text-center">
+                  {order.orderStatus === STATUSES.UNCHECKED && (
+                    <p className="text-xs text-gray-500">
+                      {t("uncheckedOrderHelp", "orderDetails") ||
+                        "This order is unchecked and cannot be modified."}
+                    </p>
+                  )}
+
                   {order.orderStatus === STATUSES.PENDING && (
                     <p className="text-xs text-gray-500">
                       {t("pendingOrderHelp", "orderDetails") ||
@@ -1077,7 +1151,7 @@ const OrderDetails = () => {
                   {order.orderStatus === STATUSES.CANCELED && (
                     <p className="text-xs text-gray-500">
                       {t("canceledOrderHelp", "orderDetails") ||
-                        "This order has been canceled. No further actions available."}
+                        "This order has been canceled. You can confirm it again if needed."}
                     </p>
                   )}
                 </div>
@@ -1114,7 +1188,6 @@ const OrderDetails = () => {
               </div>
             ) : customerInfo ? (
               <div className="space-y-4">
-                {/* الاسم */}
                 {customerInfo.name && (
                   <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                     <User className="text-gray-500 mr-3" size={18} />
@@ -1129,7 +1202,6 @@ const OrderDetails = () => {
                   </div>
                 )}
 
-                {/* البريد الإلكتروني */}
                 {customerInfo.email && (
                   <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                     <Mail className="text-gray-500 mr-3" size={18} />
@@ -1144,7 +1216,6 @@ const OrderDetails = () => {
                   </div>
                 )}
 
-                {/* الهاتف */}
                 {customerInfo.phone && (
                   <div className="flex items-center p-3 bg-gray-50 rounded-lg">
                     <Phone className="text-gray-500 mr-3" size={18} />
@@ -1157,7 +1228,6 @@ const OrderDetails = () => {
                   </div>
                 )}
 
-                {/* زر الاتصال - فقط إذا كان هناك إيميل */}
                 {customerInfo.email && (
                   <button
                     onClick={handleContactCustomer}
@@ -1181,7 +1251,6 @@ const OrderDetails = () => {
         </div>
       </div>
 
-      {/* Bottom Actions */}
       <div className="flex justify-between items-center pt-6 border-t border-gray-200">
         <button
           onClick={() => navigate("/orders")}
@@ -1192,7 +1261,6 @@ const OrderDetails = () => {
         </button>
 
         <div className="flex space-x-3">
-          {/* زر Generate Invoice في الأسفل أيضًا - يظهر فقط للحالة CONFIRMED */}
           {order.orderStatus === STATUSES.CONFIRMED && (
             <button
               onClick={handleGenerateInvoice}

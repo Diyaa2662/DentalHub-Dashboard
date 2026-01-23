@@ -67,8 +67,8 @@
   "positiveNumberRequired": "Must be a positive number",
   "invalidInvoiceId": "Invoice ID must be a positive number",
   "selectInvoiceTypeFirst": "Please select invoice type first",
-  "invoiceFound": "Invoice found: {number}",
-  "invoiceNotFound": "Invoice #{id} not found",
+  "invoiceFound": "Invoice found",
+  "invoiceNotFound": "Invoice not found",
   "invalidPayableId": "Payable ID must be a positive number",
   "selectPayableTypeFirst": "Please select payable type first",
   "orderFound": "Order found: {number}",
@@ -182,5 +182,7 @@
   "invoiceDetails": "Invoice Details",
   "invoiceDate": "Invoice Date",
   "important": "Important",
-  "linkedEntitiesCannotBeModified": "Linked invoice cannot be modified. To change the invoice, create a new payment."
+  "linkedEntitiesCannotBeModified": "Linked invoice cannot be modified. To change the invoice, create a new payment.",
+  "transactionIdCopied": "Transaction ID copied to clipboard!",
+  "notes": "Notes"
 }

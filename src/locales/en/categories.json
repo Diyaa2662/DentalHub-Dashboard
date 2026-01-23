@@ -50,7 +50,7 @@
   "categoryNotFound": "Category not found",
   "categoryDeleted": "Category deleted successfully!",
   "deleteError": "Error deleting category",
-  "confirmDeleteCategory": "Are you sure you want to delete category \"{name}\"?",
+  "confirmDeleteCategory": "Are you sure you want to delete category ",
   "statusUpdateError": "Error updating status",
   "validationError": "Validation error",
   "updateError": "Failed to update category",

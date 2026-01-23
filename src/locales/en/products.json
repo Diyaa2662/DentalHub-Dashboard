@@ -22,7 +22,6 @@
   "view": "View",
   "edit": "Edit",
   "delete": "Delete",
-  "confirmDelete": "Are you sure you want to delete product \"{name}\"?",
   "deleteSuccess": "Product deleted successfully",
   "deleteError": "Error deleting product",
   "noProducts": "No products found",
@@ -275,8 +274,8 @@
   "lowstock": "Low Stock",
   "other": "Other",
   "loadProductsFailed": "Failed to load products",
-  "deleteProductConfirm": "Are you sure you want to delete product \"{name}\"?",
-  "productDeletedSuccess": "Product \"{name}\" deleted successfully!",
+  "deleteProductConfirm": "Are you sure you want to delete product ",
+  "productDeletedSuccess": "Product deleted successfully!",
   "deleteProductError": "Error deleting product: ",
   "pageInfoText": "Page {0} of {1} ({2} items)",
   "off": "OFF",
@@ -341,5 +340,7 @@
   "clickToFilterDeleted": "Click to filter deleted products",
   "deleted": "Deleted",
   "deletedProducts": "Deleted Products",
-  "showingDeletedProducts": "✓ Showing deleted products"
+  "showingDeletedProducts": "✓ Showing deleted products",
+  "restoreProductConfirm": "Are you sure you want to restore product ",
+  "productRestoredSuccess": "Product restored successfully!"
 }

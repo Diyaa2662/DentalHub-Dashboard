@@ -63,5 +63,9 @@
   "notSpecified": "Not Specified",
   "confirmedOrders": "Confirmed Orders",
   "canceledOrders": "Canceled Orders",
-  "viewCanceled": "View canceled orders" 
+  "viewCanceled": "View canceled orders",
+  "uncheckedOrders": "Unchecked Orders",
+  "needsReview": "Needs Review",
+  "unchecked": "Unchecked",
+  "confirmed": "Confirmed"
 }

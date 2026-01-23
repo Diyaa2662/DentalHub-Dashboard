@@ -167,5 +167,6 @@
   "dragColumnHereToGroup": "Drag a column header here to group by that column",
   "english": "English",
   "swedish": "Swedish",
-  "noImage": "No Image"
+  "noImage": "No Image",
+  "confirmed": "Confirmed"
 }

@@ -97,28 +97,19 @@ const AddPayment = () => {
       if (invoiceData) {
         setInvoiceExists({
           exists: true,
-          message:
-            t("invoiceFound", "payments", {
-              number: invoiceData.invoice_number || `#${invoiceId}`,
-            }) ||
-            `Invoice found: ${invoiceData.invoice_number || `#${invoiceId}`}`,
-          invoice: invoiceData,
+          message: t("invoiceFound", "payments"),
         });
       } else {
         setInvoiceExists({
           exists: false,
-          message:
-            t("invoiceNotFound", "payments", { id: invoiceId }) ||
-            `Invoice #${invoiceId} not found`,
+          message: t("invoiceNotFound", "payments"),
         });
       }
     } catch (err) {
       console.error("Error checking invoice:", err);
       setInvoiceExists({
         exists: false,
-        message:
-          t("invoiceNotFound", "payments", { id: invoiceId }) ||
-          `Invoice #${invoiceId} not found`,
+        message: t("invoiceNotFound", "payments"),
       });
     } finally {
       setIsCheckingInvoice(false);
@@ -221,14 +212,6 @@ const AddPayment = () => {
     if (invoice_id && invoice_type) {
       checkInvoiceExists(invoice_id, invoice_type);
     }
-  };
-
-  // ✅ توليد رقم معاملة تلقائياً
-  const generateTransactionId = () => {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000);
-    const transactionId = `TRX-${timestamp}-${random}`;
-    setPaymentData((prev) => ({ ...prev, transaction_id: transactionId }));
   };
 
   // ✅ إرسال الدفعة
@@ -579,14 +562,6 @@ const AddPayment = () => {
                     <label className="block text-sm font-medium text-gray-700">
                       {t("transactionId", "payments")}
                     </label>
-                    <button
-                      type="button"
-                      onClick={generateTransactionId}
-                      className="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-                    >
-                      <RefreshCw size={12} />
-                      <span>{t("generate", "payments") || "Generate"}</span>
-                    </button>
                   </div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

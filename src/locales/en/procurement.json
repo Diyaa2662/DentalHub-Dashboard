@@ -369,7 +369,7 @@
   "errorLoadingInvoice": "Error Loading Invoice",
   "invoiceNotFound": "Invoice not found",
   "backToInvoices": "Back to Invoices",
-  "changeInvoiceStatusConfirmation": "Are you sure you want to change invoice status to",
+  "changeInvoiceStatusConfirmation": "Are you sure you want to change invoice status?",
   "invoiceStatusUpdated": "Invoice status updated successfully!",
   "changeStatusError": "Failed to change invoice status",
   "downloadInvoiceMessage": "Invoice download functionality will be implemented soon",
@@ -419,5 +419,10 @@
   "correctMethodStep3": "Click 'View Details' on the order",
   "correctMethodStep4": "Click 'Generate Invoice' button",
   "correctMethodStep5": "Invoice will be created automatically with correct data",
-  "useThisFormForOldInvoices": "Use this manual form only for adding old invoices that were created outside the system."
+  "useThisFormForOldInvoices": "Use this manual form only for adding old invoices that were created outside the system.",
+  "invoice": "Invoice",
+  "quicklyCreateNewInvoice":" Quickly create a new supplier invoice.",
+  "invoiceStatistics": "Invoice Statistics",
+  "orderIdHelpRequired": "Linking to a purchase order is recommended",
+  "invoiceNumberHelpRequired":"required for manual invoices"
 }

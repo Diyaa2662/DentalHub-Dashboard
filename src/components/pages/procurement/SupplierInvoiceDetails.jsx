@@ -258,7 +258,7 @@ const SupplierInvoiceDetails = () => {
       setUpdatingStatus(true);
       try {
         const response = await api.post(`/changesupplierinvoicestatus/${id}`, {
-          status: newStatus,
+          payment_status: newStatus,
         });
 
         console.log("Change status response:", response.data);
@@ -647,7 +647,7 @@ const SupplierInvoiceDetails = () => {
                         <div className="text-sm text-gray-700 flex flex-wrap items-center gap-3">
                           <div className="flex items-center bg-blue-50 px-2 py-1 rounded">
                             <span className="font-medium mr-1">
-                              {t("quantity", "procurement") || "Qty"}:
+                              {t("quantityShort", "procurement") || "Qty"}:
                             </span>
                             <span className="text-blue-700 font-bold">
                               {item.quantity}

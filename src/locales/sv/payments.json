@@ -67,8 +67,8 @@
   "positiveNumberRequired": "Måste vara ett positivt tal",
   "invalidInvoiceId": "Faktura-ID måste vara ett positivt tal",
   "selectInvoiceTypeFirst": "Vänligen välj fakturatyp först",
-  "invoiceFound": "Faktura hittad: {number}",
-  "invoiceNotFound": "Faktura #{id} hittades inte",
+  "invoiceFound": "Faktura hittad",
+  "invoiceNotFound": "Faktura hittades inte",
   "invalidPayableId": "Betallbart ID måste vara ett positivt tal",
   "selectPayableTypeFirst": "Vänligen välj betallbar typ först",
   "orderFound": "Beställning hittad: {number}",
@@ -182,5 +182,7 @@
   "invoiceDetails": "Fakturadetaljer",
   "invoiceDate": "Fakturadatum",
   "important": "Viktigt",
-  "linkedEntitiesCannotBeModified": "Länkad faktura kan inte ändras. För att ändra fakturan, skapa en ny betalning."
+  "linkedEntitiesCannotBeModified": "Länkad faktura kan inte ändras. För att ändra fakturan, skapa en ny betalning.",
+  "transactionIdCopied": "Transaktions-ID kopierat till urklipp!",
+  "notes": "Anteckningar"
 }

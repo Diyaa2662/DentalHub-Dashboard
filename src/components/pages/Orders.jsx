@@ -27,6 +27,7 @@ import {
   RefreshCw,
   AlertCircle,
   Hash,
+  HelpCircle,
 } from "lucide-react";
 
 const Orders = () => {
@@ -36,21 +37,22 @@ const Orders = () => {
   const [ordersData, setOrdersData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filterStatus, setFilterStatus] = useState("all"); // "all", "confirmed", "pending", "canceled"
+  const [filterStatus, setFilterStatus] = useState("all"); // "all", "confirmed", "pending", "canceled", "unchecked"
 
-  // ✅ تعريف الحالات الثابتة
+  // ✅ تعريف الحالات الثابتة  
   const STATUSES = {
     PENDING: "pending",
     CONFIRMED: "confirmed",
     CANCELED: "canceled",
+    UNCHECKED: "unchecked",  
   };
 
-  // ✅ إحصائيات حقيقية
   const [stats, setStats] = useState({
     total: 0,
     confirmed: 0,
     pending: 0,
     canceled: 0,
+    unchecked: 0,
     totalRevenue: 0,
     avgOrderValue: 0,
   });
@@ -80,6 +82,7 @@ const Orders = () => {
             confirmed: 0,
             pending: 0,
             canceled: 0,
+            unchecked: 0,   
             totalRevenue: 0,
             avgOrderValue: 0,
           });
@@ -92,7 +95,7 @@ const Orders = () => {
               : 0;
 
             // ✅ معالجة الحالة من API
-            let status = STATUSES.PENDING; // الافتراضي
+            let status = STATUSES.UNCHECKED; // الافتراضي غير مؤكد (unchecked)
 
             if (order.status) {
               const statusLower = order.status.toLowerCase();
@@ -102,6 +105,8 @@ const Orders = () => {
                 status = STATUSES.CANCELED;
               } else if (statusLower === STATUSES.PENDING) {
                 status = STATUSES.PENDING;
+              } else if (statusLower === STATUSES.UNCHECKED) {
+                status = STATUSES.UNCHECKED;
               }
             }
 
@@ -140,6 +145,7 @@ const Orders = () => {
           confirmed: 0,
           pending: 0,
           canceled: 0,
+          unchecked: 0,
           totalRevenue: 0,
           avgOrderValue: 0,
         });
@@ -158,6 +164,7 @@ const Orders = () => {
         confirmed: 0,
         pending: 0,
         canceled: 0,
+        unchecked: 0,
         totalRevenue: 0,
         avgOrderValue: 0,
       });
@@ -166,7 +173,7 @@ const Orders = () => {
     }
   };
 
-  // ✅ حساب الإحصائيات من البيانات
+  // ✅ حساب الإحصائيات من البيانات - أضفنا unchecked
   const calculateStats = (data) => {
     const total = data.length;
     const confirmed = data.filter(
@@ -174,6 +181,9 @@ const Orders = () => {
     ).length;
     const pending = data.filter((o) => o.status === STATUSES.PENDING).length;
     const canceled = data.filter((o) => o.status === STATUSES.CANCELED).length;
+    const unchecked = data.filter(
+      (o) => o.status === STATUSES.UNCHECKED,
+    ).length; // أضفنا الحالة الجديدة
     const totalRevenue = data.reduce((sum, order) => sum + order.amount, 0);
     const avgOrderValue = total > 0 ? totalRevenue / total : 0;
 
@@ -182,6 +192,7 @@ const Orders = () => {
       confirmed,
       pending,
       canceled,
+      unchecked,
       totalRevenue,
       avgOrderValue,
     });
@@ -265,7 +276,7 @@ const Orders = () => {
     );
   };
 
-  // ✅ الحصول على أيقونة الحالة
+  // ✅ الحصول على أيقونة الحالة - أضفنا حالة unchecked
   const getStatusIcon = (status) => {
     switch (status) {
       case STATUSES.CONFIRMED:
@@ -274,12 +285,14 @@ const Orders = () => {
         return <Clock size={16} className="text-yellow-600" />;
       case STATUSES.CANCELED:
         return <XCircle size={16} className="text-red-600" />;
+      case STATUSES.UNCHECKED: // أضفنا الحالة الجديدة
+        return <HelpCircle size={16} className="text-gray-600" />;
       default:
-        return <Clock size={16} className="text-gray-600" />;
+        return <HelpCircle size={16} className="text-gray-600" />;
     }
   };
 
-  // ✅ الحصول على لون الحالة
+  // ✅ الحصول على لون الحالة - أضفنا حالة unchecked
   const getStatusColor = (status) => {
     switch (status) {
       case STATUSES.CONFIRMED:
@@ -288,12 +301,14 @@ const Orders = () => {
         return "bg-yellow-100 text-yellow-800";
       case STATUSES.CANCELED:
         return "bg-red-100 text-red-800";
+      case STATUSES.UNCHECKED: // أضفنا الحالة الجديدة
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
 
-  // ✅ الحصول على نص الحالة
+  // ✅ الحصول على نص الحالة - أضفنا حالة unchecked
   const getStatusText = (status) => {
     switch (status) {
       case STATUSES.CONFIRMED:
@@ -302,6 +317,8 @@ const Orders = () => {
         return t("pending", "common") || "Pending";
       case STATUSES.CANCELED:
         return t("canceled", "common") || "Canceled";
+      case STATUSES.UNCHECKED: // أضفنا الحالة الجديدة
+        return t("unchecked", "orders") || "Unchecked";
       default:
         return status?.charAt(0).toUpperCase() + status?.slice(1) || "Unknown";
     }
@@ -503,7 +520,9 @@ const Orders = () => {
       </div>
 
       {/* Order Stats - مع فلتر عند النقر */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {" "}
+        {/* عدلنا من 4 إلى 5 أعمدة */}
         {/* Total Orders */}
         <button
           onClick={() => handleFilterClick("all")}
@@ -524,11 +543,36 @@ const Orders = () => {
               <ShoppingCart className="text-dental-blue" size={24} />
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-xs text-gray-500 mt-2">
             {t("clickToViewAll", "orders") || "Click to view all orders"}
           </p>
         </button>
-
+        {/* Unchecked Orders - كرت جديد */}
+        <button
+          onClick={() => handleFilterClick(STATUSES.UNCHECKED)}
+          className={`bg-white p-6 rounded-xl border transition-all duration-200 hover:shadow-md ${
+            filterStatus === STATUSES.UNCHECKED
+              ? "border-gray-500 ring-2 ring-gray-100"
+              : "border-gray-200"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">
+                {t("uncheckedOrders", "orders") || "Unchecked Orders"}
+              </p>
+              <p className="text-2xl font-bold text-gray-600">
+                {stats.unchecked}
+              </p>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <HelpCircle className="text-gray-500" size={24} />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            {t("needsReview", "orders") || "Needs review"}
+          </p>
+        </button>
         {/* Confirmed Orders */}
         <button
           onClick={() => handleFilterClick(STATUSES.CONFIRMED)}
@@ -551,11 +595,10 @@ const Orders = () => {
               <CheckCircle className="text-green-500" size={24} />
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-xs text-gray-500 mt-2">
             {t("clickToFilter", "orders") || "Click to filter confirmed orders"}
           </p>
         </button>
-
         {/* Pending Orders */}
         <button
           onClick={() => handleFilterClick(STATUSES.PENDING)}
@@ -578,11 +621,10 @@ const Orders = () => {
               <Clock className="text-yellow-500" size={24} />
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-xs text-gray-500 mt-2">
             {t("requiresAttention", "orders") || "Requires attention"}
           </p>
         </button>
-
         {/* Canceled Orders */}
         <button
           onClick={() => handleFilterClick(STATUSES.CANCELED)}
@@ -605,7 +647,7 @@ const Orders = () => {
               <XCircle className="text-red-500" size={24} />
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-xs text-gray-500 mt-2">
             {t("viewCanceled", "orders") || "View canceled orders"}
           </p>
         </button>

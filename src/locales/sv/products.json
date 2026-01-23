@@ -22,7 +22,6 @@
   "view": "Visa",
   "edit": "Redigera",
   "delete": "Radera",
-  "confirmDelete": "Är du säker på att du vill radera produkten \"{name}\"?",
   "deleteSuccess": "Produkten raderades framgångsrikt",
   "deleteError": "Fel vid radering av produkt",
   "noProducts": "Inga produkter hittades",
@@ -275,8 +274,8 @@
   "lowstock": "Lågt lager",
   "other": "Annat",
   "loadProductsFailed": "Det gick inte att ladda produkter",
-  "deleteProductConfirm": "Är du säker på att du vill radera produkten \"{name}\"?",
-  "productDeletedSuccess": "Produkten \"{name}\" raderades framgångsrikt!",
+  "deleteProductConfirm": "Är du säker på att du vill radera produkten ",
+  "productDeletedSuccess": "Produkten raderades framgångsrikt!",
   "deleteProductError": "Fel vid radering av produkt: ",
   "pageInfoText": "Sida {0} av {1} ({2} objekt)",
   "off": "AV",
@@ -341,5 +340,7 @@
   "clickToFilterDeleted": "Klicka för att filtrera raderade produkter",
   "deleted": "Raderade",
   "deletedProducts": "Raderade Produkter",
-  "showingDeletedProducts": "✓ Visar raderade produkter"
+  "showingDeletedProducts": "✓ Visar raderade produkter",
+  "restoreProductConfirm": "Är du säker på att du vill återställa produkten ",
+  "productRestoredSuccess": "Produkten återställdes framgångsrikt!"
 }

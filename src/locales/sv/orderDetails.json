@@ -69,7 +69,7 @@
   "cancelOrder": "Avbryt order",
   "confirming": "Bekräftar...",
   "cancelling": "Avbryter...",
-  "confirmOrderConfirmation": "Är du säker på att du vill bekräfta order #{orderNumber}?",
+  "confirmOrderConfirmation": "Är du säker på att du vill bekräfta order?",
   "cancelOrderConfirmation": "Är du säker på att du vill avbryta order #{orderNumber}?",
   "orderStatusUpdated": "Orderstatus uppdaterad framgångsrikt",
   "failedToUpdateStatus": "Kunde inte uppdatera orderstatus",
@@ -81,5 +81,11 @@
   "confirmingOrder": "Bekräftar order...",
   "cancellingOrder": "Avbryter order...",
   "orderAlreadyConfirmed": "Ordern är redan bekräftad",
-  "orderAlreadyCanceled": "Ordern är redan avbruten"
+  "orderAlreadyCanceled": "Ordern är redan avbruten",
+  "uncheckedOrderHelp": "Denna order har inte kontrollerats än.",
+  "notSpecified": "Ej specificerat",
+  "taxRate": "Skattesats",
+  "discountPrice": "Erbjudandepris",
+  "generateInvoiceConfirmation": "Är du säker på att du vill generera faktura för denna order?",
+  "invoiceGenerated": "Faktura genererad framgångsrikt"
 }

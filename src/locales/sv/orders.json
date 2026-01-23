@@ -63,5 +63,9 @@
   "notSpecified": "Ej specificerad",
   "confirmedOrders": "Bekräftade ordrar",
   "canceledOrders": "Avbrutna ordrar",
-  "viewCanceled": "Visa avbrutna ordrar"
+  "viewCanceled": "Visa avbrutna ordrar",
+  "uncheckedOrders": "Obekräftade ordrar",
+  "needsReview": "Behöver granskning",
+  "unchecked": "Obekräftad",
+  "confirmed": "Bekräftad"
 }

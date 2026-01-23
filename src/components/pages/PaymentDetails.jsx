@@ -668,10 +668,10 @@ const PaymentDetails = () => {
                   to={
                     payment.invoice_type === "customer_invoice"
                       ? `/invoices/${payment.invoice_id}`
-                      : `/supplier-invoices/${payment.invoice_id}`
+                      : `/procurement/supplier-invoices/${payment.invoice_id}`
                   }
                   className="p-2 hover:bg-gray-100 rounded-lg transition"
-                  title={t("viewDetails", "common") || "View details"}
+                  title={t("viewDetails", "payments") || "View details"}
                 >
                   <ExternalLink size={18} className="text-gray-500" />
                 </Link>
@@ -756,19 +756,6 @@ const PaymentDetails = () => {
                     </p>
                   </div>
                 </div>
-                {payerDetails && (
-                  <Link
-                    to={
-                      payment.payer_type === "customer"
-                        ? `/customers/${payment.payer_id}`
-                        : `/suppliers/${payment.payer_id}`
-                    }
-                    className="p-2 hover:bg-gray-100 rounded-lg transition"
-                    title={t("viewDetails", "common") || "View details"}
-                  >
-                    <ExternalLink size={18} className="text-gray-500" />
-                  </Link>
-                )}
               </div>
 
               <div className="space-y-3">
@@ -854,11 +841,11 @@ const PaymentDetails = () => {
                   <Link
                     to={
                       payment.payable_type === "order"
-                        ? `/orders/${payment.payable_id}`
-                        : `/supplier-orders/${payment.payable_id}`
+                        ? `/orders/view/${payment.payable_id}`
+                        : `/procurement/purchase-orders/view/${payment.payable_id}`
                     }
                     className="p-2 hover:bg-gray-100 rounded-lg transition"
-                    title={t("viewDetails", "common") || "View details"}
+                    title={t("viewDetails", "payments") || "View details"}
                   >
                     <ExternalLink size={18} className="text-gray-500" />
                   </Link>

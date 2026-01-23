@@ -143,10 +143,6 @@ const Inventory = () => {
     fetchInventoryData();
   };
 
-  const handleAddMovement = () => {
-    alert(t("addMovement", "inventory") || "Add new movement functionality");
-  };
-
   // ✅ حالة التحميل
   if (loading) {
     return (
@@ -230,13 +226,6 @@ const Inventory = () => {
           >
             <RefreshCw size={20} />
             <span>{t("refresh", "common") || "Refresh"}</span>
-          </button>
-          <button
-            onClick={handleAddMovement}
-            className="px-4 py-2 bg-dental-blue text-white rounded-lg font-medium hover:bg-blue-600 transition flex items-center space-x-2"
-          >
-            <Plus size={20} />
-            <span>{t("addMovement", "inventory")}</span>
           </button>
         </div>
       </div>

@@ -693,7 +693,7 @@ const SupplierInvoices = () => {
               {t("createNewInvoice", "procurement") || "Create New Invoice"}
             </h3>
             <p className="text-sm text-gray-600">
-              {t("quicklyCreateNewInvoice", "common") ||
+              {t("quicklyCreateNewInvoice", "procurement") ||
                 "Quickly create a new supplier invoice"}
             </p>
           </div>
@@ -712,7 +712,7 @@ const SupplierInvoices = () => {
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-medium text-gray-800">
-            {t("invoiceStatistics", "common") || "Invoice Statistics"}
+            {t("invoiceStatistics", "procurement") || "Invoice Statistics"}
           </h3>
           <TrendingUp className="text-gray-500" size={20} />
         </div>

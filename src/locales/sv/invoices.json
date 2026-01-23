@@ -97,5 +97,6 @@
   "invoiceStatusUpdated": "Fakturastatus uppdaterad",
   "failedToChangeInvoiceStatus": "Kunde inte ändra fakturastatus",
   "invoicePaidHelp": "Fakturan är markerad som betald. Du kan ändra den till obetald om det behövs.",
-  "invoiceUnpaidHelp": "Fakturan är för närvarande obetald. Markera den som betald när betalning mottagits."
+  "invoiceUnpaidHelp": "Fakturan är för närvarande obetald. Markera den som betald när betalning mottagits.",
+  "notes": "Anteckningar"
 }

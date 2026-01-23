@@ -191,12 +191,7 @@ const Products = () => {
   };
 
   const handleDelete = async (id, name) => {
-    if (
-      window.confirm(
-        t("deleteProductConfirm", "products", { name }) ||
-          `Are you sure you want to delete product "${name}"?`,
-      )
-    ) {
+    if (window.confirm(`${t("deleteProductConfirm", "products")} "${name}"?`)) {
       try {
         await api.delete(`/deleteproduct/${id}`);
         await fetchProducts(); // Refresh the products list
@@ -219,18 +214,15 @@ const Products = () => {
 
   const handleRestore = async (id, name) => {
     if (
-      window.confirm(
-        t("restoreProductConfirm", "products", { name }) ||
-          `Are you sure you want to restore product "${name}"?`,
-      )
+      window.confirm(`${t("restoreProductConfirm", "products")} "${name}"?`)
     ) {
       try {
         // Assuming the endpoint is similar to the one you mentioned
         await api.post(`/restoreproduct/${id}`);
         await fetchProducts(); // Refresh the products list
         alert(
-          t("productRestoredSuccess", "products", { name }) ||
-            `Product "${name}" restored successfully!`,
+          t("productRestoredSuccess", "products") ||
+            "Product restored successfully!",
         );
       } catch (err) {
         alert(

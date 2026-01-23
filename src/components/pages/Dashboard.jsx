@@ -317,7 +317,7 @@ const Dashboard = () => {
             </Chart>
           ) : (
             <div className="h-64 flex items-center justify-center text-gray-500">
-              {t("noDataAvailable", "common") || "No data available"}
+              {t("noDataAvailable", "dashboard") || "No data available"}
             </div>
           )}
         </div>

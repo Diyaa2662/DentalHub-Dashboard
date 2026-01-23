@@ -369,7 +369,7 @@
   "errorLoadingInvoice": "Fel vid laddning av faktura",
   "invoiceNotFound": "Faktura hittades inte",
   "backToInvoices": "Tillbaka till fakturor",
-  "changeInvoiceStatusConfirmation": "Är du säker på att du vill ändra fakturastatus till",
+  "changeInvoiceStatusConfirmation": "Är du säker på att du vill ändra fakturastatus?",
   "invoiceStatusUpdated": "Fakturastatus uppdaterad framgångsrikt!",
   "changeStatusError": "Misslyckades att ändra fakturastatus",
   "downloadInvoiceMessage": "Fakturanedladdningsfunktionalitet kommer att implementeras snart",
@@ -419,5 +419,10 @@
   "correctMethodStep3": "Klicka på 'Visa Detaljer' för ordern",
   "correctMethodStep4": "Klicka på 'Generera Faktura'-knappen",
   "correctMethodStep5": "Fakturan skapas automatiskt med korrekta data",
-  "useThisFormForOldInvoices": "Använd detta manuella formulär endast för att lägga till gamla fakturor som skapats utanför systemet."
+  "useThisFormForOldInvoices": "Använd detta manuella formulär endast för att lägga till gamla fakturor som skapats utanför systemet.",
+  "invoice": "Faktura",
+  "quicklyCreateNewInvoice":" Lägg snabbt till en ny leverantörsfaktura.",
+  "invoiceStatistics": "Fakturastatistik",
+  "orderIdHelpRequired": "Länkning till en inköpsorder är rekommenderad",
+  "invoiceNumberHelpRequired":"krävs för manuella fakturor"
 }

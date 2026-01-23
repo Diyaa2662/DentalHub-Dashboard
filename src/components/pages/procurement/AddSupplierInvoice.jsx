@@ -152,6 +152,26 @@ const AddSupplierInvoice = () => {
         t("supplierRequired", "procurement") || "Supplier is required";
     }
 
+    if (!invoiceData.supplier_order_id) {
+      errors.supplier_order_id =
+        t("orderIdRequired", "procurement") || "Order ID is required";
+    } else {
+      const orderId = parseInt(invoiceData.supplier_order_id);
+      if (isNaN(orderId) || orderId <= 0) {
+        errors.supplier_order_id =
+          t("invalidOrderId", "procurement") ||
+          "Order ID must be a positive number";
+      } else if (orderExists && !orderExists.exists) {
+        errors.supplier_order_id = orderExists.message;
+      }
+    }
+
+    if (!invoiceData.invoice_number) {
+      errors.invoice_number =
+        t("invoiceNumberRequired", "procurement") ||
+        "Invoice number is required";
+    }
+
     if (!invoiceData.subtotal || parseFloat(invoiceData.subtotal) <= 0) {
       errors.subtotal =
         t("validSubtotalRequired", "procurement") ||
@@ -180,18 +200,6 @@ const AddSupplierInvoice = () => {
     if (!invoiceData.due_date) {
       errors.due_date =
         t("dueDateRequired", "procurement") || "Due date is required";
-    }
-
-    // التحقق من أن order_id رقم صحيح موجب إذا تم إدخاله
-    if (invoiceData.supplier_order_id) {
-      const orderId = parseInt(invoiceData.supplier_order_id);
-      if (isNaN(orderId) || orderId <= 0) {
-        errors.supplier_order_id =
-          t("invalidOrderId", "procurement") ||
-          "Order ID must be a positive number";
-      } else if (orderExists && !orderExists.exists) {
-        errors.supplier_order_id = orderExists.message;
-      }
     }
 
     // التحقق من أن إجمالي المبلغ = subtotal + tax
@@ -225,6 +233,9 @@ const AddSupplierInvoice = () => {
       } else {
         setOrderExists(null);
       }
+    } else if (name === "invoice_number") {
+      // السماح لأرقام الفاتورة أن تحتوي على أحرف وأرقام
+      setInvoiceData((prev) => ({ ...prev, [name]: value }));
     } else {
       setInvoiceData((prev) => ({ ...prev, [name]: value }));
     }
@@ -272,8 +283,8 @@ const AddSupplierInvoice = () => {
       // تحضير البيانات للإرسال
       const submitData = {
         supplier_id: invoiceData.supplier_id,
-        supplier_order_id: invoiceData.supplier_order_id || null,
-        invoice_number: invoiceData.invoice_number || null, // null إذا ترك فارغاً
+        supplier_order_id: invoiceData.supplier_order_id, // الآن إجباري
+        invoice_number: invoiceData.invoice_number, // الآن إجباري
         invoice_date: invoiceData.invoice_date,
         subtotal: parseFloat(invoiceData.subtotal),
         tax_amount: parseFloat(invoiceData.tax_amount),
@@ -405,7 +416,7 @@ const AddSupplierInvoice = () => {
             </h1>
             <p className="text-gray-600">
               {t("addInvoiceManuallyDescription", "procurement") ||
-                "Add a supplier invoice manually. Leave invoice number empty for auto-generation."}
+                "Add a supplier invoice manually. All fields marked with * are required."}
             </p>
           </div>
         </div>
@@ -535,11 +546,10 @@ const AddSupplierInvoice = () => {
                   )}
                 </div>
 
-                {/* إدخال رقم طلب الشراء (اختياري) */}
+                {/* إدخال رقم طلب الشراء (إجباري الآن) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t("relatedOrderId", "procurement") || "Related Order ID"} (
-                    {t("optional", "common") || "Optional"})
+                    {t("relatedOrderId", "procurement") || "Related Order ID"} *
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -559,6 +569,7 @@ const AddSupplierInvoice = () => {
                           ? "border-red-500"
                           : "border-gray-300"
                       }`}
+                      required
                     />
                   </div>
                   {validationErrors.supplier_order_id ? (
@@ -575,7 +586,7 @@ const AddSupplierInvoice = () => {
                     )
                   )}
                   <p className="mt-1 text-sm text-gray-500">
-                    {t("orderIdHelp", "procurement") ||
+                    {t("orderIdHelpRequired", "procurement") ||
                       "Enter the purchase order ID (positive integer) to link this invoice to an existing order"}
                   </p>
                 </div>
@@ -601,11 +612,10 @@ const AddSupplierInvoice = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* رقم الفاتورة (اختياري) */}
+                {/* رقم الفاتورة (إجباري الآن) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t("invoiceNumber", "procurement") || "Invoice Number"} (
-                    {t("optional", "common") || "Optional"})
+                    {t("invoiceNumber", "procurement") || "Invoice Number"} *
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -617,15 +627,25 @@ const AddSupplierInvoice = () => {
                       value={invoiceData.invoice_number}
                       onChange={handleInputChange}
                       placeholder={
-                        t("autoGenerateIfEmpty", "procurement") ||
-                        "Leave empty for auto-generation"
+                        t("enterInvoiceNumber", "procurement") ||
+                        "e.g., INV-2024-001"
                       }
-                      className="w-full pl-10 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full pl-10 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        validationErrors.invoice_number
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                      required
                     />
                   </div>
+                  {validationErrors.invoice_number && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {validationErrors.invoice_number}
+                    </p>
+                  )}
                   <p className="mt-1 text-sm text-gray-500">
-                    {t("invoiceNumberHelp", "procurement") ||
-                      "Leave empty to generate automatically"}
+                    {t("invoiceNumberHelpRequired", "procurement") ||
+                      "Enter invoice number provided by supplier"}
                   </p>
                 </div>
 
@@ -946,7 +966,7 @@ const AddSupplierInvoice = () => {
                 />
                 <p className="text-sm text-blue-700">
                   {t("useThisFormForOldInvoices", "procurement") ||
-                    "Use this manual form only for adding old invoices that were created outside the system."}
+                    "Use this manual form only for adding old invoices that were created outside the system. All fields marked with * are required."}
                 </p>
               </div>
             </div>

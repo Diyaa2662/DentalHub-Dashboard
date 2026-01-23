@@ -13,7 +13,6 @@ import {
 import { TextBox } from "devextreme-react";
 import {
   Plus,
-  Edit,
   Trash2,
   CheckCircle,
   XCircle,
@@ -35,10 +34,8 @@ const Categories = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // State for add/edit forms
+  // State for add form only (removed edit states)
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showEditPopup, setShowEditPopup] = useState(false);
-  const [editingCategory, setEditingCategory] = useState(null);
   const [newCategory, setNewCategory] = useState({
     name_en: "",
     name_sv: "",
@@ -72,7 +69,7 @@ const Categories = () => {
         setCategories(formattedData);
       } else {
         setError(
-          t("noCategoriesData", "categories") || "No categories data found"
+          t("noCategoriesData", "categories") || "No categories data found",
         );
         setCategories([]);
       }
@@ -81,7 +78,7 @@ const Categories = () => {
         err.response?.data?.message ||
           err.message ||
           t("failedToLoadCategories", "categories") ||
-          "Failed to load categories"
+          "Failed to load categories",
       );
       setCategories([]);
     } finally {
@@ -94,7 +91,7 @@ const Categories = () => {
     if (!newCategory.name_en.trim()) {
       alert(
         t("enterEnglishName", "categories") ||
-          "Please enter category name in English"
+          "Please enter category name in English",
       );
       return;
     }
@@ -114,54 +111,14 @@ const Categories = () => {
       alert(
         t("addError", "categories") ||
           "Error adding category: " +
-            (err.response?.data?.message || err.message || "Please try again")
+            (err.response?.data?.message || err.message || "Please try again"),
       );
-    }
-  };
-
-  // ✅ Handle edit category
-  const handleSaveEdit = async () => {
-    if (!editingCategory.name_en.trim()) {
-      alert(
-        t("enterEnglishName", "categories") ||
-          "Please enter category name in English"
-      );
-      return;
-    }
-
-    try {
-      const categoryId = editingCategory.id;
-      const updateData = {
-        name: editingCategory.name_en.trim(),
-        s_name:
-          editingCategory.name_sv.trim() || editingCategory.name_en.trim(),
-      };
-
-      await api.post(`/updatecategory/${categoryId}`, updateData);
-
-      await fetchCategories();
-      setShowEditPopup(false);
-      setEditingCategory(null);
-    } catch (err) {
-      let errorMessage =
-        t("updateError", "categories") || "Failed to update category";
-
-      if (err.response?.status === 422) {
-        errorMessage =
-          t("validationError", "categories") || "Please check your input data";
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      }
-
-      alert(errorMessage);
     }
   };
 
   // ✅ Handle delete category
   const handleDeleteCategory = async (id, name) => {
-    const confirmMessage =
-      t("confirmDeleteCategory", "categories") ||
-      `Are you sure you want to delete category "${name}"?`;
+    const confirmMessage = `${t("confirmDeleteCategory", "categories")} "${name}"?`;
 
     if (!window.confirm(confirmMessage)) return;
 
@@ -182,7 +139,7 @@ const Categories = () => {
       alert(
         t("deleteError", "categories") ||
           "Error deleting category: " +
-            (err.response?.data?.message || err.message || "Please try again")
+            (err.response?.data?.message || err.message || "Please try again"),
       );
     }
   };
@@ -201,8 +158,8 @@ const Categories = () => {
 
       setCategories((prev) =>
         prev.map((cat) =>
-          cat.id === id ? { ...cat, enabled: newEnabledState } : cat
-        )
+          cat.id === id ? { ...cat, enabled: newEnabledState } : cat,
+        ),
       );
     } catch (err) {
       let errorMessage =
@@ -220,51 +177,6 @@ const Categories = () => {
       }
 
       alert(errorMessage);
-    }
-  };
-
-  // ✅ Handle edit button click
-  const handleEditCategory = async (category) => {
-    try {
-      const response = await api.get(`/categories/${category.id}`);
-
-      let categoryData = null;
-
-      if (response.data?.data) {
-        categoryData = response.data.data;
-      } else if (response.data?.category) {
-        categoryData = response.data.category;
-      } else if (response.data && typeof response.data === "object") {
-        categoryData = response.data;
-      }
-
-      const editData = categoryData || category.originalData || category;
-
-      setEditingCategory({
-        id: editData.id || category.id,
-        name_en: editData.name || editData.name_en || "",
-        name_sv: editData.s_name || editData.name_sv || editData.name || "",
-        enabled: category.enabled,
-        productCount:
-          editData.products_number ||
-          editData.productCount ||
-          category.productCount,
-        originalData: editData,
-      });
-
-      setShowEditPopup(true);
-      // eslint-disable-next-line no-unused-vars
-    } catch (err) {
-      setEditingCategory({
-        id: category.id,
-        name_en: category.name_en,
-        name_sv: category.name_sv,
-        enabled: category.enabled,
-        productCount: category.productCount,
-        originalData: category.originalData || category,
-      });
-
-      setShowEditPopup(true);
     }
   };
 
@@ -504,7 +416,7 @@ const Categories = () => {
               <p className="text-xs text-gray-500 mt-1">
                 {t(
                   "Optional - will use English name if left empty",
-                  "categories"
+                  "categories",
                 ) || "Optional - will use English name if left empty"}
               </p>
             </div>
@@ -532,139 +444,6 @@ const Categories = () => {
               <Save size={18} />
               <span>{t("addCategory", "categories") || "Add Category"}</span>
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Category Popup */}
-      {showEditPopup && editingCategory && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-800">
-                {t("editCategory", "categories") || "Edit Category"}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowEditPopup(false);
-                  setEditingCategory(null);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <X size={20} className="text-gray-500" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {/* Category Information */}
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center space-x-3 mb-2">
-                  <Info className="text-blue-500" size={18} />
-                  <span className="text-sm font-medium text-blue-800">
-                    {t("categoryInformation", "categories") ||
-                      "Category Information"}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-gray-600">ID:</span>
-                    <span className="font-medium ml-2">
-                      {editingCategory.id}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">
-                      {t("products", "categories") || "Products"}:
-                    </span>
-                    <span className="font-medium ml-2">
-                      {editingCategory.productCount}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">
-                      {t("status", "categories") || "Status"}:
-                    </span>
-                    <span
-                      className={`ml-2 font-medium ${
-                        editingCategory.enabled
-                          ? "text-green-600"
-                          : "text-gray-600"
-                      }`}
-                    >
-                      {editingCategory.enabled
-                        ? t("active", "categories") || "Active"
-                        : t("inactive", "categories") || "Inactive"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* English Name */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                  <Globe className="mr-2 text-blue-500" size={16} />
-                  {t("categoryName", "categories") || "Category Name"} (English)
-                  *
-                </label>
-                <TextBox
-                  placeholder="e.g., Orthodontic Supplies"
-                  value={editingCategory.name_en}
-                  onValueChange={(value) =>
-                    setEditingCategory({ ...editingCategory, name_en: value })
-                  }
-                  width="100%"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  {t("requiredField", "categories") || "Required field"}
-                </p>
-              </div>
-
-              {/* Swedish Name */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                  <Flag className="mr-2 text-yellow-500" size={16} />
-                  {t("categoryName", "categories") || "Category Name"} (Swedish)
-                </label>
-                <TextBox
-                  placeholder="e.g., Ortodontiska tillbehör"
-                  value={editingCategory.name_sv}
-                  onValueChange={(value) =>
-                    setEditingCategory({ ...editingCategory, name_sv: value })
-                  }
-                  width="100%"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  {t(
-                    "Optional - will use English name if left empty",
-                    "categories"
-                  ) || "Optional - will use English name if left empty"}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
-              <button
-                onClick={() => {
-                  setShowEditPopup(false);
-                  setEditingCategory(null);
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                {t("cancel", "common") || "Cancel"}
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={!editingCategory.name_en.trim()}
-                className={`px-4 py-2 rounded-lg font-medium transition flex items-center space-x-2 ${
-                  !editingCategory.name_en.trim()
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-dental-blue text-white hover:bg-blue-600"
-                }`}
-              >
-                <Save size={18} />
-                <span>{t("saveChanges", "categories") || "Save Changes"}</span>
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -821,13 +600,7 @@ const Categories = () => {
               allowGrouping={false}
               cellRender={({ data }) => (
                 <div className="flex space-x-2 justify-start">
-                  <button
-                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
-                    title={t("editCategory", "categories") || "Edit Category"}
-                    onClick={() => handleEditCategory(data)}
-                  >
-                    <Edit size={16} />
-                  </button>
+                  {/* تمت إزالة زر التعديل Edit */}
                   <button
                     className={`p-1.5 rounded transition ${
                       data.enabled

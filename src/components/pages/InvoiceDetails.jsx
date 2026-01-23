@@ -240,7 +240,7 @@ const InvoiceDetails = () => {
         const response = await api.post(
           `/changestatusinvoice/${invoiceData.id}`,
           {
-            status: newStatus,
+            payment_status: newStatus,
           },
         );
 
@@ -543,7 +543,7 @@ const InvoiceDetails = () => {
                           {customerInfo.name}
                         </p>
                         <p className="text-sm text-gray-600">
-                          {t("customer", "navigation")}
+                          {t("customer", "invoices") || "Customer"}
                         </p>
                       </div>
                     </div>
@@ -707,7 +707,7 @@ const InvoiceDetails = () => {
           {/* Summary Card */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              {t("summary", "common") || "Summary"}
+              {t("summary", "invoices") || "invoices"}
             </h3>
 
             <div className="space-y-3">
@@ -782,7 +782,7 @@ const InvoiceDetails = () => {
           {/* Dates Card */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              {t("dates", "common") || "Dates"}
+              {t("dates", "invoices") || "Dates"}
             </h3>
 
             <div className="space-y-4">

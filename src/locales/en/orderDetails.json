@@ -69,7 +69,7 @@
   "cancelOrder": "Cancel Order",
   "confirming": "Confirming...",
   "cancelling": "Cancelling...",
-  "confirmOrderConfirmation": "Are you sure you want to confirm order #{orderNumber}?",
+  "confirmOrderConfirmation": "Are you sure you want to confirm order?",
   "cancelOrderConfirmation": "Are you sure you want to cancel order #{orderNumber}?",
   "orderStatusUpdated": "Order status updated successfully",
   "failedToUpdateStatus": "Failed to update order status",
@@ -81,5 +81,11 @@
   "confirmingOrder": "Confirming order...",
   "cancellingOrder": "Cancelling order...",
   "orderAlreadyConfirmed": "Order is already confirmed",
-  "orderAlreadyCanceled": "Order is already canceled"
+  "orderAlreadyCanceled": "Order is already canceled",
+  "uncheckedOrderHelp": "This order has not been checked yet.",
+  "notSpecified": "Not Specified",
+  "taxRate": "Tax Rate",
+  "discountPrice": "Offer Price",
+  "generateInvoiceConfirmation": "Are you sure you want to generate invoice for this order?",
+  "invoiceGenerated": "Invoice generated successfully"
 }
