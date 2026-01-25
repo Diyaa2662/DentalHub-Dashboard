@@ -168,7 +168,7 @@ const AddPurchaseOrder = () => {
           return updatedItem;
         }
         return item;
-      })
+      }),
     );
 
     if (field === "product" && value) {
@@ -198,7 +198,6 @@ const AddPurchaseOrder = () => {
         ? Math.max(...orderItems.map((item) => item.id)) + 1
         : 1;
     setOrderItems([
-      ...orderItems,
       {
         id: newId,
         product: "",
@@ -209,6 +208,7 @@ const AddPurchaseOrder = () => {
         subTotal: 0,
         taxAmount: 0,
       },
+      ...orderItems, // ✅ العناصر القديمة تبقى بعد العنصر الجديد
     ]);
 
     setShowProductSuggestions((prev) => ({
@@ -257,7 +257,7 @@ const AddPurchaseOrder = () => {
           return updatedItem;
         }
         return item;
-      })
+      }),
     );
 
     setShowProductSuggestions((prev) => ({
@@ -269,11 +269,11 @@ const AddPurchaseOrder = () => {
   const calculateTotals = () => {
     const subtotal = orderItems.reduce(
       (sum, item) => sum + (item.subTotal || 0),
-      0
+      0,
     );
     const tax = orderItems.reduce(
       (sum, item) => sum + (item.taxAmount || 0),
-      0
+      0,
     );
     const totalAmount = subtotal + tax;
 
@@ -332,7 +332,7 @@ const AddPurchaseOrder = () => {
       } else {
         setError(
           t("createOrderError", "procurement") ||
-            "Error creating purchase order"
+            "Error creating purchase order",
         );
       }
     } catch (err) {
@@ -355,7 +355,7 @@ const AddPurchaseOrder = () => {
         err.response?.data?.message ||
           err.message ||
           t("createOrderError", "procurement") ||
-          "Error creating purchase order"
+          "Error creating purchase order",
       );
     } finally {
       setSubmitting(false);
@@ -568,7 +568,7 @@ const AddPurchaseOrder = () => {
                               handleItemChange(
                                 item.id,
                                 "product",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                             onFocus={() => {
@@ -609,7 +609,7 @@ const AddPurchaseOrder = () => {
                                 .filter((p) =>
                                   p.name
                                     .toLowerCase()
-                                    .includes(item.product.toLowerCase())
+                                    .includes(item.product.toLowerCase()),
                                 )
                                 .map((product) => (
                                   <div
@@ -658,7 +658,7 @@ const AddPurchaseOrder = () => {
                             handleItemChange(
                               item.id,
                               "quantity",
-                              parseInt(e.target.value) || 1
+                              parseInt(e.target.value) || 1,
                             )
                           }
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -712,7 +712,7 @@ const AddPurchaseOrder = () => {
                               handleItemChange(
                                 item.id,
                                 "taxRate",
-                                parseFloat(e.target.value) || 0
+                                parseFloat(e.target.value) || 0,
                               )
                             }
                             className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

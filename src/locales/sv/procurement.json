@@ -197,6 +197,8 @@
   "errorLoadingSuppliers": "Fel vid laddning av leverantörer",
   "invalidDataFormat": "Ogiltigt dataformat från servern",
   "deleteError": "Fel vid borttagning av leverantör",
+  "supplierHasRelations": "Kan inte ta bort leverantör med befintliga relationer",
+  "pleaseRemoveLinksFirst": "Ta bort relaterade inköpsorder eller fakturor först",
   "deleteFailed": "Borttagning misslyckades",
   "noSuppliersFound": "Inga leverantörer hittades",
   "addFirstSupplier": "Lägg till din första leverantör för att komma igång",
@@ -424,5 +426,7 @@
   "quicklyCreateNewInvoice":" Lägg snabbt till en ny leverantörsfaktura.",
   "invoiceStatistics": "Fakturastatistik",
   "orderIdHelpRequired": "Länkning till en inköpsorder är rekommenderad",
-  "invoiceNumberHelpRequired":"krävs för manuella fakturor"
+  "invoiceNumberHelpRequired":"krävs för manuella fakturor",
+  "orderLocked":"(Låst)",
+  "orderLockedMessage":"Denna order är låst och kan inte ändras."
 }

@@ -197,6 +197,8 @@
   "errorLoadingSuppliers": "Error Loading Suppliers",
   "invalidDataFormat": "Invalid data format from server",
   "deleteError": "Error deleting supplier",
+  "supplierHasRelations": "Cannot delete supplier with existing relations",
+  "pleaseRemoveLinksFirst": "Please remove related purchase orders or invoices first",
   "deleteFailed": "Delete failed",
   "noSuppliersFound": "No Suppliers Found",
   "addFirstSupplier": "Add your first supplier to get started",
@@ -424,5 +426,7 @@
   "quicklyCreateNewInvoice":" Quickly create a new supplier invoice.",
   "invoiceStatistics": "Invoice Statistics",
   "orderIdHelpRequired": "Linking to a purchase order is recommended",
-  "invoiceNumberHelpRequired":"required for manual invoices"
+  "invoiceNumberHelpRequired":"required for manual invoices",
+  "orderLocked":"(Locked)",
+  "orderLockedMessage":"This order is locked and cannot be modified."
 }

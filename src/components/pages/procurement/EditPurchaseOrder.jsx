@@ -253,9 +253,9 @@ const EditPurchaseOrder = () => {
       subtotal: 0,
       current_stock: 0,
     };
-    setOrderItems([...orderItems, newItem]);
+    // ✅ العنصر الجديد يضاف في البداية
+    setOrderItems([newItem, ...orderItems]);
   };
-
   // حذف عنصر
   const removeOrderItem = (index) => {
     if (orderLocked) return;

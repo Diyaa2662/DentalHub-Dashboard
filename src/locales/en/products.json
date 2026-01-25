@@ -342,5 +342,14 @@
   "deletedProducts": "Deleted Products",
   "showingDeletedProducts": "✓ Showing deleted products",
   "restoreProductConfirm": "Are you sure you want to restore product ",
-  "productRestoredSuccess": "Product restored successfully!"
+  "productRestoredSuccess": "Product restored successfully!",
+  "alertStock": "Alert Stock",
+  "alertStockProducts": "Alert Stock Products",
+  "alertStockNotification": "Stock Alert!",
+  "negativeStockWarning": "You have products with negative stock quantity. These products are in \"Alert Stock\" status and require immediate attention.",
+  "viewAlertStockProducts": "View Alert Stock Products",
+  "showingAlertStockProducts": "Showing Alert Stock Product(s)",
+  "clickToFilterAlertStock": "Click to filter Alert Stock Product(s)",
+  "negativeStockWarningSingle": "You have 1 product with negative stock quantity. This product is in 'Alert Stock' status and requires immediate attention.",
+  "viewAlertStockProduct": "View 1 Alert Stock Product"
 }

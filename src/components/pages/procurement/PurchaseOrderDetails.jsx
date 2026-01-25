@@ -289,10 +289,7 @@ const PurchaseOrderDetails = () => {
           notes: `Invoice for purchase order #${purchaseOrder.poNumber}`,
         };
 
-        const response = await api.post(
-          "/generatesupplierinvoice",
-          invoiceData,
-        );
+        await api.post("/generatesupplierinvoice", invoiceData);
 
         alert(
           t("invoiceGeneratedSuccess", "procurement") ||
@@ -427,7 +424,11 @@ const PurchaseOrderDetails = () => {
 
   // ✅ دالة تأكيد الطلب
   const handleConfirmOrder = async () => {
-    if (purchaseOrder?.status !== STATUSES.PENDING) return;
+    if (
+      purchaseOrder?.status !== STATUSES.PENDING &&
+      purchaseOrder?.status !== STATUSES.CANCELLED
+    )
+      return;
 
     if (
       window.confirm(
@@ -437,7 +438,7 @@ const PurchaseOrderDetails = () => {
     ) {
       setUpdatingStatus(true);
       try {
-        const response = await api.post(`/confirmsupplierorder/${id}`);
+        await api.post(`/confirmsupplierorder/${id}`);
 
         alert(
           t("orderConfirmedSuccess", "procurement") ||
@@ -467,7 +468,7 @@ const PurchaseOrderDetails = () => {
     ) {
       setUpdatingStatus(true);
       try {
-        const response = await api.post(`/cancelsupplierorder/${id}`);
+        await api.post(`/cancelsupplierorder/${id}`);
 
         alert(
           t("orderCancelledSuccess", "procurement") ||
@@ -491,6 +492,7 @@ const PurchaseOrderDetails = () => {
     navigate(`/procurement/purchase-orders/edit/${id}`);
   };
 
+  // ✅ دالة التحقق من حالة الطلب لعرض الزر المناسب
   // ✅ دالة التحقق من حالة الطلب لعرض الزر المناسب
   const renderStatusActionButton = () => {
     if (!purchaseOrder) return null;
@@ -541,6 +543,31 @@ const PurchaseOrderDetails = () => {
             <>
               <X size={18} />
               <span>{t("cancelOrder", "procurement") || "Cancel Order"}</span>
+            </>
+          )}
+        </button>
+      );
+    } else if (currentStatus === STATUSES.CANCELLED) {
+      // ✅ إضافة زر Confirm للحالة CANCELLED
+      return (
+        <button
+          onClick={handleConfirmOrder}
+          disabled={updatingStatus}
+          className={`w-full py-3 px-4 rounded-lg font-medium transition flex items-center justify-center space-x-2 ${
+            updatingStatus
+              ? "bg-green-200 text-green-800 cursor-not-allowed"
+              : "bg-green-600 hover:bg-green-700 text-white"
+          }`}
+        >
+          {updatingStatus ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <span>{t("confirming", "procurement") || "Confirming..."}</span>
+            </>
+          ) : (
+            <>
+              <Check size={18} />
+              <span>{t("confirmOrder", "procurement") || "Confirm Order"}</span>
             </>
           )}
         </button>

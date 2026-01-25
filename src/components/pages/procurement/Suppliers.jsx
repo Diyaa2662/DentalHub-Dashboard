@@ -134,23 +134,14 @@ const Suppliers = () => {
     );
   };
 
-  // ✅ دالة لحذف المزود مع API
+  // ✅ دالة لحذف المزود مع API - معدلة لمعالجة خطأ 403
   const handleDeleteSupplier = async (id, name) => {
     if (!window.confirm(`${t("confirmDelete", "procurement")} "${name}"?`)) {
       return;
     }
 
+    let supplierToDelete;
     try {
-      // ✅ 1. إزالة العنصر محلياً أولاً (تجربة مستخدم فورية)
-      // eslint-disable-next-line no-unused-vars
-      const supplierToDelete = suppliersData.find((s) => s.id === id);
-      setSuppliersData((prev) => prev.filter((supplier) => supplier.id !== id));
-
-      // ✅ تحديث الإحصائيات بعد الحذف المحلي
-      setStats((prev) => ({
-        totalSuppliers: prev.totalSuppliers - 1,
-      }));
-
       // ✅ 2. إرسال طلب الحذف إلى API
       await api.delete(`/deletesupplier/${id}`);
 
@@ -176,9 +167,7 @@ const Suppliers = () => {
       alert(`${t("deleteSuccess", "procurement")}: ${name}`);
     } catch (err) {
       // ✅ 5. إذا فشل الحذف، استعادة العنصر
-      // eslint-disable-next-line no-undef
       if (supplierToDelete) {
-        // eslint-disable-next-line no-undef
         setSuppliersData((prev) => [...prev, supplierToDelete]);
         // ✅ استعادة الإحصائيات
         setStats((prev) => ({
@@ -186,14 +175,35 @@ const Suppliers = () => {
         }));
       }
 
-      alert(
-        err.response?.data?.message ||
-          t("deleteError", "procurement") ||
-          "Error deleting supplier",
-      );
+      // ✅ 6. التحقق من حالة الخطأ 403
+      if (err.response && err.response.status === 403) {
+        // ✅ استخراج رسالة الخطأ من الـ response أو استخدام رسالة افتراضية
+        const errorMessage =
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          err.message ||
+          "Cannot delete supplier";
+
+        // ✅ رسالة توضيحية مفصلة للمستخدم
+        const userFriendlyMessage =
+          `${t("deleteError", "procurement") || "Error deleting supplier"}: ${name}\n\n` +
+          `${t("supplierHasRelations", "procurement") || "This supplier cannot be deleted because it is linked to existing orders or other system records."}\n` +
+          `${t("pleaseRemoveLinksFirst", "procurement") || "Please remove all related records before deleting this supplier."}\n\n` +
+          `(${errorMessage})`;
+
+        alert(userFriendlyMessage);
+      } else {
+        // ✅ خطأ آخر غير 403
+        alert(
+          err.response?.data?.message ||
+            err.response?.data?.error ||
+            err.message ||
+            t("deleteError", "procurement") ||
+            "Error deleting supplier",
+        );
+      }
     }
   };
-
   // ✅ دالة لتعديل المزود
   const handleEditSupplier = (id) => {
     navigate(`/procurement/suppliers/edit/${id}`);

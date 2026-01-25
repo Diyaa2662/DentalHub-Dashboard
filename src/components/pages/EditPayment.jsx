@@ -248,7 +248,7 @@ const EditPayment = () => {
         notes: paymentData.notes || "",
       };
 
-      const response = await api.put(`/updatepayment/${id}`, submitData);
+      const response = await api.post(`/updatepayment/${id}`, submitData);
 
       setSuccess(true);
 

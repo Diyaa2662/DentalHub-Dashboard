@@ -29,6 +29,7 @@ import {
   Filter,
   Undo,
   Trash,
+  AlertTriangle,
 } from "lucide-react";
 
 const Products = () => {
@@ -36,14 +37,17 @@ const Products = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAlertNotification, setShowAlertNotification] = useState(false);
+  const [alertStockCount, setAlertStockCount] = useState(0);
   const navigate = useNavigate();
   const { t, currentLanguage } = useLanguage();
 
   // State للفلاتر
-  const [activeFilter, setActiveFilter] = useState("all"); // all, lowStock, outOfStock, deleted
+  const [activeFilter, setActiveFilter] = useState("all"); // all, lowStock, alertStock, outOfStock, deleted
   const [stats, setStats] = useState({
     total: 0,
     lowStock: 0,
+    alertStock: 0,
     outOfStock: 0,
     deleted: 0,
   });
@@ -59,6 +63,17 @@ const Products = () => {
     applyFilter();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFilter, products]);
+
+  // تحقق من وجود منتجات بحالة الإنذار عند تحميل البيانات
+  useEffect(() => {
+    if (products.length > 0) {
+      const alertCount = products.filter(
+        (product) => product.isAlertStock,
+      ).length;
+      setAlertStockCount(alertCount);
+      setShowAlertNotification(alertCount > 0);
+    }
+  }, [products]);
 
   const fetchProducts = async () => {
     try {
@@ -79,6 +94,7 @@ const Products = () => {
           let isLowStock = false;
           let isOutOfStock = false;
           let isDeleted = normalizedStatus === "deleted";
+          let isAlertStock = normalizedStatus === "alertstock";
 
           if (normalizedStatus === "outofstock") {
             stockStatus = t("outOfStock", "products");
@@ -88,6 +104,9 @@ const Products = () => {
             isLowStock = true;
           } else if (normalizedStatus === "instock") {
             stockStatus = t("inStock", "products");
+          } else if (normalizedStatus === "alertstock") {
+            stockStatus = t("alertStock", "products") || "Alert Stock";
+            isAlertStock = true;
           } else if (isDeleted) {
             stockStatus = t("deleted", "products") || "Deleted";
           }
@@ -118,12 +137,20 @@ const Products = () => {
             isLowStock: isLowStock,
             isOutOfStock: isOutOfStock,
             isDeleted: isDeleted,
+            isAlertStock: isAlertStock,
             normalizedStatus: normalizedStatus,
           };
         });
 
         setProducts(formattedData);
         calculateStats(formattedData);
+
+        // التحقق من وجود منتجات بحالة الإنذار
+        const alertCount = formattedData.filter(
+          (product) => product.isAlertStock,
+        ).length;
+        setAlertStockCount(alertCount);
+        setShowAlertNotification(alertCount > 0);
       } else {
         setError(
           t("noProductsData", "products") ||
@@ -149,16 +176,20 @@ const Products = () => {
   const calculateStats = (productsList) => {
     const total = productsList.length;
     const lowStock = productsList.filter(
-      (product) => product.isLowStock,
+      (product) => product.isLowStock && !product.isAlertStock,
+    ).length;
+    const alertStock = productsList.filter(
+      (product) => product.isAlertStock,
     ).length;
     const outOfStock = productsList.filter(
-      (product) => product.isOutOfStock,
+      (product) => product.isOutOfStock && !product.isAlertStock,
     ).length;
     const deleted = productsList.filter((product) => product.isDeleted).length;
 
     setStats({
       total,
       lowStock,
+      alertStock,
       outOfStock,
       deleted,
     });
@@ -169,10 +200,17 @@ const Products = () => {
 
     switch (activeFilter) {
       case "lowStock":
-        filtered = products.filter((product) => product.isLowStock);
+        filtered = products.filter(
+          (product) => product.isLowStock && !product.isAlertStock,
+        );
+        break;
+      case "alertStock":
+        filtered = products.filter((product) => product.isAlertStock);
         break;
       case "outOfStock":
-        filtered = products.filter((product) => product.isOutOfStock);
+        filtered = products.filter(
+          (product) => product.isOutOfStock && !product.isAlertStock,
+        );
         break;
       case "deleted":
         filtered = products.filter((product) => product.isDeleted);
@@ -258,6 +296,8 @@ const Products = () => {
           return baseClass + "bg-blue-50 border-blue-200 shadow-sm";
         case "lowStock":
           return baseClass + "bg-yellow-50 border-yellow-200 shadow-sm";
+        case "alertStock":
+          return baseClass + "bg-orange-50 border-orange-200 shadow-sm";
         case "outOfStock":
           return baseClass + "bg-red-50 border-red-200 shadow-sm";
         case "deleted":
@@ -277,6 +317,8 @@ const Products = () => {
           return "text-blue-700";
         case "lowStock":
           return "text-yellow-700";
+        case "alertStock":
+          return "text-orange-700";
         case "outOfStock":
           return "text-red-700";
         case "deleted":
@@ -295,6 +337,8 @@ const Products = () => {
           return "text-blue-800";
         case "lowStock":
           return "text-yellow-800";
+        case "alertStock":
+          return "text-orange-800";
         case "outOfStock":
           return "text-red-800";
         case "deleted":
@@ -340,8 +384,56 @@ const Products = () => {
         </div>
       </div>
 
+      {/* تنبيه المنتجات بحالة الإنذار */}
+      {showAlertNotification && (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <AlertTriangle className="text-orange-600" size={24} />
+              <div>
+                <h3 className="font-bold text-orange-800">
+                  {t("alertStockNotification", "products") || "Stock Alert!"}
+                </h3>
+                <p className="text-orange-700">
+                  {alertStockCount === 1
+                    ? t("negativeStockWarningSingle", "products") ||
+                      "You have 1 product with negative stock quantity. This product is in 'Alert Stock' status and requires immediate attention."
+                    : t("negativeStockWarning", "products", {
+                        count: alertStockCount,
+                      }) ||
+                      `You have ${alertStockCount} products with negative stock quantity. These products are in "Alert Stock" status and require immediate attention.`}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowAlertNotification(false)}
+              className="text-orange-600 hover:text-orange-800"
+              title={t("dismiss", "common") || "Dismiss"}
+            >
+              <XCircle size={20} />
+            </button>
+          </div>
+          <div className="mt-3 pt-3 border-t border-orange-200">
+            <button
+              onClick={() => handleFilterClick("alertStock")}
+              className="px-4 py-2 bg-orange-100 text-orange-800 rounded-lg font-medium hover:bg-orange-200 transition flex items-center space-x-2"
+            >
+              <AlertTriangle size={16} />
+              <span>
+                {alertStockCount === 1
+                  ? t("viewAlertStockProduct", "products") ||
+                    "View 1 Alert Stock Product"
+                  : t("viewAlertStockProducts", "products", {
+                      count: alertStockCount,
+                    }) || `View ${alertStockCount} Alert Stock Products`}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Filter Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {/* Total Products Filter */}
         <div
           className={getFilterButtonClass("all")}
@@ -425,6 +517,58 @@ const Products = () => {
                   })
                 : t("clickToFilterLowStock", "products", {
                     count: stats.lowStock,
+                  })}
+            </p>
+          </div>
+        </div>
+
+        {/* Alert Stock Filter */}
+        <div
+          className={getFilterButtonClass("alertStock")}
+          onClick={() => handleFilterClick("alertStock")}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center space-x-2 mb-1">
+                <AlertTriangle
+                  size={16}
+                  className={getFilterTextClass("alertStock")}
+                />
+                <p
+                  className={`text-sm font-medium ${getFilterTextClass(
+                    "alertStock",
+                  )}`}
+                >
+                  {t("alertStock", "products") || "Alert Stock"}
+                </p>
+              </div>
+              <p
+                className={`text-2xl font-bold ${getFilterCountClass(
+                  "alertStock",
+                )}`}
+              >
+                {stats.alertStock}
+              </p>
+            </div>
+            <div
+              className={`p-2 rounded-lg ${
+                activeFilter === "alertStock" ? "bg-orange-100" : "bg-gray-100"
+              }`}
+            >
+              <AlertTriangle
+                size={20}
+                className={getFilterTextClass("alertStock")}
+              />
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              {activeFilter === "alertStock"
+                ? t("showingAlertStockProducts", "products", {
+                    count: stats.alertStock,
+                  })
+                : t("clickToFilterAlertStock", "products", {
+                    count: stats.alertStock,
                   })}
             </p>
           </div>
@@ -532,9 +676,11 @@ const Products = () => {
           className={`p-3 rounded-lg ${
             activeFilter === "lowStock"
               ? "bg-yellow-50 border border-yellow-200"
-              : activeFilter === "outOfStock"
-                ? "bg-red-50 border border-red-200"
-                : "bg-gray-100 border border-gray-300"
+              : activeFilter === "alertStock"
+                ? "bg-orange-50 border border-orange-200"
+                : activeFilter === "outOfStock"
+                  ? "bg-red-50 border border-red-200"
+                  : "bg-gray-100 border border-gray-300"
           }`}
         >
           <div className="flex items-center justify-between">
@@ -544,6 +690,13 @@ const Products = () => {
                   <AlertCircle className="text-yellow-600" size={18} />
                   <span className="font-medium text-yellow-800">
                     {t("filteredBy", "products")}: {t("lowStock", "products")}
+                  </span>
+                </>
+              ) : activeFilter === "alertStock" ? (
+                <>
+                  <AlertTriangle className="text-orange-600" size={18} />
+                  <span className="font-medium text-orange-800">
+                    {t("filteredBy", "products")}: {t("alertStock", "products")}
                   </span>
                 </>
               ) : activeFilter === "outOfStock" ? (
@@ -572,9 +725,11 @@ const Products = () => {
           <p className="text-sm text-gray-600 mt-1 ml-7">
             {activeFilter === "lowStock"
               ? `${stats.lowStock} ${t("lowStockProducts", "products")}`
-              : activeFilter === "outOfStock"
-                ? `${stats.outOfStock} ${t("outOfStockProducts", "products")}`
-                : `${stats.deleted} ${t("deletedProducts", "products")}`}
+              : activeFilter === "alertStock"
+                ? `${stats.alertStock} ${t("alertStockProducts", "products")}`
+                : activeFilter === "outOfStock"
+                  ? `${stats.outOfStock} ${t("outOfStockProducts", "products")}`
+                  : `${stats.deleted} ${t("deletedProducts", "products")}`}
           </p>
         </div>
       )}
@@ -624,9 +779,11 @@ const Products = () => {
                       ? t("allProducts", "products")
                       : activeFilter === "lowStock"
                         ? t("lowStockProducts", "products")
-                        : activeFilter === "outOfStock"
-                          ? t("outOfStockProducts", "products")
-                          : t("deletedProducts", "products")}
+                        : activeFilter === "alertStock"
+                          ? t("alertStockProducts", "products")
+                          : activeFilter === "outOfStock"
+                            ? t("outOfStockProducts", "products")
+                            : t("deletedProducts", "products")}
                   </span>
                   <span className="bg-gray-200 text-gray-700 text-xs font-medium px-2 py-1 rounded-full">
                     {filteredProducts.length} {t("items", "products")}
@@ -638,6 +795,11 @@ const Products = () => {
                   {activeFilter === "lowStock" &&
                     `${stats.lowStock} ${t(
                       "lowStock",
+                      "products",
+                    )?.toLowerCase()}`}
+                  {activeFilter === "alertStock" &&
+                    `${stats.alertStock} ${t(
+                      "alertStock",
                       "products",
                     )?.toLowerCase()}`}
                   {activeFilter === "outOfStock" &&
@@ -666,7 +828,9 @@ const Products = () => {
               showColumnLines={true}
               showRowLines={true}
               rowClass={(rowData) => {
-                return rowData.isDeleted ? "deleted-row" : "";
+                if (rowData.isDeleted) return "deleted-row";
+                if (rowData.isAlertStock) return "alert-stock-row";
+                return "";
               }}
             >
               <HeaderFilter visible={true} />
@@ -694,7 +858,7 @@ const Products = () => {
                 }
               />
 
-              {/* ... نفس الأعمدة السابقة ... */}
+              {/* ID Column */}
               <Column
                 dataField="id"
                 caption={t("id", "products") || "ID"}
@@ -703,6 +867,7 @@ const Products = () => {
                 allowGrouping={false}
               />
 
+              {/* SKU Column */}
               <Column
                 dataField="sku"
                 caption="SKU"
@@ -717,6 +882,7 @@ const Products = () => {
                 )}
               />
 
+              {/* Product Name Column */}
               <Column
                 dataField="name"
                 caption={t("productName", "products") || "Product Name"}
@@ -736,7 +902,11 @@ const Products = () => {
                     >
                       <div
                         className={`font-medium ${
-                          data.isDeleted ? "text-gray-500" : "text-gray-800"
+                          data.isDeleted
+                            ? "text-gray-500"
+                            : data.isAlertStock
+                              ? "text-orange-700"
+                              : "text-gray-800"
                         }`}
                       >
                         {displayName}
@@ -756,6 +926,7 @@ const Products = () => {
                 }}
               />
 
+              {/* Category Column */}
               <Column
                 dataField="category"
                 caption={t("category", "products") || "Category"}
@@ -767,7 +938,9 @@ const Products = () => {
                     className={`px-2 py-1 rounded text-sm font-medium capitalize ${
                       data.isDeleted
                         ? "bg-gray-200 text-gray-600"
-                        : "bg-gray-100 text-gray-700"
+                        : data.isAlertStock
+                          ? "bg-orange-100 text-orange-700"
+                          : "bg-gray-100 text-gray-700"
                     }`}
                   >
                     {data.category}
@@ -775,6 +948,7 @@ const Products = () => {
                 )}
               />
 
+              {/* Price Column */}
               <Column
                 dataField="price"
                 caption={t("price", "products") || "Price"}
@@ -783,6 +957,7 @@ const Products = () => {
                 allowGrouping={false}
               />
 
+              {/* Price After Discount Column */}
               <Column
                 dataField="priceAfterDiscount"
                 caption={t("priceAfterDiscount", "products") || "Offer Price"}
@@ -798,20 +973,23 @@ const Products = () => {
                           className={`font-semibold ${
                             data.isDeleted
                               ? "text-gray-500"
-                              : hasDisc
-                                ? "text-green-600"
-                                : "text-gray-800"
+                              : data.isAlertStock
+                                ? "text-orange-600"
+                                : hasDisc
+                                  ? "text-green-600"
+                                  : "text-gray-800"
                           }`}
                         >
                           {data.priceAfterDiscount}
                         </span>
-                        {hasDisc && !data.isDeleted && (
+                        {hasDisc && !data.isDeleted && !data.isAlertStock && (
                           <Tag className="text-red-500 ml-2" size={12} />
                         )}
                       </div>
                       {hasDisc &&
                         data.discountPercentage > 0 &&
-                        !data.isDeleted && (
+                        !data.isDeleted &&
+                        !data.isAlertStock && (
                           <div className="text-xs text-red-600 font-medium mt-1">
                             {data.discountPercentage}%{" "}
                             {t("off", "products") || "OFF"}
@@ -822,14 +1000,23 @@ const Products = () => {
                 }}
               />
 
+              {/* Stock Column */}
               <Column
                 dataField="stock"
                 caption={t("stock", "products") || "Stock"}
                 width="auto"
                 alignment="left"
                 allowGrouping={false}
+                cellRender={({ data }) => (
+                  <div
+                    className={`font-medium ${data.isAlertStock ? "text-orange-600 font-bold" : ""}`}
+                  >
+                    {data.stock}
+                  </div>
+                )}
               />
 
+              {/* Tax Rate Column */}
               <Column
                 dataField="taxRate"
                 caption={t("taxRate", "products") || "Tax Rate"}
@@ -842,11 +1029,13 @@ const Products = () => {
                       className={`font-medium ${
                         data.isDeleted
                           ? "text-gray-500"
-                          : data.taxRate === "20%"
-                            ? "text-red-600"
-                            : data.taxRate === "15%"
-                              ? "text-orange-600"
-                              : "text-green-600"
+                          : data.isAlertStock
+                            ? "text-orange-600"
+                            : data.taxRate === "20%"
+                              ? "text-red-600"
+                              : data.taxRate === "15%"
+                                ? "text-orange-600"
+                                : "text-green-600"
                       }`}
                     >
                       {data.taxRate}
@@ -855,6 +1044,7 @@ const Products = () => {
                 )}
               />
 
+              {/* Status Column */}
               <Column
                 dataField="status"
                 caption={t("status", "common") || "Status"}
@@ -870,6 +1060,10 @@ const Products = () => {
                     [t("lowStock", "products") || "Low Stock"]: {
                       color: "bg-yellow-100 text-yellow-800",
                       icon: <AlertCircle size={12} className="mr-1" />,
+                    },
+                    [t("alertStock", "products") || "Alert Stock"]: {
+                      color: "bg-orange-100 text-orange-800",
+                      icon: <AlertTriangle size={12} className="mr-1" />,
                     },
                     [t("outOfStock", "products") || "Out of Stock"]: {
                       color: "bg-red-100 text-red-800",
@@ -896,6 +1090,7 @@ const Products = () => {
                 }}
               />
 
+              {/* Actions Column */}
               <Column
                 caption={t("actions", "products") || "Actions"}
                 width="auto"

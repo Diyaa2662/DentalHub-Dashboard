@@ -342,5 +342,14 @@
   "deletedProducts": "Raderade Produkter",
   "showingDeletedProducts": "✓ Visar raderade produkter",
   "restoreProductConfirm": "Är du säker på att du vill återställa produkten ",
-  "productRestoredSuccess": "Produkten återställdes framgångsrikt!"
+  "productRestoredSuccess": "Produkten återställdes framgångsrikt!",
+  "alertStock": "Lagerlarm",
+  "alertStockProducts": "Produkter med lagerlarm",
+  "alertStockNotification": "Lagerlarm!",
+  "negativeStockWarning": "Du har produkter med negativ lagerkvantitet. Dessa produkter har status \"Lagerlarm\" och kräver omedelbar åtgärd.",
+  "viewAlertStockProducts": "Visa produkter med lagerlarm",
+  "showingAlertStockProducts": "Visar produkt(er) med lagerlarm",
+  "clickToFilterAlertStock": "Klicka för att filtrera produkt(er) med lagerlarm",
+  "negativeStockWarningSingle": "Du har 1 produkt med negativ lagerkvantitet. Denna produkt har status 'Lagerlarm' och kräver omedelbar åtgärd.",
+  "viewAlertStockProduct": "Visa 1 produkt med lagerlarm"
 }
