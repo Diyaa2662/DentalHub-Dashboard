@@ -121,7 +121,7 @@ const EditProduct = () => {
         err.response?.data?.message ||
           err.message ||
           t("loadProductFailed", "editProduct") ||
-          "Failed to load product data"
+          "Failed to load product data",
       );
     } finally {
       setLoading(false);
@@ -141,7 +141,7 @@ const EditProduct = () => {
       console.error(
         t("errorFetchingCategories", "editProduct") ||
           "Error fetching categories:",
-        err
+        err,
       );
     }
   };
@@ -192,7 +192,7 @@ const EditProduct = () => {
     if (filesToAdd.length === 0) {
       alert(
         t("maxImagesAlert", "editProduct") ||
-          "You can only have up to 4 images total"
+          "You can only have up to 4 images total",
       );
       return;
     }
@@ -318,14 +318,14 @@ const EditProduct = () => {
     if (!formData.name.trim()) {
       alert(
         t("nameRequiredAlert", "editProduct") ||
-          "Please enter product name in English"
+          "Please enter product name in English",
       );
       return;
     }
 
     if (!formData.price) {
       alert(
-        t("priceRequiredAlert", "editProduct") || "Please enter product price"
+        t("priceRequiredAlert", "editProduct") || "Please enter product price",
       );
       return;
     }
@@ -362,22 +362,22 @@ const EditProduct = () => {
       formDataToSend.append("price", parseFloat(formData.price).toFixed(2));
       formDataToSend.append(
         "cost",
-        formData.cost ? parseFloat(formData.cost).toFixed(2) : "0.00"
+        formData.cost ? parseFloat(formData.cost).toFixed(2) : "0.00",
       );
       formDataToSend.append(
         "stock_quantity",
-        parseInt(formData.stock_quantity) || 0
+        parseInt(formData.stock_quantity) || 0,
       );
 
       formDataToSend.append(
         "tax_rate",
-        parseFloat(formData.tax_rate || 0).toFixed(2)
+        parseFloat(formData.tax_rate || 0).toFixed(2),
       );
 
       if (formData.discount_price && formData.discount_price < formData.price) {
         formDataToSend.append(
           "discount_price",
-          parseFloat(formData.discount_price).toFixed(2)
+          parseFloat(formData.discount_price).toFixed(2),
         );
       } else {
         formDataToSend.append("discount_price", "0.00");
@@ -385,12 +385,12 @@ const EditProduct = () => {
 
       formDataToSend.append(
         "low_stock_alert_threshold",
-        parseInt(formData.low_stock_alert_threshold) || 10
+        parseInt(formData.low_stock_alert_threshold) || 10,
       );
 
       formDataToSend.append(
         "product_rate",
-        parseFloat(formData.product_rate || 0).toFixed(1)
+        parseFloat(formData.product_rate || 0).toFixed(1),
       );
 
       // إرسال تحديث البيانات الأساسية
@@ -403,7 +403,7 @@ const EditProduct = () => {
         } catch (err) {
           console.error(
             t("errorDeletingImage", "editProduct") || "Error deleting image:",
-            err
+            err,
           );
         }
       }
@@ -422,11 +422,11 @@ const EditProduct = () => {
           console.error(
             t("errorUploadingImages", "editProduct") ||
               "Error uploading images:",
-            err
+            err,
           );
           setError(
             t("imageUploadError", "editProduct", { count: newImages.length }) ||
-              `Failed to upload ${newImages.length} image(s)`
+              `Failed to upload ${newImages.length} image(s)`,
           );
         }
       }
@@ -482,7 +482,7 @@ const EditProduct = () => {
           err.response?.data?.message ||
             err.message ||
             t("updateProductError", "editProduct") ||
-            "Error updating product"
+            "Error updating product",
         );
       }
     } finally {
@@ -498,7 +498,7 @@ const EditProduct = () => {
   // الحصول على الصور المعروضة (بعد استبعاد المحذوفات)
   const getDisplayedImages = () => {
     const filteredExisting = existingImages.filter(
-      (img) => !imagesToDelete.includes(img.id)
+      (img) => !imagesToDelete.includes(img.id),
     );
     return [...filteredExisting, ...newImages];
   };
@@ -1076,7 +1076,7 @@ const EditProduct = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Stock Quantity */}
-                  <div>
+                  {/* <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t("stock", "products")} *
                     </label>
@@ -1090,7 +1090,7 @@ const EditProduct = () => {
                       min={0}
                       width="100%"
                     />
-                  </div>
+                  </div> */}
 
                   {/* Low Stock Alert Threshold */}
                   <div>
@@ -1131,17 +1131,17 @@ const EditProduct = () => {
                           parseInt(formData.stock_quantity) === 0
                             ? "bg-red-100 text-red-800"
                             : parseInt(formData.stock_quantity) <=
-                              parseInt(formData.low_stock_alert_threshold) // ✅ تغيير هنا
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-green-100 text-green-800"
+                                parseInt(formData.low_stock_alert_threshold) // ✅ تغيير هنا
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
                         }`}
                       >
                         {parseInt(formData.stock_quantity) === 0
                           ? t("outOfStock", "products") || "Out of Stock"
                           : parseInt(formData.stock_quantity) <=
-                            parseInt(formData.low_stock_alert_threshold) // ✅ تغيير هنا
-                          ? t("lowStock", "products") || "Low Stock"
-                          : t("inStock", "products") || "In Stock"}
+                              parseInt(formData.low_stock_alert_threshold) // ✅ تغيير هنا
+                            ? t("lowStock", "products") || "Low Stock"
+                            : t("inStock", "products") || "In Stock"}
                       </div>
                       <span className="text-sm text-gray-600">
                         {t("current", "common") || "Current"}:{" "}
@@ -1402,7 +1402,7 @@ const EditProduct = () => {
                           </p>
                         </div>
                       </div>
-                    )
+                    ),
                   )}
                 </div>
               </div>

@@ -98,7 +98,7 @@ const AddProduct = () => {
     if (!newCategoryName.trim()) {
       alert(
         t("categoryNameRequired", "addProduct") ||
-          "Please enter category name in English"
+          "Please enter category name in English",
       );
       return;
     }
@@ -137,7 +137,7 @@ const AddProduct = () => {
 
         alert(
           t("categoryAddedSuccess", "addProduct") ||
-            "Category added successfully!"
+            "Category added successfully!",
         );
       } else {
         throw new Error(response.data?.message || "Failed to add category");
@@ -147,7 +147,7 @@ const AddProduct = () => {
       alert(
         t("categoryAddError", "addProduct") ||
           "Error adding category: " +
-            (err.response?.data?.message || err.message)
+            (err.response?.data?.message || err.message),
       );
     } finally {
       setAddingCategory(false);
@@ -169,7 +169,7 @@ const AddProduct = () => {
     if (filesToAdd.length === 0) {
       alert(
         t("maxImagesAlert", "addProduct") ||
-          "You can only upload up to 4 images. You already have 4 images."
+          "You can only upload up to 4 images. You already have 4 images.",
       );
       return;
     }
@@ -308,21 +308,21 @@ const AddProduct = () => {
     if (!formData.name.trim()) {
       alert(
         t("nameRequiredAlert", "addProduct") ||
-          "Please enter product name in English"
+          "Please enter product name in English",
       );
       return;
     }
 
     if (!formData.price) {
       alert(
-        t("priceRequiredAlert", "addProduct") || "Please enter product price"
+        t("priceRequiredAlert", "addProduct") || "Please enter product price",
       );
       return;
     }
 
     if (!formData.category) {
       alert(
-        t("categoryRequiredAlert", "addProduct") || "Please select a category"
+        t("categoryRequiredAlert", "addProduct") || "Please select a category",
       );
       return;
     }
@@ -357,33 +357,33 @@ const AddProduct = () => {
       formDataToSend.append("price", parseFloat(formData.price).toFixed(2));
       formDataToSend.append(
         "cost",
-        formData.cost ? parseFloat(formData.cost).toFixed(2) : "0.00"
+        formData.cost ? parseFloat(formData.cost).toFixed(2) : "0.00",
       );
       formDataToSend.append(
         "stock_quantity",
-        parseInt(formData.stock_quantity) || 0
+        parseInt(formData.stock_quantity) || 0,
       );
 
       formDataToSend.append(
         "tax_rate",
-        parseFloat(formData.tax_rate || 0).toFixed(2)
+        parseFloat(formData.tax_rate || 0).toFixed(2),
       );
 
       if (formData.discount_price && formData.discount_price < formData.price) {
         formDataToSend.append(
           "discount_price",
-          parseFloat(formData.discount_price).toFixed(2)
+          parseFloat(formData.discount_price).toFixed(2),
         );
       }
 
       formDataToSend.append(
         "low_stock_alert_threshold",
-        parseInt(formData.low_stock_alert_threshold) || 10
+        parseInt(formData.low_stock_alert_threshold) || 10,
       );
 
       formDataToSend.append(
         "product_rate",
-        parseFloat(formData.product_rate || 0).toFixed(1)
+        parseFloat(formData.product_rate || 0).toFixed(1),
       );
 
       images.forEach((image, index) => {
@@ -407,14 +407,14 @@ const AddProduct = () => {
           setError(
             response.data.message ||
               t("apiSuccessFalse", "addProduct") ||
-              "Operation completed but API returned success: false"
+              "Operation completed but API returned success: false",
           );
         }
       } else {
         setError(
           response.data.message ||
             t("createProductFailed", "addProduct") ||
-            "Failed to create product"
+            "Failed to create product",
         );
       }
     } catch (err) {
@@ -440,7 +440,7 @@ const AddProduct = () => {
         setError(
           err.message ||
             t("createProductError", "addProduct") ||
-            "Error creating product"
+            "Error creating product",
         );
       }
     } finally {
@@ -1066,7 +1066,7 @@ const AddProduct = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Stock Quantity */}
-                  <div>
+                  {/* <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t("stock", "products")} *
                     </label>
@@ -1080,7 +1080,7 @@ const AddProduct = () => {
                       min={0}
                       width="100%"
                     />
-                  </div>
+                  </div> */}
 
                   {/* Low Stock Alert Threshold */}
                   <div>
@@ -1101,13 +1101,13 @@ const AddProduct = () => {
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       {t("lowStockDescription", "addProduct") ||
-                        "Product will be marked as 'Low Stock' when quantity ≤ this threshold"}
+                        "Product will be marked as 'Low Stock' when quantity < this threshold"}
                     </p>
                   </div>
                 </div>
 
                 {/* Stock Status Preview */}
-                {formData.stock_quantity !== "" && (
+                {/* {formData.stock_quantity !== "" && (
                   <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                     <h4 className="text-sm font-medium text-gray-800 mb-2">
                       {t("stockStatusPreview", "addProduct") ||
@@ -1120,17 +1120,17 @@ const AddProduct = () => {
                           parseInt(formData.stock_quantity) === 0
                             ? "bg-red-100 text-red-800"
                             : parseInt(formData.stock_quantity) <
-                              parseInt(formData.low_stock_alert_threshold)
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-green-100 text-green-800"
+                                parseInt(formData.low_stock_alert_threshold)
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
                         }`}
                       >
                         {parseInt(formData.stock_quantity) === 0
                           ? t("outOfStock", "products") || "Out of Stock"
                           : parseInt(formData.stock_quantity) <
-                            parseInt(formData.low_stock_alert_threshold)
-                          ? t("lowStock", "products") || "Low Stock"
-                          : t("inStock", "products") || "In Stock"}
+                              parseInt(formData.low_stock_alert_threshold)
+                            ? t("lowStock", "products") || "Low Stock"
+                            : t("inStock", "products") || "In Stock"}
                       </div>
                       <span className="text-sm text-gray-600">
                         {t("current", "common") || "Current"}:{" "}
@@ -1142,7 +1142,7 @@ const AddProduct = () => {
                       </span>
                     </div>
                   </div>
-                )}
+                )} */}
               </div>
 
               {/* Description Card */}

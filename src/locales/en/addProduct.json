@@ -89,7 +89,7 @@
   "stockInventory": "Stock & Inventory",
   "setStockDetails": "Set inventory and stock alert details",
   "lowStockAlertThreshold": "Low Stock Alert Threshold",
-  "lowStockDescription": "Product will be marked as 'Low Stock' when quantity ≤ this threshold",
+  "lowStockDescription": "Product will be marked as 'Low Stock' when quantity < this threshold",
   "stockStatusPreview": "Stock Status Preview",
   "outOfStock": "Out of Stock",
   "lowStock": "Low Stock",

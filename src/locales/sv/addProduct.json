@@ -89,7 +89,7 @@
   "stockInventory": "Lager & Inventering",
   "setStockDetails": "Ställ in lager- och lageraviseringar",
   "lowStockAlertThreshold": "Lågt lager varningströskel",
-  "lowStockDescription": "Produkten kommer att markeras som 'Lågt lager' när kvantiteten ≤ detta värde",
+  "lowStockDescription": "Produkten kommer att markeras som 'Lågt lager' när kvantiteten < detta värde",
   "stockStatusPreview": "Lagerstatus förhandsvisning",
   "outOfStock": "Slut i lager",
   "lowStock": "Lågt lager",
