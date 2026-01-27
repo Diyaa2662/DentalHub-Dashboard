@@ -353,10 +353,8 @@ const EditProduct = () => {
       // ✅ إرسال SKU المعدل (يمكن أن يكون فارغاً)
       if (formData.sku && formData.sku.trim()) {
         formDataToSend.append("sku", formData.sku.trim());
-      } else {
-        // إذا كان فارغاً، لن نرسل SKU وسيبقى كما هو في السيرفر
-        // لا نرسل حقل SKU إطلاقاً
       }
+      // إذا كان فارغاً، لن نرسل SKU وسيبقى كما هو في السيرفر
 
       formDataToSend.append("category", formData.category);
       formDataToSend.append("price", parseFloat(formData.price).toFixed(2));
@@ -374,14 +372,19 @@ const EditProduct = () => {
         parseFloat(formData.tax_rate || 0).toFixed(2),
       );
 
-      if (formData.discount_price && formData.discount_price < formData.price) {
+      // ✅ التعديل هنا: نرسل سعر الخصم فقط إذا كان فيه خصم حقيقي
+      if (
+        formData.discount_price &&
+        formData.discount_price > 0 &&
+        formData.discount_price < formData.price
+      ) {
         formDataToSend.append(
           "discount_price",
           parseFloat(formData.discount_price).toFixed(2),
         );
-      } else {
-        formDataToSend.append("discount_price", "0.00");
       }
+      // إذا لم يكن فيه خصم، ما نبعت الحقل إطلاقاً
+      // سيبقى discount_price = null في قاعدة البيانات
 
       formDataToSend.append(
         "low_stock_alert_threshold",
@@ -489,7 +492,6 @@ const EditProduct = () => {
       setUpdating(false);
     }
   };
-
   // دالة للعودة للتفاصيل
   const goToProductDetails = () => {
     navigate(`/products/view/${id}`);

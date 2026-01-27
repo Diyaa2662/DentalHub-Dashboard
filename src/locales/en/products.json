@@ -351,5 +351,6 @@
   "showingAlertStockProducts": "Showing Alert Stock Product(s)",
   "clickToFilterAlertStock": "Click to filter Alert Stock Product(s)",
   "negativeStockWarningSingle": "You have 1 product with negative stock quantity. This product is in 'Alert Stock' status and requires immediate attention.",
-  "viewAlertStockProduct": "View 1 Alert Stock Product"
+  "viewAlertStockProduct": "View 1 Alert Stock Product",
+  "noOfferPrice": "No Offer Price"
 }

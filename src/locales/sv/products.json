@@ -351,5 +351,6 @@
   "showingAlertStockProducts": "Visar produkt(er) med lagerlarm",
   "clickToFilterAlertStock": "Klicka för att filtrera produkt(er) med lagerlarm",
   "negativeStockWarningSingle": "Du har 1 produkt med negativ lagerkvantitet. Denna produkt har status 'Lagerlarm' och kräver omedelbar åtgärd.",
-  "viewAlertStockProduct": "Visa 1 produkt med lagerlarm"
+  "viewAlertStockProduct": "Visa 1 produkt med lagerlarm",
+  "noOfferPrice": "Inget erbjudandepris"
 }
