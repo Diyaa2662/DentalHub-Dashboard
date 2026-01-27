@@ -79,5 +79,7 @@
   "deleteError": "Fel vid radering av produkt",
   "alertStock": "Varning för lager",
   "statusFromAPI": "Status från servern",
-  "noImagesAvailable": "Inga bilder tillgängliga"
+  "noImagesAvailable": "Inga bilder tillgängliga",
+  "noDiscount": "Ingen rabatt",
+  "freeProduct": "GRATIS PRODUKT"
 }

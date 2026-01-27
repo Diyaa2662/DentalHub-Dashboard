@@ -79,5 +79,7 @@
   "deleteError": "Error deleting product",
   "alertStock": "Alert Stock",
   "statusFromAPI": "Status from server",
-  "noImagesAvailable": "No images available"
+  "noImagesAvailable": "No images available",
+  "noDiscount": "No discount",
+  "freeProduct": "FREE PRODUCT"
 }

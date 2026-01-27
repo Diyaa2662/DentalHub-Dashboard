@@ -113,11 +113,19 @@ const Products = () => {
 
           const price = parseFloat(product.price) || 0;
           const discountPrice = parseFloat(product.discount_price) || 0;
-          const hasDiscount = discountPrice > 0 && discountPrice < price;
-          const finalPrice = hasDiscount ? discountPrice : price;
-          const discountPercentage = hasDiscount
-            ? Math.round(((price - discountPrice) / price) * 100)
-            : 0;
+
+          // ✅ التعديل هنا: نعرض سعر الخصم دائماً إذا كانت القيمة موجودة (حتى لو 0)
+          const hasDiscountValue =
+            discountPrice !== null && discountPrice !== undefined;
+
+          // ✅ السعر النهائي: نعرض سعر الخصم إذا كان له قيمة، وإلا السعر العادي
+          const finalPrice = hasDiscountValue ? discountPrice : price;
+
+          // ✅ نحسب نسبة الخصم فقط إذا كان سعر الخصم أقل من السعر الأصلي وأكبر من 0
+          const discountPercentage =
+            discountPrice > 0 && discountPrice < price
+              ? Math.round(((price - discountPrice) / price) * 100)
+              : 0;
 
           return {
             id: product.id,
@@ -126,14 +134,34 @@ const Products = () => {
             sku: product.sku || "",
             category: product.category || t("other", "products") || "other",
             price: `$${price.toFixed(2)}`,
-            discount: hasDiscount ? `${discountPercentage}%` : "0%",
-            priceAfterDiscount: `$${finalPrice.toFixed(2)}`,
+            // ✅ عرض نسبة الخصم:
+            // - إذا كان سعر الخصم أقل من السعر الأصلي: X%
+            // - إذا كان يساوي صفر: "Free"
+            // - إذا كان يساوي السعر الأصلي: "-"
+            discount:
+              discountPrice > 0 && discountPrice < price
+                ? `${discountPercentage}%`
+                : discountPrice === 0
+                  ? "Free"
+                  : "-",
+            // ✅ عرض سعر الخصم: دائماً نعرضه إذا كان له قيمة (حتى لو 0)
+            priceAfterDiscount: hasDiscountValue
+              ? `$${finalPrice.toFixed(2)}`
+              : "-",
+            originalPriceAfterDiscount: finalPrice,
             stock: product.stock_quantity || 0,
             status: stockStatus,
             taxRate: product.tax_rate ? `${product.tax_rate}%` : "0%",
             originalData: product,
-            hasDiscount: hasDiscount,
+            // ✅ نغير الشرط: hasDiscount = أي سعر خصم له قيمة (حتى لو 0)
+            hasDiscountValue: hasDiscountValue,
             discountPercentage: discountPercentage,
+            // ✅ نضيف متغيرات جديدة
+            discountPriceValue: discountPrice,
+            priceValue: price,
+            isDiscountEqualPrice: discountPrice === price,
+            isDiscountZero: discountPrice === 0,
+            isDiscountLessThanPrice: discountPrice > 0 && discountPrice < price,
             isLowStock: isLowStock,
             isOutOfStock: isOutOfStock,
             isDeleted: isDeleted,
@@ -283,7 +311,8 @@ const Products = () => {
   };
 
   const hasDiscount = (product) => {
-    return product.hasDiscount || false;
+    // ✅ نعتبر فيه خصم إذا كان له قيمة (حتى لو 0)
+    return product.hasDiscountValue || false;
   };
 
   const getFilterButtonClass = (filterType) => {
@@ -958,6 +987,7 @@ const Products = () => {
               />
 
               {/* Price After Discount Column */}
+              {/* Price After Discount Column */}
               <Column
                 dataField="priceAfterDiscount"
                 caption={t("priceAfterDiscount", "products") || "Offer Price"}
@@ -966,6 +996,10 @@ const Products = () => {
                 allowGrouping={false}
                 cellRender={({ data }) => {
                   const hasDisc = hasDiscount(data);
+                  const isDiscEqualPrice = data.isDiscountEqualPrice;
+                  const isDiscZero = data.isDiscountZero;
+                  const isDiscLessThanPrice = data.isDiscountLessThanPrice;
+
                   return (
                     <div className="flex flex-col">
                       <div className="flex items-center">
@@ -975,26 +1009,48 @@ const Products = () => {
                               ? "text-gray-500"
                               : data.isAlertStock
                                 ? "text-orange-600"
-                                : hasDisc
-                                  ? "text-green-600"
-                                  : "text-gray-800"
+                                : isDiscZero
+                                  ? "text-red-600 font-bold" // ✅ لون أحمر للمنتجات المجانية
+                                  : isDiscEqualPrice
+                                    ? "text-gray-700"
+                                    : isDiscLessThanPrice
+                                      ? "text-green-600"
+                                      : "text-gray-700"
                           }`}
                         >
                           {data.priceAfterDiscount}
                         </span>
-                        {hasDisc && !data.isDeleted && !data.isAlertStock && (
-                          <Tag className="text-red-500 ml-2" size={12} />
-                        )}
+                        {isDiscLessThanPrice &&
+                          !data.isDeleted &&
+                          !data.isAlertStock && (
+                            <Tag className="text-red-500 ml-2" size={12} />
+                          )}
+                        {isDiscZero &&
+                          !data.isDeleted &&
+                          !data.isAlertStock && (
+                            <Tag className="text-red-500 ml-2" size={12} />
+                          )}
                       </div>
-                      {hasDisc &&
+                      {isDiscLessThanPrice &&
                         data.discountPercentage > 0 &&
                         !data.isDeleted &&
                         !data.isAlertStock && (
                           <div className="text-xs text-red-600 font-medium mt-1">
-                            {data.discountPercentage}%{" "}
-                            {t("off", "products") || "OFF"}
+                            {data.discount} {t("off", "products") || "OFF"}
                           </div>
                         )}
+                      {isDiscEqualPrice &&
+                        !data.isDeleted &&
+                        !data.isAlertStock && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {t("noDiscount", "products") || "No discount"}
+                          </div>
+                        )}
+                      {isDiscZero && !data.isDeleted && !data.isAlertStock && (
+                        <div className="text-xs text-red-600 font-medium mt-1">
+                          {t("freeProduct", "products") || "FREE PRODUCT"}
+                        </div>
+                      )}
                     </div>
                   );
                 }}

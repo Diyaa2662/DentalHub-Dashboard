@@ -109,15 +109,26 @@ const ProductDetails = () => {
 
         // الحصول على قيم الخصم وتحويلها لأرقام
         const price = parseFloat(apiData.price) || 0;
-        const discountPrice = parseFloat(apiData.discount_price) || null;
+        const discountPrice = parseFloat(apiData.discount_price) || 0; // ✅ نأخذ القيمة كما هي حتى لو 0
 
-        // حساب ما إذا كان هناك خصم فعلي
-        const hasActualDiscount =
-          discountPrice !== null && discountPrice < price && discountPrice > 0;
+        // ✅ التعديل هنا: نحدد نوع الخصم بناءً على القيمة
+        let discountType = "none"; // none, free, equal, discount
+        let discountMessage = "";
 
-        // حساب نسبة الخصم فقط إذا كان هناك خصم فعلي
+        if (discountPrice === 0) {
+          discountType = "free";
+          discountMessage =
+            t("freeProduct", "productDetails") || "FREE PRODUCT";
+        } else if (discountPrice === price) {
+          discountType = "equal";
+          discountMessage = t("noDiscount", "productDetails") || "No discount";
+        } else if (discountPrice > 0 && discountPrice < price) {
+          discountType = "discount";
+        }
+
+        // ✅ حساب نسبة الخصم فقط إذا كان سعر الخصم أقل من السعر الأصلي
         const discountPercentage =
-          hasActualDiscount && price > 0
+          discountType === "discount" && price > 0
             ? Math.round(((price - discountPrice) / price) * 100)
             : 0;
 
@@ -142,9 +153,11 @@ const ProductDetails = () => {
           created_at: apiData.created_at || "",
 
           // حقول محسوبة
-          hasDiscount: hasActualDiscount,
+          discountType: discountType,
+          discountMessage: discountMessage,
+          hasDiscount: discountPrice > 0, // أي سعر خصم أكبر من 0
           discountPercentage: discountPercentage,
-          finalPrice: hasActualDiscount ? discountPrice : price,
+          finalPrice: discountPrice > 0 ? discountPrice : price,
         };
 
         setProduct(processedProduct);
@@ -290,9 +303,9 @@ const ProductDetails = () => {
   const calculateDiscountAmount = () => {
     if (
       !product ||
-      !product.hasDiscount ||
       !product.discount_price ||
-      !product.price
+      !product.price ||
+      product.discount_price >= product.price
     )
       return 0;
     return (product.price - product.discount_price).toFixed(2);
@@ -617,22 +630,58 @@ const ProductDetails = () => {
                 </p>
               </div>
 
-              {/* Discount Price - عرض فقط إذا كان هناك خصم فعلي */}
-              {product.hasDiscount && product.discount_price !== null && (
-                <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <p className="text-sm font-medium text-gray-600 mb-1">
-                    {t("priceAfterDiscount", "products") || "Offer Price"}
-                  </p>
-                  <p className="text-2xl font-bold text-red-600">
-                    ${parseFloat(product.discount_price).toFixed(2)}
-                  </p>
-                  <p className="text-xs text-red-600 mt-1">
-                    {product.discountPercentage > 0 &&
-                      `${product.discountPercentage}% `}
-                    {t("off", "products") || "OFF"}
-                  </p>
-                </div>
-              )}
+              {/* Discount Price - عرض دائماً إذا كان فيه قيمة (حتى لو 0) */}
+              {product.discount_price !== null &&
+                product.discount_price !== undefined && (
+                  <div
+                    className={`text-center p-4 rounded-lg ${
+                      product.discountType === "free"
+                        ? "bg-red-50"
+                        : product.discountType === "equal"
+                          ? "bg-gray-50"
+                          : product.discountType === "discount"
+                            ? "bg-green-50"
+                            : "bg-gray-50"
+                    }`}
+                  >
+                    <p className="text-sm font-medium text-gray-600 mb-1">
+                      {t("priceAfterDiscount", "products") || "Offer Price"}
+                    </p>
+                    <p
+                      className={`text-2xl font-bold ${
+                        product.discountType === "free"
+                          ? "text-red-600"
+                          : product.discountType === "equal"
+                            ? "text-gray-600"
+                            : product.discountType === "discount"
+                              ? "text-green-600"
+                              : "text-gray-600"
+                      }`}
+                    >
+                      ${parseFloat(product.discount_price).toFixed(2)}
+                    </p>
+                    <p
+                      className={`text-xs mt-1 ${
+                        product.discountType === "free"
+                          ? "text-red-600 font-bold"
+                          : product.discountType === "equal"
+                            ? "text-gray-500"
+                            : product.discountType === "discount"
+                              ? "text-red-600"
+                              : "text-gray-500"
+                      }`}
+                    >
+                      {product.discountType === "free"
+                        ? t("freeProduct", "productDetails") || "FREE PRODUCT"
+                        : product.discountType === "equal"
+                          ? t("noDiscount", "productDetails") || "No discount"
+                          : product.discountType === "discount" &&
+                              product.discountPercentage > 0
+                            ? `${product.discountPercentage}% ${t("off", "products") || "OFF"}`
+                            : ""}
+                    </p>
+                  </div>
+                )}
 
               {/* Tax Rate */}
               <div className="text-center p-4 bg-purple-50 rounded-lg">
@@ -695,27 +744,76 @@ const ProductDetails = () => {
                     </>
                   )}
 
-                  {product.hasDiscount && (
+                  {product.discountType !== "none" && (
                     <>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-700">
-                          {t("discountAmount", "productDetails") ||
-                            "Discount Amount"}
-                          :
-                        </span>
-                        <span className="font-medium text-red-600">
-                          -${calculateDiscountAmount()}
-                        </span>
-                      </div>
-                      {product.discountPercentage > 0 && (
+                      {product.discountType === "free" && (
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-700">
-                            {t("discountPercentage", "productDetails") ||
-                              "Discount Percentage"}
+                            {t("priceAfterDiscount", "products") ||
+                              "Offer Price"}
                             :
                           </span>
                           <span className="font-medium text-red-600">
-                            {product.discountPercentage}% OFF
+                            ${parseFloat(product.discount_price).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+
+                      {product.discountType === "equal" && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-700">
+                            {t("priceAfterDiscount", "products") ||
+                              "Offer Price"}
+                            :
+                          </span>
+                          <span className="font-medium text-gray-600">
+                            ${parseFloat(product.discount_price).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+
+                      {product.discountType === "discount" && (
+                        <>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-700">
+                              {t("priceAfterDiscount", "products") ||
+                                "Offer Price"}
+                              :
+                            </span>
+                            <span className="font-medium text-green-600">
+                              ${parseFloat(product.discount_price).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-700">
+                              {t("discountAmount", "productDetails") ||
+                                "Discount Amount"}
+                              :
+                            </span>
+                            <span className="font-medium text-red-600">
+                              -${calculateDiscountAmount()}
+                            </span>
+                          </div>
+                          {product.discountPercentage > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">
+                                {t("discountPercentage", "productDetails") ||
+                                  "Discount Percentage"}
+                                :
+                              </span>
+                              <span className="font-medium text-red-600">
+                                {product.discountPercentage}% OFF
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* رسالة توضيحية */}
+                      {product.discountMessage && (
+                        <div className="flex justify-between text-sm pt-1">
+                          <span className="text-gray-500 text-xs italic">
+                            {product.discountMessage}
                           </span>
                         </div>
                       )}

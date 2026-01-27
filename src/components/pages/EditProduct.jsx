@@ -92,14 +92,16 @@ const EditProduct = () => {
               : `https://nethy-production.up.railway.app${img.url}`,
           })) || [];
 
+        // ✅ نحتفظ بالقيمة الأصلية كما هي (سواء 80.00, 0.00, 100.00, إلخ)
         const preparedData = {
           name: apiData.name || "",
           s_name: apiData.s_name || "",
-          sku: apiData.sku || "", // جلب SKU
+          sku: apiData.sku || "",
           category: apiData.category || "",
           cost: parseFloat(apiData.cost) || 0,
           price: parseFloat(apiData.price) || 0,
-          discount_price: parseFloat(apiData.discount_price) || "",
+          // ✅ نأخذ القيمة كما هي من الـ API بدون تغيير
+          discount_price: parseFloat(apiData.discount_price) || 0,
           tax_rate: parseFloat(apiData.tax_rate) || 0,
           stock_quantity: parseInt(apiData.stock_quantity) || 0,
           description: apiData.description || "",
@@ -330,9 +332,27 @@ const EditProduct = () => {
       return;
     }
 
+    // ✅ التحقق من أن سعر الخصم ليس سالباً
+    if (formData.discount_price < 0) {
+      alert(
+        t("discountPriceCannotBeNegative", "editProduct") ||
+          "Discount price cannot be negative",
+      );
+      return;
+    }
+
+    // ✅ التحقق من أن سعر الخصم ليس أكبر من السعر الأصلي
+    if (formData.discount_price > formData.price) {
+      alert(
+        t("discountPriceCannotExceedPrice", "editProduct") ||
+          "Discount price cannot exceed original price",
+      );
+      return;
+    }
+
     setUpdating(true);
     setError(null);
-    setSkuError(null); // ✅ مسح أي أخطاء سابقة
+    setSkuError(null);
 
     try {
       // 1. تحديث بيانات المنتج الأساسية
@@ -350,11 +370,9 @@ const EditProduct = () => {
         formDataToSend.append("s_description", formData.s_description.trim());
       }
 
-      // ✅ إرسال SKU المعدل (يمكن أن يكون فارغاً)
       if (formData.sku && formData.sku.trim()) {
         formDataToSend.append("sku", formData.sku.trim());
       }
-      // إذا كان فارغاً، لن نرسل SKU وسيبقى كما هو في السيرفر
 
       formDataToSend.append("category", formData.category);
       formDataToSend.append("price", parseFloat(formData.price).toFixed(2));
@@ -372,19 +390,13 @@ const EditProduct = () => {
         parseFloat(formData.tax_rate || 0).toFixed(2),
       );
 
-      // ✅ التعديل هنا: نرسل سعر الخصم فقط إذا كان فيه خصم حقيقي
-      if (
-        formData.discount_price &&
-        formData.discount_price > 0 &&
-        formData.discount_price < formData.price
-      ) {
-        formDataToSend.append(
-          "discount_price",
-          parseFloat(formData.discount_price).toFixed(2),
-        );
-      }
-      // إذا لم يكن فيه خصم، ما نبعت الحقل إطلاقاً
-      // سيبقى discount_price = null في قاعدة البيانات
+      // ✅ التعديل هنا: نرسل سعر الخصم دائماً كما هو
+      // سواء كان صفراً أو يساوي السعر الأصلي أو أقل منه
+      // المهم أنه لا يكون سالباً ولا أكبر من السعر الأصلي (تم التحقق أعلاه)
+      formDataToSend.append(
+        "discount_price",
+        parseFloat(formData.discount_price || 0).toFixed(2),
+      );
 
       formDataToSend.append(
         "low_stock_alert_threshold",
