@@ -279,11 +279,6 @@ const SupplierInvoiceDetails = () => {
     }
   };
 
-  // ✅ دالة طباعة الفاتورة
-  const handlePrintInvoice = () => {
-    window.print();
-  };
-
   const handleRefresh = () => {
     fetchInvoiceDetails();
   };
@@ -495,14 +490,6 @@ const SupplierInvoiceDetails = () => {
             <span className="hidden md:inline">
               {t("refresh", "common") || "Refresh"}
             </span>
-          </button>
-
-          <button
-            onClick={handlePrintInvoice}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center space-x-2"
-          >
-            <Printer size={20} />
-            <span>{t("printInvoice", "procurement") || "Print Invoice"}</span>
           </button>
         </div>
       </div>

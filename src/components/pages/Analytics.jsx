@@ -36,9 +36,19 @@ const Analytics = () => {
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedTimePeriod, setSelectedTimePeriod] = useState("month");
-  const [dateRange, setDateRange] = useState({
-    from: "2025-01-01",
-    to: "2026-01-25",
+  const [dateRange, setDateRange] = useState(() => {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDayOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0,
+    );
+
+    return {
+      from: firstDayOfMonth.toISOString().split("T")[0],
+      to: lastDayOfMonth.toISOString().split("T")[0],
+    };
   });
 
   // State for API data
@@ -126,7 +136,7 @@ const Analytics = () => {
 
   const handleTimePeriodChange = (periodId) => {
     setSelectedTimePeriod(periodId);
-    // Update date range based on selected period
+
     const today = new Date();
     let fromDate, toDate;
 
@@ -136,32 +146,78 @@ const Analytics = () => {
         toDate = today.toISOString().split("T")[0];
         break;
       case "week":
-        const weekAgo = new Date(today);
-        weekAgo.setDate(today.getDate() - 7);
-        fromDate = weekAgo.toISOString().split("T")[0];
-        toDate = today.toISOString().split("T")[0];
+        // الأسبوع الحالي من الأحد إلى السبت
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay()); // الأحد
+        const endOfWeek = new Date(today);
+        endOfWeek.setDate(today.getDate() + (6 - today.getDay())); // السبت
+        fromDate = startOfWeek.toISOString().split("T")[0];
+        toDate = endOfWeek.toISOString().split("T")[0];
         break;
       case "month":
-        const monthAgo = new Date(today);
-        monthAgo.setMonth(today.getMonth() - 1);
-        fromDate = monthAgo.toISOString().split("T")[0];
-        toDate = today.toISOString().split("T")[0];
+        // الشهر الحالي من الأول إلى الأخير
+        const firstDayOfMonth = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          1,
+        );
+        const lastDayOfMonth = new Date(
+          today.getFullYear(),
+          today.getMonth() + 1,
+          0,
+        );
+        fromDate = firstDayOfMonth.toISOString().split("T")[0];
+        toDate = lastDayOfMonth.toISOString().split("T")[0];
         break;
       case "quarter":
-        const quarterAgo = new Date(today);
-        quarterAgo.setMonth(today.getMonth() - 3);
-        fromDate = quarterAgo.toISOString().split("T")[0];
-        toDate = today.toISOString().split("T")[0];
+        // الربع الحالي
+        const currentQuarter = Math.floor(today.getMonth() / 3);
+        const quarterStartMonth = currentQuarter * 3;
+        const quarterEndMonth = quarterStartMonth + 2;
+        const firstDayOfQuarter = new Date(
+          today.getFullYear(),
+          quarterStartMonth,
+          1,
+        );
+        const lastDayOfQuarter = new Date(
+          today.getFullYear(),
+          quarterEndMonth + 1,
+          0,
+        );
+        fromDate = firstDayOfQuarter.toISOString().split("T")[0];
+        toDate = lastDayOfQuarter.toISOString().split("T")[0];
         break;
       case "year":
-        const yearAgo = new Date(today);
-        yearAgo.setFullYear(today.getFullYear() - 1);
-        fromDate = yearAgo.toISOString().split("T")[0];
-        toDate = today.toISOString().split("T")[0];
+        // السنة الحالية من الأول من يناير إلى آخر ديسمبر
+        const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+        const lastDayOfYear = new Date(today.getFullYear(), 11, 31);
+        fromDate = firstDayOfYear.toISOString().split("T")[0];
+        toDate = lastDayOfYear.toISOString().split("T")[0];
         break;
-      default:
-        // For custom range, keep existing dates
+      case "custom":
+        // For custom range, keep existing dates or set to last 30 days
+        if (!dateRange.from || !dateRange.to) {
+          const thirtyDaysAgo = new Date(today);
+          thirtyDaysAgo.setDate(today.getDate() - 30);
+          fromDate = thirtyDaysAgo.toISOString().split("T")[0];
+          toDate = today.toISOString().split("T")[0];
+          setDateRange({ from: fromDate, to: toDate });
+        }
         return;
+      default:
+        // Default to current month
+        const defaultFirstDay = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          1,
+        );
+        const defaultLastDay = new Date(
+          today.getFullYear(),
+          today.getMonth() + 1,
+          0,
+        );
+        fromDate = defaultFirstDay.toISOString().split("T")[0];
+        toDate = defaultLastDay.toISOString().split("T")[0];
     }
 
     setDateRange({ from: fromDate, to: toDate });

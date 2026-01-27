@@ -304,10 +304,6 @@ const InvoiceDetails = () => {
     return configs[status] || configs.pending;
   };
 
-  const handlePrintInvoice = () => {
-    window.print();
-  };
-
   const handleBack = () => {
     navigate("/invoices");
   };
@@ -454,14 +450,6 @@ const InvoiceDetails = () => {
             title={t("refresh", "common") || "Refresh"}
           >
             <RefreshCw size={20} />
-          </button>
-
-          <button
-            onClick={handlePrintInvoice}
-            className="px-4 py-2 bg-blue-50 text-dental-blue rounded-lg font-medium hover:bg-blue-100 transition flex items-center space-x-2"
-          >
-            <Printer size={20} />
-            <span>{t("print", "common") || "Print"}</span>
           </button>
         </div>
       </div>
