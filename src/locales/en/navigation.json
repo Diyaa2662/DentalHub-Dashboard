@@ -35,5 +35,6 @@
   "supplierInvoices": "Supplier Invoices",
   "supplierInvoicesManagement": "Supplier Invoices Management",
   "payment": "Payment",
-  "payments": "Payments"
+  "payments": "Payments",
+  "databaseBackup": "Database Backup"
 }

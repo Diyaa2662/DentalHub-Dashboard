@@ -35,5 +35,6 @@
   "supplierInvoices": "Leverantörsfakturor",
   "supplierInvoicesManagement": "Hantering av Leverantörsfakturor",
   "payment": "Betalning",
-  "payments": "Betalningar"
+  "payments": "Betalningar",
+  "databaseBackup": "Databassäkerhetskopiering"
 }

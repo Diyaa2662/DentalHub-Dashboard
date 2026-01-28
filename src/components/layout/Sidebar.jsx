@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Users2,
   Receipt,
-  CreditCard, // ✅ أيقونة جديدة للمدفوعات
+  CreditCard,
+  Database,
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -31,7 +32,7 @@ const Sidebar = () => {
     sales: true,
     inventory: true,
     suppliersInvoices: true,
-    payment: true, // ✅ حالة جديدة لقسم المدفوعات
+    payment: true,
     team: true,
     reports: true,
   });
@@ -174,6 +175,12 @@ const Sidebar = () => {
           label: t("analytics", "navigation") || t("analytics", "common"),
           icon: <BarChart3 size={18} />,
           path: "/analytics",
+        },
+        {
+          id: "backup",
+          label: t("databaseBackup", "navigation") || "Database Backup", // ✅ إضافة جديدة
+          icon: <Database size={18} />,
+          path: "/backup",
         },
       ],
     },

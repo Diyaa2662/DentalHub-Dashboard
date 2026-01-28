@@ -939,9 +939,6 @@ const ProductDetails = () => {
                 >
                   {stockStatus.text}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {t("statusFromAPI", "products") || "Status from server"}
-                </p>
               </div>
 
               <div className="p-3 bg-gray-50 rounded-lg">

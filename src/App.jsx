@@ -36,6 +36,7 @@ import EditPayment from "./components/pages/EditPayment";
 import AddSupplierInvoice from "./components/pages/procurement/AddSupplierInvoice";
 import Employees from "./components/pages/Employees";
 import EditProduct from "./components/pages/EditProduct";
+import Backup from "./components/pages/Backup";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import "./App.css";
@@ -150,6 +151,8 @@ function App() {
             <Route path="/payments/:id" element={<PaymentDetails />} />
 
             <Route path="/payments/edit/:id" element={<EditPayment />} />
+
+            <Route path="/backup" element={<Backup />} />
           </Route>
           {/* ============================================ */}
           {/* نهاية المسارات المحمية */}
