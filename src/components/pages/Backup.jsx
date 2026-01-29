@@ -25,6 +25,50 @@ const Backup = () => {
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState({});
 
+  // Function to convert http to https
+  const convertToHttps = (url) => {
+    if (!url) return "";
+
+    try {
+      // إذا كان الرابط يحتوي على http:// فقط، استبدله بـ https://
+      if (url.startsWith("http://")) {
+        return url.replace("http://", "https://");
+      }
+
+      // إذا لم يكن يحتوي على بروتوكول، أضف https://
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        return `https://${url}`;
+      }
+
+      // إذا كان يحتوي على https:// بالفعل، اتركه كما هو
+      return url;
+    } catch (err) {
+      console.error("Error converting URL to HTTPS:", err);
+      return url;
+    }
+  };
+
+  // Function to validate and fix URL
+  const validateAndFixUrl = (url) => {
+    if (!url) return "";
+
+    // تحويل إلى https أولاً
+    let fixedUrl = convertToHttps(url);
+
+    // إزالة أي مسافات أو أسطر جديدة
+    fixedUrl = fixedUrl.trim();
+
+    // التحقق من أن الرابط صالح
+    try {
+      new URL(fixedUrl);
+      return fixedUrl;
+      // eslint-disable-next-line no-unused-vars
+    } catch (err) {
+      console.warn("Invalid URL after fixing:", url, "->", fixedUrl);
+      return url; // إرجاع الرابط الأصلي إذا فشل الإصلاح
+    }
+  };
+
   // Fetch backups data
   useEffect(() => {
     fetchBackups();
@@ -47,7 +91,8 @@ const Backup = () => {
           name: backup.name,
           size: backup.size,
           createdAt: backup.created_at,
-          downloadLink: backup.links?.download || "",
+          downloadLink: validateAndFixUrl(backup.links?.download || ""), // إصلاح الرابط هنا
+          originalDownloadLink: backup.links?.download || "", // حفظ الرابط الأصلي للرجوع إليه
           formattedDate: new Date(backup.created_at).toLocaleString(),
         }));
 
@@ -84,10 +129,7 @@ const Backup = () => {
       setDownloading((prev) => ({ ...prev, [backup.backupId]: true }));
 
       // Get token from localStorage
-      const token =
-        localStorage.getItem("authToken") ||
-        localStorage.getItem("token") ||
-        sessionStorage.getItem("authToken");
+      const token = localStorage.getItem("authToken");
 
       if (!token) {
         alert(
@@ -146,7 +188,15 @@ const Backup = () => {
     } catch (err) {
       console.error("Error downloading backup:", err);
 
-      if (err.response?.status === 401) {
+      // Try with original URL if https fails
+      if (
+        err.response?.status === 0 || // Network error
+        err.code === "ERR_NETWORK" ||
+        (err.response?.status >= 400 && err.response?.status < 500)
+      ) {
+        console.log("HTTPS failed, trying original HTTP URL...");
+        await tryWithOriginalUrl(backup);
+      } else if (err.response?.status === 401) {
         // Unauthorized - token expired or invalid
         alert(
           t("sessionExpired", "backup") ||
@@ -164,14 +214,7 @@ const Backup = () => {
             "Downloaded file is empty. Please try again.",
         );
       } else {
-        // Try alternative method with fetch if axios fails
-        try {
-          console.log("Trying fetch as fallback...");
-          await downloadWithFetch(backup);
-        } catch (fetchErr) {
-          console.error("Fetch fallback also failed:", fetchErr);
-          showErrorAlert(backup.name, err.message);
-        }
+        showErrorAlert(backup.name, err.message);
       }
     } finally {
       // Reset downloading state
@@ -181,55 +224,55 @@ const Backup = () => {
     }
   };
 
-  // Alternative download function using fetch
-  const downloadWithFetch = async (backup) => {
-    const token =
-      localStorage.getItem("authToken") || localStorage.getItem("token");
-
-    if (!token) {
-      throw new Error("No authentication token");
+  // Try download with original HTTP URL
+  const tryWithOriginalUrl = async (backup) => {
+    if (!backup.originalDownloadLink) {
+      showErrorAlert(backup.name, "No original URL available");
+      return;
     }
 
-    const response = await fetch(backup.downloadLink, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/zip, application/octet-stream",
-      },
-    });
+    try {
+      const token =
+        localStorage.getItem("authToken") || localStorage.getItem("token");
 
-    if (!response.ok) {
-      throw new Error(`Fetch failed with status: ${response.status}`);
-    }
+      // Use original HTTP URL
+      const response = await api.get(backup.originalDownloadLink, {
+        responseType: "blob",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/zip, application/octet-stream, */*",
+        },
+      });
 
-    const blob = await response.blob();
+      if (response.data) {
+        const blob = new Blob([response.data], {
+          type: response.headers["content-type"] || "application/zip",
+        });
 
-    if (blob.size === 0) {
-      throw new Error("Empty file received");
-    }
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = backup.name;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
 
-    // Create and trigger download
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = backup.name;
-    link.style.display = "none";
-    document.body.appendChild(link);
-    link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }, 100);
 
-    // Cleanup
-    setTimeout(() => {
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    }, 100);
-
-    // Success message
-    setTimeout(() => {
-      alert(
-        t("downloadSuccess", "backup", { name: backup.name }) ||
-          `Backup "${backup.name}" downloaded successfully (via fetch)`,
+        setTimeout(() => {
+          alert(`Backup "${backup.name}" downloaded successfully (using HTTP)`);
+        }, 300);
+      }
+    } catch (httpErr) {
+      console.error("HTTP download also failed:", httpErr);
+      showErrorAlert(
+        backup.name,
+        `HTTPS and HTTP both failed: ${httpErr.message}`,
       );
-    }, 300);
+    }
   };
 
   // Helper function for error alerts
@@ -247,34 +290,36 @@ const Backup = () => {
     alert(message);
   };
 
-  // Render actions column
+  // Render actions column - MODIFIED to show URL status
   const actionsCellRender = (data) => {
     const isDownloading = downloading[data.data.backupId];
 
     return (
-      <div className="flex items-center justify-center space-x-2">
-        <button
-          onClick={() => handleDownloadBackup(data.data)}
-          disabled={isDownloading || !data.data.downloadLink}
-          className={`p-2 rounded-lg transition ${
-            isDownloading
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : data.data.downloadLink
-                ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-          }`}
-          title={
-            isDownloading
-              ? t("downloading", "backup") || "Downloading..."
-              : t("downloadBackup", "backup") || "Download Backup"
-          }
-        >
-          {isDownloading ? (
-            <RefreshCw className="animate-spin" size={18} />
-          ) : (
-            <Download size={18} />
-          )}
-        </button>
+      <div className="flex flex-col items-center space-y-1">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => handleDownloadBackup(data.data)}
+            disabled={isDownloading || !data.data.downloadLink}
+            className={`p-2 rounded-lg transition ${
+              isDownloading
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : data.data.downloadLink
+                  ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+            title={
+              isDownloading
+                ? t("downloading", "backup") || "Downloading..."
+                : t("downloadBackup", "backup") || "Download Backup"
+            }
+          >
+            {isDownloading ? (
+              <RefreshCw className="animate-spin" size={18} />
+            ) : (
+              <Download size={18} />
+            )}
+          </button>
+        </div>
       </div>
     );
   };
@@ -584,7 +629,7 @@ const Backup = () => {
               {/* Download Column */}
               <Column
                 caption={t("actions", "backup") || "Actions"}
-                width={100}
+                width={120}
                 alignment="center"
                 allowGrouping={false}
                 cellRender={actionsCellRender}
